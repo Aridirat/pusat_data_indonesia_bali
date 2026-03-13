@@ -1,0 +1,374 @@
+@extends('layouts.main')
+
+@section('content')
+<div class="py-6">
+
+    <a href="{{ route('data.index') }}"
+       class="flex items-center gap-1 font-semibold text-sky-600 ps-4 mb-4 hover:text-sky-900 text-sm transition-colors">
+        <i class="fas fa-angle-left"></i> Kembali ke Data
+    </a>
+
+    {{-- HEADER CARD --}}
+    <div class="mt-2 bg-white rounded-xl shadow p-6">
+
+        <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div>
+                <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">Detail Data</p>
+                <h1 class="text-xl font-bold text-gray-800">
+                    {{ $datum->metadata->nama ?? 'Data #' . $datum->id }}
+                </h1>
+                @if($datum->metadata?->alias)
+                    <p class="text-sm text-gray-400 mt-0.5">{{ $datum->metadata->alias }}</p>
+                @endif
+            </div>
+
+            {{-- Status badge + aksi admin --}}
+            <div class="flex flex-col items-end gap-2 shrink-0">
+                @php
+                    $statusMap = [
+                        0 => ['label' => 'Pending',   'style' => 'background:#fef3c7; color:#b45309;', 'icon' => 'fa-clock'],
+                        1 => ['label' => 'Available', 'style' => 'background:#dcfce7; color:#15803d;', 'icon' => 'fa-check-circle'],
+                        2 => ['label' => 'Ditolak',   'style' => 'background:#fee2e2; color:#b91c1c;', 'icon' => 'fa-times-circle'],
+                    ];
+                    $s = $statusMap[$datum->status] ?? $statusMap[0];
+                @endphp
+                <span style="{{ $s['style'] }}"
+                      class="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5">
+                    <i class="fas {{ $s['icon'] }}"></i>
+                    {{ $s['label'] }}
+                </span>
+
+                {{-- Tombol approve/reject untuk admin --}}
+                @if($datum->status == 0)
+                    <div class="flex gap-2">
+                        <form action="{{ route('data.approve', $datum->id) }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                style="background-color:#22c55e; color:#fff;"
+                                onmouseover="this.style.backgroundColor='#16a34a'"
+                                onmouseout="this.style.backgroundColor='#22c55e'"
+                                class="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm">
+                                <i class="fas fa-check"></i> Setujui
+                            </button>
+                        </form>
+                        <form action="{{ route('data.reject', $datum->id) }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                style="background-color:#f87171; color:#fff;"
+                                onmouseover="this.style.backgroundColor='#ef4444'"
+                                onmouseout="this.style.backgroundColor='#f87171'"
+                                class="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm">
+                                <i class="fas fa-times"></i> Tolak
+                            </button>
+                        </form>
+                    </div>
+                @elseif($datum->status == 1)
+                    <form action="{{ route('data.reject', $datum->id) }}" method="POST">
+                        @csrf
+                        <button type="submit"
+                            style="border:1px solid #fca5a5; color:#ef4444; background:transparent;"
+                            onmouseover="this.style.backgroundColor='#fef2f2'"
+                            onmouseout="this.style.backgroundColor='transparent'"
+                            class="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors">
+                            <i class="fas fa-ban"></i> Cabut Persetujuan
+                        </button>
+                    </form>
+                @elseif($datum->status == 2)
+                    <form action="{{ route('data.approve', $datum->id) }}" method="POST">
+                        @csrf
+                        <button type="submit"
+                            style="border:1px solid #86efac; color:#16a34a; background:transparent;"
+                            onmouseover="this.style.backgroundColor='#f0fdf4'"
+                            onmouseout="this.style.backgroundColor='transparent'"
+                            class="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors">
+                            <i class="fas fa-redo"></i> Pulihkan
+                        </button>
+                    </form>
+                @endif
+            </div>
+        </div>
+
+        {{-- INFO META --}}
+        <div class="mt-2 flex flex-wrap gap-4 text-xs text-gray-400 border-t pt-3">
+            <span><i class="fas fa-hashtag mr-1"></i>ID: <strong class="text-gray-600">{{ $datum->id }}</strong></span>
+            <span><i class="fas fa-user mr-1"></i>Diinput oleh: <strong class="text-gray-600">{{ $datum->user->name ?? '-' }}</strong></span>
+            <span><i class="fas fa-calendar mr-1"></i>
+                {{ \Carbon\Carbon::parse($datum->date_inputed)->translatedFormat('d F Y, H:i') }} WITA
+            </span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
+
+        {{-- KOLOM KIRI: Nilai Data --}}
+        <div class="lg:col-span-1 space-y-5">
+
+            {{-- Nilai --}}
+            <div class="bg-white rounded-xl shadow p-5">
+                <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-bar text-sky-500"></i> Nilai Data
+                </h2>
+
+                {{-- Nilai Angka --}}
+                @if(!is_null($datum->number_value))
+                    <div class="mb-4 p-4 bg-sky-50 border border-sky-100 rounded-lg text-center">
+                        <p class="text-xs text-sky-500 font-medium uppercase tracking-wide mb-1">Nilai Angka</p>
+                        <p class="text-3xl font-bold text-sky-700">
+                            {{ number_format($datum->number_value, 2) }}
+                        </p>
+                        @if($datum->metadata?->satuan_data)
+                            <p class="text-sm text-sky-400 mt-1">{{ $datum->metadata->satuan_data }}</p>
+                        @endif
+                    </div>
+                @endif
+
+                {{-- Nilai Teks --}}
+                @if($datum->text_value)
+                    <div class="mb-4">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Nilai Teks</p>
+                        <p class="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 leading-relaxed">
+                            {{ $datum->text_value }}
+                        </p>
+                    </div>
+                @endif
+
+                {{-- Nilai Kategori --}}
+                @if(!is_null($datum->kategori_value))
+                    <div class="mb-4">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Kategori</p>
+                        <span class="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">
+                            Kategori {{ $datum->kategori_value }}
+                        </span>
+                    </div>
+                @endif
+
+                {{-- Keterangan lain --}}
+                @if($datum->other)
+                    <div>
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Keterangan Lain</p>
+                        <p class="text-sm text-gray-700">{{ $datum->other }}</p>
+                    </div>
+                @endif
+
+                @if(is_null($datum->number_value) && !$datum->text_value && is_null($datum->kategori_value) && !$datum->other)
+                    <p class="text-sm text-gray-400 text-center py-4">Tidak ada nilai yang diinput</p>
+                @endif
+            </div>
+
+            {{-- Analisis Fenomena --}}
+            @if($datum->analisis_fenomena)
+                <div class="bg-white rounded-xl shadow p-5">
+                    <h2 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <i class="fas fa-microscope text-purple-500"></i> Analisis Fenomena
+                    </h2>
+                    <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                        {{ $datum->analisis_fenomena }}
+                    </p>
+                </div>
+            @endif
+
+        </div>
+
+        {{-- KOLOM KANAN: Dimensi --}}
+        <div class="lg:col-span-2 space-y-5">
+
+            {{-- Dimensi Metadata --}}
+            <div class="bg-white rounded-xl shadow p-5">
+                <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <i class="fas fa-database text-sky-500"></i> Metadata
+                </h2>
+
+                @if($datum->metadata)
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                        @php
+                            $metaFields = [
+                                'Nama'                  => $datum->metadata->nama,
+                                'Alias'                 => $datum->metadata->alias,
+                                'Klasifikasi'           => $datum->metadata->klasifikasi,
+                                'Tipe Data'             => $datum->metadata->tipe_data,
+                                'Satuan Data'           => $datum->metadata->satuan_data,
+                                'Ukuran Data'           => $datum->metadata->ukuran_data,
+                                'Sumber Data'           => $datum->metadata->data_sumber,
+                                'Frekuensi Penerbitan'  => $datum->metadata->frekuensi_penerbitan,
+                                'Produsen Data'         => $datum->metadata->produsen_data,
+                                'Rujukan'               => $datum->metadata->rujukan,
+                            ];
+                        @endphp
+
+                        @foreach($metaFields as $label => $value)
+                            @if($value)
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium">{{ $label }}</p>
+                                    <p class="text-gray-700 font-semibold mt-0.5">{{ $value }}</p>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+
+                    @if($datum->metadata->definisi)
+                        <div class="mt-4 pt-4 border-t">
+                            <p class="text-xs text-gray-400 font-medium mb-1">Definisi</p>
+                            <p class="text-sm text-gray-600 leading-relaxed">{{ $datum->metadata->definisi }}</p>
+                        </div>
+                    @endif
+
+                    @if($datum->metadata->konsep)
+                        <div class="mt-3">
+                            <p class="text-xs text-gray-400 font-medium mb-1">Konsep</p>
+                            <p class="text-sm text-gray-600 leading-relaxed">{{ $datum->metadata->konsep }}</p>
+                        </div>
+                    @endif
+                @else
+                    <p class="text-sm text-gray-400">Data metadata tidak ditemukan.</p>
+                @endif
+            </div>
+
+            {{-- Dimensi Lokasi --}}
+            <div class="bg-white rounded-xl shadow p-5">
+                <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt text-rose-500"></i> Lokasi
+                </h2>
+
+                @if($datum->location)
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+                        @php
+                            $locFields = [
+                                'Provinsi'          => $datum->location->provinsi,
+                                'Kabupaten/Kota'    => $datum->location->kabupaten,
+                                'Kecamatan'         => $datum->location->kecamatan,
+                                'Desa/Kelurahan'    => $datum->location->desa,
+                                'Banjar'            => $datum->location->banjar,
+                                'RT'                => $datum->location->rt,
+                            ];
+                        @endphp
+                        @foreach($locFields as $label => $value)
+                            @if($value)
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium">{{ $label }}</p>
+                                    <p class="text-gray-700 font-semibold mt-0.5">{{ $value }}</p>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+
+                    {{-- Kode wilayah --}}
+                    <div class="mt-4 pt-4 border-t flex flex-wrap gap-3">
+                        @foreach([
+                            'Kode Provinsi'   => $datum->location->kode_provinsi,
+                            'Kode Kabupaten'  => $datum->location->kode_kabupaten,
+                            'Kode Kecamatan'  => $datum->location->kode_kecamatan,
+                            'Kode Desa'       => $datum->location->kode_desa,
+                        ] as $label => $kode)
+                            @if($kode)
+                                <div class="bg-gray-50 border rounded-md px-3 py-1.5 text-xs">
+                                    <span class="text-gray-400">{{ $label }}: </span>
+                                    <span class="font-mono font-semibold text-gray-700">{{ $kode }}</span>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-gray-400">Data lokasi tidak ditemukan.</p>
+                @endif
+            </div>
+
+            {{-- Dimensi Waktu --}}
+            <div class="bg-white rounded-xl shadow p-5">
+                <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <i class="fas fa-calendar-alt text-emerald-500"></i> Waktu
+                </h2>
+
+                @if($datum->time)
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        @php
+                            $bulanList = ['','Januari','Februari','Maret','April','Mei','Juni',
+                                          'Juli','Agustus','September','Oktober','November','Desember'];
+                            $quarterStyles = [
+                                1 => ['bg' => '#e0f2fe', 'border' => '#bae6fd', 'text' => '#0369a1'],
+                                2 => ['bg' => '#dcfce7', 'border' => '#bbf7d0', 'text' => '#15803d'],
+                                3 => ['bg' => '#fef3c7', 'border' => '#fde68a', 'text' => '#b45309'],
+                                4 => ['bg' => '#ffe4e6', 'border' => '#fecdd3', 'text' => '#be123c'],
+                            ];
+                            $qs = $quarterStyles[$datum->time->quarter] ?? ['bg'=>'#f9fafb','border'=>'#e5e7eb','text'=>'#374151'];
+                        @endphp
+
+                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-400 mb-1">Dekade</p>
+                            <p class="text-lg font-bold text-gray-700">{{ $datum->time->decade }}an</p>
+                        </div>
+                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-400 mb-1">Tahun</p>
+                            <p class="text-lg font-bold text-gray-700">{{ $datum->time->year }}</p>
+                        </div>
+                        <div style="background:{{ $qs['bg'] }}; border:1px solid {{ $qs['border'] }};"
+                             class="rounded-lg p-3 text-center">
+                            <p style="color:{{ $qs['text'] }}; opacity:0.7;" class="text-xs mb-1">Kuartal</p>
+                            <p style="color:{{ $qs['text'] }};" class="text-lg font-bold">
+                                Q{{ $datum->time->quarter }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-400 mb-1">Bulan</p>
+                            <p class="text-lg font-bold text-gray-700">
+                                {{ $bulanList[$datum->time->month] ?? '-' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t text-center">
+                        <p class="text-xs text-gray-400 mb-1">Tanggal Lengkap</p>
+                        @php
+                            try {
+                                $fullDate = \Carbon\Carbon::create(
+                                    $datum->time->year,
+                                    $datum->time->month,
+                                    $datum->time->day
+                                )->translatedFormat('l, d F Y');
+                            } catch (\Exception $e) {
+                                $fullDate = '-';
+                            }
+                        @endphp
+                        <p class="text-base font-semibold text-gray-700">{{ $fullDate }}</p>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-400">Data waktu tidak ditemukan.</p>
+                @endif
+            </div>
+
+            {{-- Kontak Person --}}
+            @if($datum->metadata?->nama_contact_person)
+                <div class="bg-white rounded-xl shadow p-5">
+                    <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                        <i class="fas fa-address-card text-teal-500"></i> Kontak Person
+                    </h2>
+                    <div class="flex flex-wrap gap-6 text-sm">
+                        <div>
+                            <p class="text-xs text-gray-400 font-medium">Nama</p>
+                            <p class="text-gray-700 font-semibold mt-0.5">{{ $datum->metadata->nama_contact_person }}</p>
+                        </div>
+                        @if($datum->metadata->nomor_contact_person)
+                            <div>
+                                <p class="text-xs text-gray-400 font-medium">Nomor</p>
+                                <a href="tel:{{ $datum->metadata->nomor_contact_person }}"
+                                   class="text-sky-600 hover:text-sky-800 font-semibold mt-0.5 block transition-colors">
+                                    {{ $datum->metadata->nomor_contact_person }}
+                                </a>
+                            </div>
+                        @endif
+                        @if($datum->metadata->email_contact_person)
+                            <div>
+                                <p class="text-xs text-gray-400 font-medium">Email</p>
+                                <a href="mailto:{{ $datum->metadata->email_contact_person }}"
+                                   class="text-sky-600 hover:text-sky-800 font-semibold mt-0.5 block transition-colors">
+                                    {{ $datum->metadata->email_contact_person }}
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+        </div>
+    </div>
+</div>
+@endsection
