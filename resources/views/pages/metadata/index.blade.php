@@ -27,7 +27,7 @@
                 </a>
             @endif
 
-            {{-- Tombol Export --}}
+            {{-- Tombol Export Metadata --}}
             <button onclick="openExportModal()"
                     class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
                            text-white transition-colors shadow-sm"
@@ -35,7 +35,18 @@
                     onmouseover="this.style.background='#047857'"
                     onmouseout="this.style.background='#059669'">
                 <i class="fas fa-file-excel"></i>
-                Export Excel
+                Export Metadata
+            </button>
+
+            {{-- [BARU] Tombol Export Template Metadata --}}
+            <button onclick="openTemplateModal()"
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
+                           text-white transition-colors shadow-sm"
+                    style="background:#7c3aed;"
+                    onmouseover="this.style.background='#6d28d9'"
+                    onmouseout="this.style.background='#7c3aed'">
+                <i class="fas fa-table-columns"></i>
+                Export Template
             </button>
 
             {{-- Tombol Tambah --}}
@@ -417,6 +428,136 @@
 </div>
 
 {{-- ══════════════════════════════════════════════════════════════
+     [BARU] MODAL EXPORT TEMPLATE METADATA
+     Menghasilkan file .xlsx kosong dengan header metadata_id,
+     nama_metadata, location_id, nama_lokasi, + kolom periode waktu
+══════════════════════════════════════════════════════════════ --}}
+<div id="templateModal"
+     class="fixed inset-0 z-50 hidden items-center justify-center"
+     style="background: rgba(0,0,0,0.45);">
+
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+
+        {{-- Header modal --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b"
+             style="background: linear-gradient(90deg,#7c3aed,#a78bfa);">
+            <div class="flex items-center gap-2 text-white">
+                <i class="fas fa-table-columns text-lg"></i>
+                <h2 class="text-base font-bold">Export Template Metadata</h2>
+            </div>
+            <button onclick="closeTemplateModal()"
+                    class="text-white/80 hover:text-white transition-colors text-xl leading-none">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        {{-- Body modal --}}
+        <div class="px-6 py-5">
+            <p class="text-sm text-gray-500 mb-5">
+                Hasilkan template Excel kosong yang siap diisi data.
+                Template berisi baris metadata milik produsen yang dipilih,
+                dengan kolom periode waktu sesuai rentang yang ditentukan.
+            </p>
+
+            <form id="templateForm" method="GET" action="{{ route('metadata.template') }}">
+
+                {{-- Dropdown Produsen Data (wajib) --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        <i class="fas fa-building text-violet-400 mr-1"></i>
+                        Produsen Data <span class="text-red-500">*</span>
+                    </label>
+                    <select name="produsen_id" id="tplProdusen" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                                   focus:outline-none focus:ring-2 focus:ring-violet-400 text-gray-700">
+                        <option value="">— Pilih Produsen —</option>
+                        @foreach($produsenAll as $p)
+                            <option value="{{ $p->produsen_id }}">{{ $p->nama_produsen }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Dropdown Rentang Waktu (wajib, tanpa Tahunan) --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        <i class="fas fa-calendar-range text-amber-400 mr-1"></i>
+                        Rentang Waktu <span class="text-red-500">*</span>
+                    </label>
+                    <select name="rentang" id="tplRentang" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                                   focus:outline-none focus:ring-2 focus:ring-violet-400 text-gray-700"
+                            onchange="updateTplPreview()">
+                        <option value="">— Pilih Rentang —</option>
+                        <option value="5-tahun">5 Tahun (2021–2025)</option>
+                        <option value="semester">Semester (10 kolom / 5 thn)</option>
+                        <option value="quarter">Quarter (20 kolom / 5 thn)</option>
+                        <option value="bulanan">Bulanan (60 kolom / 5 thn)</option>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">
+                        Catatan: Tahunan tidak tersedia pada template. Rentang selalu mencakup 5 tahun.
+                    </p>
+                </div>
+
+                {{-- Tahun Awal (wajib) --}}
+                <div class="mb-5">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        <i class="fas fa-calendar-plus text-sky-400 mr-1"></i>
+                        Tahun Awal <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="tahun_awal" id="tplTahun"
+                           min="1990" max="2099"
+                           placeholder="Contoh: 2021"
+                           required
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-violet-400 text-gray-700"
+                           oninput="updateTplPreview()">
+                    <p class="text-xs text-gray-400 mt-1">Periode dimulai dari tahun ini selama 5 tahun.</p>
+                </div>
+
+                {{-- Live Preview Kolom --}}
+                <div id="tplPreview"
+                     class="rounded-lg p-3 mb-5 text-xs"
+                     style="background:#faf5ff; border:1px solid #e9d5ff; color:#6d28d9; display:none;">
+                    <p class="font-semibold mb-1.5 flex items-center gap-1.5">
+                        <i class="fas fa-eye"></i>
+                        Preview Kolom Periode
+                    </p>
+                    <div id="tplPreviewCols"
+                         class="flex flex-wrap gap-1 mt-1 max-h-24 overflow-y-auto"></div>
+                    <p id="tplPreviewCount" class="mt-2 text-violet-500 font-medium"></p>
+                </div>
+
+                {{-- Jumlah metadata (live AJAX) --}}
+                <div id="tplMetaPreview"
+                     class="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs mb-5"
+                     style="background:#faf5ff; border:1px solid #e9d5ff; color:#6d28d9; display:none;">
+                    <i class="fas fa-database shrink-0"></i>
+                    <span id="tplMetaPreviewText"></span>
+                </div>
+
+                {{-- Tombol --}}
+                <div class="flex gap-3">
+                    <button type="submit" id="tplBtn"
+                            class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5
+                                   text-sm font-semibold text-white rounded-lg transition-colors shadow-sm"
+                            style="background:#7c3aed;"
+                            onmouseover="this.style.background='#6d28d9'"
+                            onmouseout="this.style.background='#7c3aed'">
+                        <i class="fas fa-download"></i>
+                        Download Template
+                    </button>
+                    <button type="button" onclick="closeTemplateModal()"
+                            class="flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg border
+                                   border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">
+                        Batal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════════════════════════════ --}}
 <script>
@@ -445,7 +586,7 @@ function resetFilters() {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   MODAL EXPORT
+   MODAL EXPORT METADATA
 ════════════════════════════════════════════════════════════════ */
 const exportModal    = document.getElementById('exportModal');
 const exportProdusen = document.getElementById('exportProdusen');
@@ -463,17 +604,7 @@ function closeExportModal() {
     exportModal.classList.remove('flex');
 }
 
-// Tutup modal jika klik backdrop
-exportModal.addEventListener('click', function(e) {
-    if (e.target === exportModal) closeExportModal();
-});
-
-// ESC untuk tutup modal
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeExportModal(); });
-
-/* ── Preview Count (AJAX) ──────────────────────────────────── */
-// Hitung estimasi data yang akan diekspor secara live saat user
-// memilih filter — memberikan konfirmasi visual sebelum download.
+exportModal.addEventListener('click', e => { if (e.target === exportModal) closeExportModal(); });
 
 let previewDebounce = null;
 
@@ -486,23 +617,24 @@ function fetchPreviewCount() {
             const params = new URLSearchParams();
             if (exportProdusen.value)  params.set('produsen_id', exportProdusen.value);
             if (exportFrekuensi.value) params.set('frekuensi',   exportFrekuensi.value);
-            params.set('count_only', '1');
 
             const res  = await fetch('{{ route("metadata.export.count") }}?' + params.toString(), {
                 headers: { 'Accept': 'application/json' },
             });
             const json = await res.json();
 
+            const previewEl = document.getElementById('exportPreview');
+            const btnEl     = document.getElementById('exportBtn');
             if (json.count === 0) {
                 previewText.textContent = 'Tidak ada data sesuai filter yang dipilih.';
-                document.getElementById('exportPreview').style.cssText =
-                    'background:#fef2f2; border-color:#fecaca; color:#b91c1c;';
-                document.getElementById('exportBtn').disabled = true;
+                previewEl.style.cssText = 'background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;';
+                previewEl.className     = 'flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs mb-5';
+                btnEl.disabled = true;
             } else {
                 previewText.textContent = `${json.count.toLocaleString('id-ID')} metadata akan diekspor.`;
-                document.getElementById('exportPreview').style.cssText =
-                    'background:#f0f9ff; border-color:#bae6fd; color:#0369a1;';
-                document.getElementById('exportBtn').disabled = false;
+                previewEl.style.cssText = 'background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;';
+                previewEl.className     = 'flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs mb-5';
+                btnEl.disabled = false;
             }
         } catch {
             previewText.textContent = 'Gagal menghitung data.';
@@ -513,16 +645,167 @@ function fetchPreviewCount() {
 exportProdusen.addEventListener('change', fetchPreviewCount);
 exportFrekuensi.addEventListener('change', fetchPreviewCount);
 
-/* ── Loading state saat submit export ───────────────────────── */
 document.getElementById('exportForm').addEventListener('submit', function() {
     const btn = document.getElementById('exportBtn');
     btn.disabled  = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan file…';
-    // Re-enable setelah 8 detik (antisipasi download lama)
     setTimeout(() => {
         btn.disabled  = false;
         btn.innerHTML = '<i class="fas fa-download"></i> Download Excel';
     }, 8000);
+});
+
+/* ════════════════════════════════════════════════════════════════
+   [BARU] MODAL EXPORT TEMPLATE METADATA
+════════════════════════════════════════════════════════════════ */
+const templateModal = document.getElementById('templateModal');
+const tplProdusen   = document.getElementById('tplProdusen');
+const tplRentang    = document.getElementById('tplRentang');
+const tplTahun      = document.getElementById('tplTahun');
+
+function openTemplateModal() {
+    templateModal.classList.remove('hidden');
+    templateModal.classList.add('flex');
+}
+
+function closeTemplateModal() {
+    templateModal.classList.add('hidden');
+    templateModal.classList.remove('flex');
+}
+
+templateModal.addEventListener('click', e => { if (e.target === templateModal) closeTemplateModal(); });
+
+// ESC menutup modal mana pun yang terbuka
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeExportModal(); closeTemplateModal(); }
+});
+
+// ── Live Preview Kolom Periode ────────────────────────────────
+// Menampilkan contoh nama kolom sebelum user download,
+// sehingga user bisa memastikan pilihan sudah benar.
+
+const BULAN_PENDEK = ['Jan','Feb','Mar','Apr','Mei','Jun',
+                      'Jul','Agu','Sep','Okt','Nov','Des'];
+
+function generatePeriodCols(rentang, tahunAwal) {
+    const cols  = [];
+    const start = parseInt(tahunAwal);
+    if (isNaN(start) || start < 1990 || start > 2099) return cols;
+
+    switch (rentang) {
+        case '5-tahun':
+            for (let y = start; y < start + 5; y++) cols.push(String(y));
+            break;
+
+        case 'semester':
+            for (let y = start; y < start + 5; y++)
+                for (let s = 1; s <= 2; s++) cols.push(`${y}_S${s}`);
+            break;
+
+        case 'quarter':
+            for (let y = start; y < start + 5; y++)
+                for (let q = 1; q <= 4; q++) cols.push(`${y}_Q${q}`);
+            break;
+
+        case 'bulanan':
+            for (let y = start; y < start + 5; y++)
+                for (let m = 0; m < 12; m++) cols.push(`${BULAN_PENDEK[m]}_${y}`);
+            break;
+    }
+    return cols;
+}
+
+function updateTplPreview() {
+    const rentang  = tplRentang.value;
+    const tahun    = tplTahun.value;
+    const previewEl= document.getElementById('tplPreview');
+    const colsEl   = document.getElementById('tplPreviewCols');
+    const countEl  = document.getElementById('tplPreviewCount');
+
+    if (!rentang || !tahun) {
+        previewEl.style.display = 'none';
+        return;
+    }
+
+    const cols = generatePeriodCols(rentang, tahun);
+    if (cols.length === 0) { previewEl.style.display = 'none'; return; }
+
+    // Render chip kolom — tampilkan max 20, sisanya ringkasan
+    const preview = cols.slice(0, 20);
+    colsEl.innerHTML = preview.map(c =>
+        `<span style="background:#ede9fe;color:#5b21b6;border-radius:9999px;padding:1px 8px;">${c}</span>`
+    ).join('') + (cols.length > 20
+        ? `<span style="color:#7c3aed;font-style:italic;">…+${cols.length - 20} kolom lagi</span>`
+        : '');
+
+    const rentangLabel = { '5-tahun':'5 Tahun','semester':'Semester','quarter':'Quarter','bulanan':'Bulanan' };
+    countEl.textContent = `Total: 4 kolom tetap + ${cols.length} kolom ${rentangLabel[rentang]} = ${4 + cols.length} kolom`;
+
+    previewEl.style.display = 'block';
+
+    // Juga fetch jumlah metadata untuk produsen yang dipilih
+    fetchTplMetaCount();
+}
+
+// ── Fetch jumlah metadata per produsen (AJAX) ────────────────
+let tplMetaDebounce = null;
+
+function fetchTplMetaCount() {
+    clearTimeout(tplMetaDebounce);
+    const metaEl = document.getElementById('tplMetaPreview');
+    const textEl = document.getElementById('tplMetaPreviewText');
+
+    if (!tplProdusen.value) {
+        metaEl.style.display = 'none';
+        return;
+    }
+
+    textEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Menghitung…';
+    metaEl.style.display = 'flex';
+
+    tplMetaDebounce = setTimeout(async () => {
+        try {
+            const params = new URLSearchParams({ produsen_id: tplProdusen.value });
+            const res    = await fetch('{{ route("metadata.export.count") }}?' + params.toString(), {
+                headers: { 'Accept': 'application/json' },
+            });
+            const json = await res.json();
+
+            if (json.count === 0) {
+                textEl.textContent = 'Produsen ini tidak memiliki metadata aktif.';
+                metaEl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;font-size:0.75rem;margin-bottom:1.25rem;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;';
+                document.getElementById('tplBtn').disabled = true;
+            } else {
+                textEl.textContent = `${json.count} baris metadata akan dimasukkan ke template.`;
+                metaEl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;font-size:0.75rem;margin-bottom:1.25rem;background:#faf5ff;border:1px solid #e9d5ff;color:#6d28d9;';
+                document.getElementById('tplBtn').disabled = false;
+            }
+        } catch {
+            textEl.textContent = 'Gagal menghitung data.';
+        }
+    }, 300);
+}
+
+tplProdusen.addEventListener('change', function() {
+    updateTplPreview();
+    if (!tplRentang.value || !tplTahun.value) fetchTplMetaCount();
+});
+
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    // Validasi client-side sebelum submit
+    if (!tplProdusen.value || !tplRentang.value || !tplTahun.value) {
+        e.preventDefault();
+        alert('Lengkapi semua field yang wajib diisi (Produsen, Rentang Waktu, Tahun Awal).');
+        return;
+    }
+
+    const btn = document.getElementById('tplBtn');
+    btn.disabled  = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan template…';
+    setTimeout(() => {
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="fas fa-download"></i> Download Template';
+    }, 10000);
 });
 </script>
 

@@ -359,7 +359,7 @@
                                     rounded-sm px-3 py-2.5 text-xs text-gray-500 hover:border-sky-400
                                     hover:bg-sky-50 transition-colors">
                             <i class="fas fa-upload text-gray-400"></i>
-                            <span id="gambarLabel">Pilih gambar (JPG / PNG / SVG / WEBP, maks 200 KB)</span>
+                            <span id="gambarLabel">Pilih gambar (JPG / PNG / SVG / WEBP, maks 500 KB)</span>
                         </label>
                     
                         <input type="file"
@@ -377,7 +377,7 @@
                         @enderror
                     
                         <p class="mt-1 text-xs text-gray-400">
-                            Ukuran file maksimal <strong>200 KB</strong>.
+                            Ukuran file maksimal <strong>500 KB</strong>.
                             Format: JPG, JPEG, PNG, SVG, WEBP.
                         </p>
                     </div>
@@ -908,18 +908,18 @@ function handleGambarRujukan(input) {
 
     if (!input.files || !input.files[0]) {
         wrap.classList.add('hidden');
-        label.textContent = 'Pilih gambar (JPG / PNG / SVG / WEBP, maks 200 KB)';
+        label.textContent = 'Pilih gambar (JPG / PNG / SVG / WEBP, maks 500 KB)';
         return;
     }
 
     const file    = input.files[0];
-    const maxSize = 200 * 1024;
+    const maxSize = 500 * 1024;
 
     if (file.size > maxSize) {
-        alert(`Ukuran file terlalu besar (${(file.size / 1024).toFixed(1)} KB). Maksimal 200 KB.`);
+        alert(`Ukuran file terlalu besar (${(file.size / 1024).toFixed(1)} KB). Maksimal 500 KB.`);
         input.value = '';
         wrap.classList.add('hidden');
-        label.textContent = 'Pilih gambar (JPG / PNG / SVG / WEBP, maks 200 KB)';
+        label.textContent = 'Pilih gambar (JPG / PNG / SVG / WEBP, maks 500 KB)';
         return;
     }
 
