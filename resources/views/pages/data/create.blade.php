@@ -225,7 +225,7 @@
 
             {{-- Info format --}}
             <div class="mb-5 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-gray-900">
-                <p class="font-semibold flex items-center gap-2 mb-2 text-blue-600">
+                <p class="font-semibold flex items-center gap-2 mb-2 text-blue-6009">
                     <i class="fas fa-info-circle"></i> Format Excel yang Diperlukan
                 </p>
                 <p class="text-xs text-gray-900 mb-2">Pastikan file Excel memiliki kolom header berikut di baris pertama:</p>

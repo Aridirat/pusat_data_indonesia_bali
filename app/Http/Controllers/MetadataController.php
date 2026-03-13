@@ -241,6 +241,344 @@ class MetadataController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════
+    // EXPORT TEMPLATE — file .xlsx kosong siap diisi data
+    // GET /metadata/template?produsen_id=X&rentang=semester&tahun_awal=2021
+    //
+    // Struktur sheet "Data Import":
+    //   A: metadata_id  B: nama_metadata  C: location_id  D: nama_lokasi
+    //   E...: kolom periode waktu (kosong, diisi saat import)
+    //
+    // Sheet kedua "Panduan" berisi keterangan kolom.
+    // ═══════════════════════════════════════════════════════════
+    public function exportTemplate(Request $request)
+    {
+        $request->validate([
+            'produsen_id' => 'required|exists:produsen_data,produsen_id',
+            'rentang'     => 'required|in:5-tahun,semester,quarter,bulanan',
+            'tahun_awal'  => 'required|integer|min:1990|max:2099',
+        ]);
+
+        $produsen  = ProdusenData::findOrFail($request->produsen_id);
+        $tahunAwal = (int) $request->tahun_awal;
+        $rentang   = $request->rentang;
+
+        // ── Ambil metadata aktif milik produsen ini ───────────
+        $rows = Metadata::where('status', self::STATUS_ACTIVE)
+                         ->where('produsen_id', $request->produsen_id)
+                         ->orderBy('metadata_id')
+                         ->get(['metadata_id', 'nama']);
+
+        // ── Bangun daftar kolom periode ────────────────────────
+        $periodCols = $this->buildPeriodColumns($rentang, $tahunAwal);
+
+        // ── Nama file ──────────────────────────────────────────
+        $rentangLabel = [
+            '5-tahun'  => '5Tahun',
+            'semester' => 'Semester',
+            'quarter'  => 'Quarter',
+            'bulanan'  => 'Bulanan',
+        ][$rentang];
+        $filename = 'Template_' . str_replace(' ', '_', $produsen->nama_produsen)
+                  . '_' . $rentangLabel
+                  . '_' . $tahunAwal . '-' . ($tahunAwal + 4)
+                  . '_' . now()->format('Ymd')
+                  . '.xlsx';
+
+        // ══════════════════════════════════════════════════════
+        // SPREADSHEET
+        // ══════════════════════════════════════════════════════
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getProperties()
+            ->setTitle('Template Import Data')
+            ->setDescription('Template import data untuk produsen ' . $produsen->nama_produsen);
+
+        // ── Warna palet (mengikuti sampel referensi) ──────────
+        $C_HEADER    = '0284C7'; // sky-600  — header kolom tetap
+        $C_PERIOD    = '0369A1'; // sky-700  — header kolom periode
+        $C_META_FILL = 'E0F2FE'; // sky-100  — sel metadata_id & nama (read-only hint)
+        $C_META_TEXT = '0369A1'; // sky-700
+        $C_EMPTY     = 'F8FAFC'; // slate-50 — kolom location & periode (kosong)
+
+        // ══════════════════════════════════════════════════════
+        // SHEET 1 — Data Import
+        // ══════════════════════════════════════════════════════
+        $ws = $spreadsheet->getActiveSheet()->setTitle('Data Import');
+
+        // Total kolom: 4 tetap + kolom periode
+        $totalCols   = 4 + count($periodCols);
+        $lastColLetter = $this->colLetter($totalCols);
+
+        // ── Baris 1: Judul ────────────────────────────────────
+        $ws->mergeCells('A1:' . $lastColLetter . '1');
+        $ws->setCellValue('A1',
+            'Template Import Data — ' . $produsen->nama_produsen
+            . ' | ' . $rentangLabel . ' ' . $tahunAwal . '–' . ($tahunAwal + 4)
+        );
+        $ws->getStyle('A1')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 13, 'color' => ['rgb' => $C_HEADER]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical'   => Alignment::VERTICAL_CENTER],
+        ]);
+        $ws->getRowDimension(1)->setRowHeight(26);
+
+        // ── Baris 2: Info ─────────────────────────────────────
+        $ws->mergeCells('A2:' . $lastColLetter . '2');
+        $ws->setCellValue('A2',
+            $rows->count() . ' metadata aktif  |  '
+            . count($periodCols) . ' kolom periode  |  '
+            . 'Kolom location_id dan nama_lokasi diisi saat import'
+        );
+        $ws->getStyle('A2')->applyFromArray([
+            'font'      => ['size' => 9, 'italic' => true, 'color' => ['rgb' => '64748B']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $ws->getRowDimension(2)->setRowHeight(16);
+
+        // ── Baris 3: Header kolom ─────────────────────────────
+        $fixedHeaders = [
+            ['label' => 'metadata_id',   'width' => 13, 'note' => 'ID metadata (otomatis)'],
+            ['label' => 'nama_metadata', 'width' => 40, 'note' => 'Nama metadata (otomatis)'],
+            ['label' => 'location_id',   'width' => 13, 'note' => 'ID lokasi — isi saat import'],
+            ['label' => 'nama_lokasi',   'width' => 30, 'note' => 'Nama lokasi — isi saat import'],
+        ];
+
+        // Kolom tetap (A–D)
+        foreach ($fixedHeaders as $i => $h) {
+            $col  = $this->colLetter($i + 1);
+            $cell = $col . '3';
+            $ws->setCellValue($cell, $h['label']);
+            $ws->getColumnDimension($col)->setWidth($h['width']);
+            $ws->getComment($cell)->getText()->createTextRun($h['note']);
+        }
+
+        // Kolom periode (E dan seterusnya)
+        foreach ($periodCols as $pi => $periodLabel) {
+            $col = $this->colLetter(5 + $pi);
+            $ws->setCellValue($col . '3', $periodLabel);
+            $ws->getColumnDimension($col)->setWidth(12);
+        }
+
+        // Styling header baris 3
+        // — kolom tetap (A:D): sky-600
+        $ws->getStyle('A3:D3')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $C_HEADER]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical'   => Alignment::VERTICAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN,
+                                              'color' => ['rgb' => '0369A1']]],
+        ]);
+        // — kolom periode (E+): sky-700 (sedikit lebih gelap untuk beda visual)
+        if (count($periodCols) > 0) {
+            $periodeRange = 'E3:' . $lastColLetter . '3';
+            $ws->getStyle($periodeRange)->applyFromArray([
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $C_PERIOD]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
+                                'vertical'   => Alignment::VERTICAL_CENTER],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN,
+                                                  'color' => ['rgb' => '075985']]],
+            ]);
+        }
+        $ws->getRowDimension(3)->setRowHeight(22);
+
+        // ── Baris 4+: Data metadata ───────────────────────────
+        foreach ($rows as $i => $meta) {
+            $rowNum = $i + 4;
+            $isAlt  = $i % 2 === 1; // zebra
+
+            // Kolom A: metadata_id (diisi otomatis)
+            $ws->setCellValue('A' . $rowNum, $meta->metadata_id);
+            $ws->getStyle('A' . $rowNum)->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $isAlt ? 'DBEAFE' : $C_META_FILL]],
+                'font'      => ['bold' => true, 'size' => 9, 'color' => ['rgb' => $C_META_TEXT]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
+                                'vertical'   => Alignment::VERTICAL_CENTER],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_HAIR,
+                                                  'color' => ['rgb' => 'BFDBFE']]],
+            ]);
+
+            // Kolom B: nama_metadata (diisi otomatis)
+            $ws->setCellValue('B' . $rowNum, $meta->nama);
+            $ws->getStyle('B' . $rowNum)->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $isAlt ? 'DBEAFE' : $C_META_FILL]],
+                'font'      => ['size' => 9, 'color' => ['rgb' => $C_META_TEXT]],
+                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_HAIR,
+                                                  'color' => ['rgb' => 'BFDBFE']]],
+            ]);
+
+            // Kolom C–D: location_id & nama_lokasi (kosong)
+            foreach (['C', 'D'] as $col) {
+                $ws->getStyle($col . $rowNum)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFFFFF']],
+                    'font'    => ['size' => 9],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_HAIR,
+                                                    'color' => ['rgb' => 'E2E8F0']]],
+                ]);
+            }
+
+            // Kolom periode (E+): kosong, warna berbeda agar tampak jelas
+            for ($pi = 0; $pi < count($periodCols); $pi++) {
+                $col = $this->colLetter(5 + $pi);
+                $ws->getStyle($col . $rowNum)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID,
+                                  'startColor' => ['rgb' => $isAlt ? 'F0F9FF' : 'FFFFFF']],
+                    'font'    => ['size' => 9],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_HAIR,
+                                                    'color' => ['rgb' => 'E0F2FE']]],
+                ]);
+            }
+
+            $ws->getRowDimension($rowNum)->setRowHeight(18);
+        }
+
+        // Jika tidak ada metadata
+        if ($rows->isEmpty()) {
+            $ws->mergeCells('A4:' . $lastColLetter . '4');
+            $ws->setCellValue('A4', 'Tidak ada metadata aktif untuk produsen ini.');
+            $ws->getStyle('A4')->applyFromArray([
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                'font'      => ['italic' => true, 'color' => ['rgb' => '9CA3AF']],
+            ]);
+        }
+
+        // ── Freeze pane & auto filter ─────────────────────────
+        $ws->freezePane('E4');   // scroll horizontal bebas, baris 1-3 + kolom A-D terkunci
+        $ws->setAutoFilter('A3:' . $lastColLetter . '3');
+
+        // ── Proteksi kolom A & B (read-only hint via lock) ────
+        // Kunci sel A & B agar user tahu isian otomatis;
+        // C, D, dan kolom periode dibiarkan terbuka untuk diisi.
+        $ws->getProtection()->setSheet(true)->setPassword('pdib2024');
+        // Unlock kolom C–D dan seluruh kolom periode untuk semua baris data
+        $lastDataRow = max($rows->count() + 3, 4);
+        $unlockStyle = ['protection' => ['locked' => \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_UNPROTECTED]];
+        $ws->getStyle('C4:' . $lastColLetter . $lastDataRow)->applyFromArray($unlockStyle);
+        // Header (baris 1-3) juga di-unlock agar tidak error saat dibuka
+        $ws->getStyle('A1:' . $lastColLetter . '3')->applyFromArray($unlockStyle);
+
+        // ══════════════════════════════════════════════════════
+        // SHEET 2 — Panduan
+        // ══════════════════════════════════════════════════════
+        $panduan = $spreadsheet->createSheet()->setTitle('Panduan');
+
+        $panduanData = [
+            ['PANDUAN KOLOM',      'KETERANGAN'],
+            ['metadata_id',        'ID dari tabel metadata. Diisi otomatis, jangan diubah.'],
+            ['nama_metadata',      'Nama metadata. Diisi otomatis, jangan diubah.'],
+            ['location_id',        'ID dari tabel dimensi lokasi. Isi dengan ID yang valid dari sistem.'],
+            ['nama_lokasi',        'Nama wilayah/lokasi. Bisa dikosongkan, hanya untuk referensi.'],
+            ['Kolom periode',      'Isi dengan nilai numerik data untuk setiap periode waktu.'],
+            [],
+            ['CATATAN PENTING',    null],
+            ['Wajib diisi',        'metadata_id, location_id, dan minimal satu kolom periode waktu'],
+            ['Boleh kosong',       'nama_lokasi, kolom periode yang belum tersedia datanya'],
+            ['Proteksi',           'Kolom metadata_id dan nama_metadata dikunci (read-only). Gunakan password: pdib2024 jika perlu membuka.'],
+            ['Duplikat',           'Kombinasi metadata_id + location_id + periode yang sama = duplikat, akan ditolak saat import'],
+            ['Status default',     'Semua data yang diimport berstatus PENDING, menunggu approval admin'],
+            [],
+            ['INFO TEMPLATE',      null],
+            ['Produsen',           $produsen->nama_produsen],
+            ['Rentang waktu',      $rentangLabel . ' ' . $tahunAwal . '–' . ($tahunAwal + 4)],
+            ['Jumlah metadata',    $rows->count() . ' baris'],
+            ['Jumlah kolom waktu', count($periodCols) . ' kolom'],
+            ['Dibuat pada',        now()->format('d/m/Y H:i')],
+        ];
+
+        $panduan->getColumnDimension('A')->setWidth(22);
+        $panduan->getColumnDimension('B')->setWidth(72);
+
+        foreach ($panduanData as $ri => $row) {
+            $rowNum = $ri + 1;
+            if (empty($row)) { $panduan->getRowDimension($rowNum)->setRowHeight(10); continue; }
+
+            $panduan->setCellValue('A' . $rowNum, $row[0]);
+            $panduan->setCellValue('B' . $rowNum, $row[1] ?? '');
+
+            // Header baris
+            if ($ri === 0 || in_array($row[0], ['CATATAN PENTING', 'INFO TEMPLATE'])) {
+                $panduan->getStyle('A' . $rowNum . ':B' . $rowNum)->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $C_HEADER]],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN,
+                                                   'color' => ['rgb' => '0369A1']]],
+                ]);
+            } else {
+                $isAltRow = $ri % 2 === 0;
+                $panduan->getStyle('A' . $rowNum . ':B' . $rowNum)->applyFromArray([
+                    'font'    => ['size' => 9],
+                    'fill'    => ['fillType' => Fill::FILL_SOLID,
+                                  'startColor' => ['rgb' => $isAltRow ? 'F8FAFC' : 'FFFFFF']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_HAIR,
+                                                   'color' => ['rgb' => 'E2E8F0']]],
+                    'alignment' => ['wrapText' => true, 'vertical' => Alignment::VERTICAL_TOP],
+                ]);
+                $panduan->getStyle('A' . $rowNum)->getFont()->setBold(true)->setColor(
+                    (new \PhpOffice\PhpSpreadsheet\Style\Color('374151'))
+                );
+            }
+            $panduan->getRowDimension($rowNum)->setRowHeight(18);
+        }
+
+        // Aktifkan kembali sheet pertama saat file dibuka
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // ── Stream download ────────────────────────────────────
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(
+            fn() => $writer->save('php://output'),
+            $filename,
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
+    }
+
+    // ── Helper: konversi index kolom (1-based) ke huruf Excel ──
+    // Mendukung kolom dua huruf (AA, AB, …) untuk kolom periode bulanan (max 64 kolom)
+    private function colLetter(int $index): string
+    {
+        $letter = '';
+        while ($index > 0) {
+            $index--;
+            $letter = chr(65 + ($index % 26)) . $letter;
+            $index  = intdiv($index, 26);
+        }
+        return $letter;
+    }
+
+    // ── Helper: bangun array nama kolom periode ─────────────────
+    private function buildPeriodColumns(string $rentang, int $tahunAwal): array
+    {
+        $cols      = [];
+        $bulanPendek = ['Jan','Feb','Mar','Apr','Mei','Jun',
+                         'Jul','Agu','Sep','Okt','Nov','Des'];
+
+        for ($y = $tahunAwal; $y < $tahunAwal + 5; $y++) {
+            switch ($rentang) {
+                case '5-tahun':
+                    $cols[] = (string) $y;
+                    break;
+
+                case 'semester':
+                    $cols[] = $y . '_S1';
+                    $cols[] = $y . '_S2';
+                    break;
+
+                case 'quarter':
+                    for ($q = 1; $q <= 4; $q++) $cols[] = $y . '_Q' . $q;
+                    break;
+
+                case 'bulanan':
+                    for ($m = 0; $m < 12; $m++) $cols[] = $bulanPendek[$m] . '_' . $y;
+                    break;
+            }
+        }
+
+        return $cols;
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // CREATE / STORE / CHECK NAMA / APPROVAL / APPROVE / REJECT
     // REACTIVATE / BULK APPROVE / BULK APPROVE ALL / DETAIL
     // (tidak berubah dari versi sebelumnya)
@@ -254,6 +592,21 @@ class MetadataController extends Controller
 
     public function store(Request $request)
     {
+        $gambarPath = null;
+
+        if ($request->hasFile('gambar_rujukan')) {
+
+            $file = $request->file('gambar_rujukan');
+
+            $filename = time().'_'.$file->getClientOriginalName();
+
+            $gambarPath = $file->storeAs(
+                'gambar_rujukan',
+                $filename,
+                'public'
+            );
+        }
+
         $request->validate([
             'nama'                  => ['required','max:100',Rule::unique('metadata','nama')],
             'alias'                 => 'nullable|max:100',
@@ -272,6 +625,7 @@ class MetadataController extends Controller
             'tanggal_rilis'         => 'nullable|integer|between:1,31',
             'flag_desimal'          => 'required|integer',
             'tag'                   => 'required|max:255',
+            'gambar_rujukan' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:500',
             'produsen_id'           => 'required|exists:produsen_data,produsen_id',
             'nama_contact_person'   => 'required|max:100',
             'nomor_contact_person'  => 'required|max:100',
@@ -303,6 +657,7 @@ class MetadataController extends Controller
             'flag_desimal'           => $request->flag_desimal,
             'tag'                    => $request->tag,
             'nama_rujukan'           => $request->nama_rujukan,
+            'gambar_rujukan'         => $gambarPath,
             'link_rujukan'           => $request->link_rujukan,
             'produsen_id'            => $request->produsen_id,
             'nama_contact_person'    => $request->nama_contact_person,

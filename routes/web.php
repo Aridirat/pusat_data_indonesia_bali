@@ -81,6 +81,10 @@ Route::middleware([IsLogin::class])->group(function () {
     Route::get('/metadata/export/count', [MetadataController::class, 'exportCount'])->name('metadata.export.count');
     Route::get('/metadata/export',       [MetadataController::class, 'export'])->name('metadata.export');
 
+    // ── [BARU] Export Template Metadata ──────────────────────
+    // Menghasilkan file .xlsx kosong berisi metadata_id + nama + kolom periode waktu
+    Route::get('/metadata/template',     [MetadataController::class, 'exportTemplate'])->name('metadata.template');
+
     // ── Import Excel ──────────────────────────────────────────
     Route::post('/metadata/import/preview', [MetadataImportController::class, 'preview'])->name('metadata.import.preview');
     Route::post('/metadata/import/store',   [MetadataImportController::class, 'store'])->name('metadata.import.store');
