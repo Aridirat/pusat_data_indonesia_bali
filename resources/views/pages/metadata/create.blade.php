@@ -120,7 +120,7 @@
                                 class="w-full border @error('klasifikasi') border-red-400 @else border-gray-300 @enderror
                                        rounded-sm focus:outline-none focus:ring-2 focus:ring-sky-400 px-2 py-2 text-xs">
                             <option value="">-- Pilih Klasifikasi --</option>
-                            @foreach(['Kependudukan','Kesehatan','Pendidikan','Ekonomi','Sosial','Pertanian','Infrastruktur','Lingkungan','Pariwisata','Lainnya'] as $klas)
+                            @foreach(['Kependudukan','Kesehatan','Ketenagakerjaan','Pendidikan','Ekonomi','Sosial','Pertanian','Infrastruktur','Lingkungan','Pariwisata','Lainnya'] as $klas)
                                 <option value="{{ $klas }}" {{ old('klasifikasi') == $klas ? 'selected' : '' }}>
                                     {{ $klas }}
                                 </option>

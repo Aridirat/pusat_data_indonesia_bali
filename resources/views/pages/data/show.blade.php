@@ -114,39 +114,11 @@
                     <div class="mb-4 p-4 bg-sky-50 border border-sky-100 rounded-lg text-center">
                         <p class="text-xs text-sky-500 font-medium uppercase tracking-wide mb-1">Nilai Angka</p>
                         <p class="text-3xl font-bold text-sky-700">
-                            {{ number_format($datum->number_value, 2) }}
+                            {{ rtrim(rtrim(number_format($datum->number_value, 2, ',', '.'), '0'), ',') }}
                         </p>
                         @if($datum->metadata?->satuan_data)
                             <p class="text-sm text-sky-400 mt-1">{{ $datum->metadata->satuan_data }}</p>
                         @endif
-                    </div>
-                @endif
-
-                {{-- Nilai Teks --}}
-                @if($datum->text_value)
-                    <div class="mb-4">
-                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Nilai Teks</p>
-                        <p class="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 leading-relaxed">
-                            {{ $datum->text_value }}
-                        </p>
-                    </div>
-                @endif
-
-                {{-- Nilai Kategori --}}
-                @if(!is_null($datum->kategori_value))
-                    <div class="mb-4">
-                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Kategori</p>
-                        <span class="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">
-                            Kategori {{ $datum->kategori_value }}
-                        </span>
-                    </div>
-                @endif
-
-                {{-- Keterangan lain --}}
-                @if($datum->other)
-                    <div>
-                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Keterangan Lain</p>
-                        <p class="text-sm text-gray-700">{{ $datum->other }}</p>
                     </div>
                 @endif
 
@@ -271,7 +243,6 @@
                     <p class="text-sm text-gray-400">Data lokasi tidak ditemukan.</p>
                 @endif
             </div>
-
             {{-- Dimensi Waktu --}}
             <div class="bg-white rounded-xl shadow p-5">
                 <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
@@ -279,57 +250,105 @@
                 </h2>
 
                 @if($datum->time)
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        @php
-                            $bulanList = ['','Januari','Februari','Maret','April','Mei','Juni',
-                                          'Juli','Agustus','September','Oktober','November','Desember'];
-                            $quarterStyles = [
-                                1 => ['bg' => '#e0f2fe', 'border' => '#bae6fd', 'text' => '#0369a1'],
-                                2 => ['bg' => '#dcfce7', 'border' => '#bbf7d0', 'text' => '#15803d'],
-                                3 => ['bg' => '#fef3c7', 'border' => '#fde68a', 'text' => '#b45309'],
-                                4 => ['bg' => '#ffe4e6', 'border' => '#fecdd3', 'text' => '#be123c'],
-                            ];
-                            $qs = $quarterStyles[$datum->time->quarter] ?? ['bg'=>'#f9fafb','border'=>'#e5e7eb','text'=>'#374151'];
-                        @endphp
 
+                    @php
+                        $bulanList = [
+                            1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',
+                            7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'
+                        ];
+
+                        $quarterStyles = [
+                            1 => ['bg'=>'#e0f2fe','border'=>'#bae6fd','text'=>'#0369a1'],
+                            2 => ['bg'=>'#dcfce7','border'=>'#bbf7d0','text'=>'#15803d'],
+                            3 => ['bg'=>'#fef3c7','border'=>'#fde68a','text'=>'#b45309'],
+                            4 => ['bg'=>'#ffe4e6','border'=>'#fecdd3','text'=>'#be123c'],
+                        ];
+
+                        $time = $datum->time;
+
+                        $decade  = $time->decade;
+                        $year    = $time->year;
+                        $quarter = $time->quarter;
+                        $month   = $time->month;
+                        $day     = $time->day;
+
+                        $qs = $quarterStyles[$quarter] ?? ['bg'=>'#f9fafb','border'=>'#e5e7eb','text'=>'#374151'];
+                    @endphp
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+                        {{-- Decade --}}
                         <div class="bg-gray-50 border rounded-lg p-3 text-center">
-                            <p class="text-xs text-gray-400 mb-1">Dekade</p>
-                            <p class="text-lg font-bold text-gray-700">{{ $datum->time->decade }}an</p>
-                        </div>
-                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
-                            <p class="text-xs text-gray-400 mb-1">Tahun</p>
-                            <p class="text-lg font-bold text-gray-700">{{ $datum->time->year }}</p>
-                        </div>
-                        <div style="background:{{ $qs['bg'] }}; border:1px solid {{ $qs['border'] }};"
-                             class="rounded-lg p-3 text-center">
-                            <p style="color:{{ $qs['text'] }}; opacity:0.7;" class="text-xs mb-1">Kuartal</p>
-                            <p style="color:{{ $qs['text'] }};" class="text-lg font-bold">
-                                Q{{ $datum->time->quarter }}
+                            <p class="text-xs text-gray-400 mb-1">Decade</p>
+                            <p class="text-lg font-bold text-gray-700">
+                                {{ $decade . '-an' ?? 'All' }}
                             </p>
                         </div>
+
+
+                        {{-- Tahun --}}
+                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-400 mb-1">Tahun</p>
+                            <p class="text-lg font-bold text-gray-700">
+                                {{ $year ?? 'All' }}
+                            </p>
+                        </div>
+
+                        {{-- Kuartal --}}
+                        <div style="background:{{ $qs['bg'] }}; border:1px solid {{ $qs['border'] }};"
+                            class="rounded-lg p-3 text-center">
+                            <p style="color:{{ $qs['text'] }}; opacity:0.7;" class="text-xs mb-1">
+                                Kuartal
+                            </p>
+                            <p style="color:{{ $qs['text'] }};" class="text-lg font-bold">
+                                {{ ($quarter && $quarter != 0) ? 'Q'.$quarter : 'All' }}
+                            </p>
+                        </div>
+
+                        {{-- Bulan --}}
                         <div class="bg-gray-50 border rounded-lg p-3 text-center">
                             <p class="text-xs text-gray-400 mb-1">Bulan</p>
                             <p class="text-lg font-bold text-gray-700">
-                                {{ $bulanList[$datum->time->month] ?? '-' }}
+                                {{ ($month && $month != 0) ? $bulanList[$month] : 'All' }}
                             </p>
                         </div>
+
+                        {{-- Hari --}}
+                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
+                            <p class="text-xs text-gray-400 mb-1">Hari</p>
+                            <p class="text-lg font-bold text-gray-700">
+                                {{ ($day && $day != 0) ? $day : 'All' }}
+                            </p>
+                        </div>
+
                     </div>
 
+                    {{-- Tampilan tanggal dinamis --}}
                     <div class="mt-4 pt-4 border-t text-center">
-                        <p class="text-xs text-gray-400 mb-1">Tanggal Lengkap</p>
+
+                        <p class="text-xs text-gray-400 mb-1">Periode Data</p>
+
                         @php
-                            try {
-                                $fullDate = \Carbon\Carbon::create(
-                                    $datum->time->year,
-                                    $datum->time->month,
-                                    $datum->time->day
-                                )->translatedFormat('l, d F Y');
-                            } catch (\Exception $e) {
-                                $fullDate = '-';
+                            $periode = '-';
+
+                            if($year && $month && $day){
+                                $periode = \Carbon\Carbon::create($year,$month,$day)
+                                    ->translatedFormat('d F Y');
+                            }
+                            elseif($year && $month){
+                                $periode = $bulanList[$month] . ' ' . $year;
+                            }
+                            elseif($year){
+                                $periode = $year;
                             }
                         @endphp
-                        <p class="text-base font-semibold text-gray-700">{{ $fullDate }}</p>
+
+                        <p class="text-base font-semibold text-gray-700">
+                            {{ $periode }}
+                        </p>
+
                     </div>
+
                 @else
                     <p class="text-sm text-gray-400">Data waktu tidak ditemukan.</p>
                 @endif

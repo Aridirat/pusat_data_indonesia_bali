@@ -7,6 +7,7 @@ use App\Http\Controllers\MetadataImportController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\WaktuController;
 use App\Http\Controllers\DataController;
+use App\Http\Controllers\DataExportController;
 use App\Http\Middleware\IsLogin;
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -55,6 +56,12 @@ Route::middleware([IsLogin::class])->group(function () {
         Route::post('/preview-excel', [DataController::class, 'previewExcel'])->name('preview_excel');
         Route::post('/import-excel',  [DataController::class, 'importExcel'])->name('import_excel');
         Route::get('/template-excel', [DataController::class, 'downloadTemplateExcel'])->name('template_excel');
+
+        // ── [BARU] Export Data (Excel / PDF / JSON) ───────────
+        // Filter params: metadata_id, kabupaten, year (sama dengan index)
+        Route::get('/export/excel', [DataExportController::class, 'excel'])->name('export.excel');
+        Route::get('/export/pdf',   [DataExportController::class, 'pdf'])->name('export.pdf');
+        Route::get('/export/json',  [DataExportController::class, 'json'])->name('export.json');
 
         // Approval
         Route::get('/approval',         [DataController::class, 'approval'])->name('approval');

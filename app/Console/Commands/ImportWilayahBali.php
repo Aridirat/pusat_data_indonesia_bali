@@ -17,6 +17,25 @@ class ImportWilayahBali extends Command
         $kodeProv = '51';
         $namaProv = 'BALI';
 
+        $batchSize = 500;
+        $dataInsert = [];
+
+        // =========================
+        // INSERT PROVINSI
+        // =========================
+        DB::table('location')->insert([
+            'kode_provinsi' => $kodeProv,
+            'kode_kabupaten' => '0',
+            'kode_kecamatan' => '0',
+            'kode_desa' => '0',
+            'provinsi' => $namaProv,
+            'kabupaten' => 'ALL',
+            'kecamatan' => 'ALL',
+            'desa' => 'ALL',
+            'banjar' => 'ALL',
+            'rt' => 'ALL'
+        ]);
+
         $this->info("Mengambil data kabupaten Bali...");
 
         $responseKab = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_kab', [
@@ -27,12 +46,23 @@ class ImportWilayahBali extends Command
 
         $kabupaten = $responseKab->json()['output'] ?? [];
 
-        $dataInsert = [];
-        $batchSize = 500;
-
         foreach ($kabupaten as $kodeKab => $namaKab) {
 
-            $this->info("Kabupaten: $namaKab");
+            // =========================
+            // INSERT KABUPATEN
+            // =========================
+            DB::table('location')->insert([
+                'kode_provinsi' => $kodeProv,
+                'kode_kabupaten' => $kodeKab,
+                'kode_kecamatan' => '0',
+                'kode_desa' => '0',
+                'provinsi' => $namaProv,
+                'kabupaten' => $namaKab,
+                'kecamatan' => 'ALL',
+                'desa' => 'ALL',
+                'banjar' => 'ALL',
+                'rt' => 'ALL'
+            ]);
 
             $responseKec = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_kec', [
                 'thn' => $tahun,
@@ -45,7 +75,21 @@ class ImportWilayahBali extends Command
 
             foreach ($kecamatan as $kodeKec => $namaKec) {
 
-                $this->info("  Kecamatan: $namaKec");
+                // =========================
+                // INSERT KECAMATAN
+                // =========================
+                DB::table('location')->insert([
+                    'kode_provinsi' => $kodeProv,
+                    'kode_kabupaten' => $kodeKab,
+                    'kode_kecamatan' => $kodeKec,
+                    'kode_desa' => '0',
+                    'provinsi' => $namaProv,
+                    'kabupaten' => $namaKab,
+                    'kecamatan' => $namaKec,
+                    'desa' => 'ALL',
+                    'banjar' => 'ALL',
+                    'rt' => 'ALL'
+                ]);
 
                 $responseDes = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_des', [
                     'thn' => $tahun,
@@ -69,8 +113,8 @@ class ImportWilayahBali extends Command
                         'kabupaten' => $namaKab,
                         'kecamatan' => $namaKec,
                         'desa' => $namaDes,
-                        'banjar' => null,
-                        'rt' => null
+                        'banjar' => 'ALL',
+                        'rt' => 'ALL'
                     ];
 
                     if (count($dataInsert) >= $batchSize) {

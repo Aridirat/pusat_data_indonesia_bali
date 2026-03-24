@@ -134,11 +134,34 @@
                         </td>
                         <td class="px-4 py-3 text-xs">
                             @if($row->time)
-                                <p class="font-medium text-gray-700">{{ $row->time->year }}</p>
-                                <p class="text-gray-400">
-                                    {{ \Carbon\Carbon::create($row->time->year, $row->time->month, $row->time->day)
-                                        ->translatedFormat('d F') }}
-                                </p>
+
+                                {{-- jika hanya tahun --}}
+                                @if($row->time->month == 0 && $row->time->day == 0)
+
+                                    <p class="font-medium text-gray-700">
+                                        {{ $row->time->year }}
+                                    </p>
+                                    <p class="text-gray-400">ALL</p>
+
+                                {{-- jika sampai bulan --}}
+                                @elseif($row->time->day == 0)
+
+                                    <p class="font-medium text-gray-700">
+                                        {{ \Carbon\Carbon::create($row->time->year, $row->time->month, 1)
+                                            ->translatedFormat('F Y') }}
+                                    </p>
+                                    <p class="text-gray-400">ALL</p>
+
+                                {{-- jika tanggal lengkap --}}
+                                @else
+
+                                    <p class="font-medium text-gray-700">
+                                        {{ \Carbon\Carbon::create($row->time->year, $row->time->month, $row->time->day)
+                                            ->translatedFormat('d F Y') }}
+                                    </p>
+
+                                @endif
+
                             @else
                                 <span class="text-gray-400">-</span>
                             @endif
@@ -146,25 +169,11 @@
                         <td class="px-4 py-3">
                             @if(!is_null($row->number_value))
                                 <span class="font-semibold text-gray-800">
-                                    {{ number_format($row->number_value, 2) }}
+                                    {{ rtrim(rtrim(number_format($row->number_value, 2, ',', '.'), '0'), ',') }}
                                     <span class="text-xs font-normal text-gray-400">{{ $row->metadata?->satuan_data }}</span>
-                                </span>
-                            @elseif($row->text_value)
-                                <span class="text-gray-700 text-xs line-clamp-2">
-                                    {{ Str::limit($row->text_value, 50) }}
-                                </span>
-                            @elseif(!is_null($row->kategori_value))
-                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs">
-                                    Kat. {{ $row->kategori_value }}
                                 </span>
                             @else
                                 <span class="text-gray-400 text-xs">-</span>
-                            @endif
-
-                            @if($row->analisis_fenomena)
-                                <p class="text-xs text-gray-400 mt-0.5 line-clamp-1 italic">
-                                    {{ Str::limit($row->analisis_fenomena, 40) }}
-                                </p>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-xs text-gray-500">

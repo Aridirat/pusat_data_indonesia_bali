@@ -65,12 +65,9 @@
                 <i class="fas fa-bookmark"></i> Simpan Template
             </button>
 
-            @if($hasFilter && $data && $data->count() > 0)
-                <button onclick="exportJSON()"
-                    class="bg-sky-100 hover:bg-sky-200 text-sky-600 px-3 py-2 rounded-md text-sm
-                           flex items-center gap-1.5 transition-colors">
-                    <i class="fas fa-code text-xs"></i> JSON
-                </button>
+            {{-- Export Buttons --}}
+            @if($hasFilter && request('metadata_id'))
+                @include('pages.data._export_buttons')
             @endif
         </div>
     </div>
@@ -345,65 +342,143 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($data as $index => $row)
+                        @php
+                            $time = $row->time;
+
+                            $bulanList = [
+                                1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',
+                                7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'
+                            ];
+
+                            $year    = $time->year ?? null;
+                            $quarter = $time->quarter ?? null;
+                            $month   = $time->month ?? null;
+
+                            $bulanText = ($month && $month != 0) ? $bulanList[$month] : 'All';
+                            $quarterText = ($quarter && $quarter != 0) ? 'Q'.$quarter : 'All';
+
+                            $lokasiText = '-';
+
+                            if($row->location){
+                                $lokasiText = implode(', ', array_filter([
+                                    $row->location->kabupaten ?? null,
+                                    $row->location->kecamatan ?? null,
+                                    $row->location->desa ?? null
+                                ]));
+                            }
+                        @endphp
+
                         <tr class="hover:bg-purple-50 transition-colors data-row"
                             id="row-{{ $row->id }}"
                             data-id="{{ $row->id }}"
                             data-metadata="{{ e($row->metadata->nama ?? '-') }}"
                             data-metadata-id="{{ $row->metadata_id }}"
-                            data-lokasi="{{ e(implode(', ', array_filter([$row->location->kabupaten ?? '', $row->location->kecamatan ?? '']))) }}"
-                            data-waktu="{{ $row->time?->year ?? '-' }}"
-                            data-nilai="{{ !is_null($row->number_value) ? number_format($row->number_value, 2) : ($row->text_value ?? ($row->kategori_value ?? '-')) }}">
+                            data-lokasi="{{ e($lokasiText) }}"
+                            data-waktu="{{ $year ?? 'All' }}"
+                            data-nilai="{{ $row->number_value ?? 0 }}">
 
                             <td class="px-4 py-3">
-                                <input type="checkbox" class="row-check rounded border-gray-300 cursor-pointer"
-                                       value="{{ $row->id }}" onchange="onRowCheck(this)">
+                                <input type="checkbox"
+                                    class="row-check rounded border-gray-300 cursor-pointer"
+                                    value="{{ $row->id }}"
+                                    onchange="onRowCheck(this)">
                             </td>
-                            <td class="px-4 py-3 text-gray-400 text-xs">{{ $data->firstItem() + $index }}</td>
+
+                            <td class="px-4 py-3 text-gray-400 text-xs">
+                                {{ $data->firstItem() + $index }}
+                            </td>
+
+                            {{-- METADATA --}}
                             <td class="px-4 py-3">
-                                <p class="font-semibold text-gray-800">{{ $row->metadata->nama ?? '-' }}</p>
+                                <p class="font-semibold text-gray-800">
+                                    {{ $row->metadata->nama ?? '-' }}
+                                </p>
+
                                 @if($row->metadata?->satuan_data)
-                                    <p class="text-xs text-gray-400">{{ $row->metadata->satuan_data }}</p>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-xs">
-                                @if($row->location)
-                                    <p class="font-medium text-gray-700">{{ $row->location->kabupaten }}</p>
-                                    <p class="text-gray-400">{{ $row->location->kecamatan }}, {{ $row->location->desa }}</p>
-                                @else
-                                    <span class="text-gray-400">-</span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-xs">
-                                @if($row->time)
-                                    <p class="font-medium text-gray-700">{{ $row->time->year }}</p>
-                                    <p class="text-gray-400">
-                                        Q{{ $row->time->quarter }} ·
-                                        {{ \Carbon\Carbon::create($row->time->year, $row->time->month)->translatedFormat('F') }}
+                                    <p class="text-xs text-gray-400">
+                                        {{ $row->metadata->satuan_data }}
                                     </p>
+                                @endif
+                            </td>
+
+                            {{-- LOKASI --}}
+                            <td class="px-4 py-3 text-xs">
+
+                                @if($row->location)
+
+                                    <p class="font-medium text-gray-700">
+                                        {{ $row->location->kabupaten ?? 'All' }}
+                                    </p>
+
+                                    <p class="text-gray-400">
+                                        {{ $row->location->kecamatan ?? 'All' }},
+                                        {{ $row->location->desa ?? 'All' }}
+                                    </p>
+
                                 @else
                                     <span class="text-gray-400">-</span>
                                 @endif
+
                             </td>
+
+                            {{-- WAKTU --}}
+                            <td class="px-4 py-3 text-xs">
+
+                                @if($row->time)
+
+                                    <p class="font-medium text-gray-700">
+                                        {{ $year ?? 'All' }}
+                                    </p>
+
+                                    <p class="text-gray-400">
+                                        {{ $quarterText }} · {{ $bulanText }}
+                                    </p>
+
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+
+                            </td>
+
+                            {{-- NILAI --}}
                             <td class="px-4 py-3">
+
                                 @if(!is_null($row->number_value))
-                                    <span class="font-semibold text-gray-800">{{ number_format($row->number_value, 2) }}</span>
-                                @elseif($row->text_value)
-                                    <span class="text-gray-600 text-xs">{{ Str::limit($row->text_value, 50) }}</span>
-                                @elseif(!is_null($row->kategori_value))
-                                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs">Kat. {{ $row->kategori_value }}</span>
+
+                                    <span class="font-semibold text-gray-800">
+                                        {{ rtrim(rtrim(number_format($row->number_value, 2, ',', '.'), '0'), ',') }}
+                                    </span>
+
+                                    <span class="text-xs font-normal text-gray-400">
+                                        {{ $row->metadata?->satuan_data }}
+                                    </span>
+
                                 @else
                                     <span class="text-gray-400 text-xs">-</span>
                                 @endif
+
                             </td>
-                            <td class="px-4 py-3 text-xs text-gray-500">{{ $row->user->name ?? '-' }}</td>
+
+                            {{-- USER --}}
+                            <td class="px-4 py-3 text-xs text-gray-500">
+                                {{ $row->user->name ?? '-' }}
+                            </td>
+
+                            {{-- AKSI --}}
                             <td class="px-4 py-3 text-center">
+
                                 <a href="{{ route('data.show', $row->id) }}"
-                                   class="text-sky-500 hover:text-sky-700 text-xs font-medium transition-colors">
+                                class="text-sky-500 hover:text-sky-700 text-xs font-medium transition-colors">
+
                                     <i class="fas fa-eye"></i> Detail
+
                                 </a>
+
                             </td>
+
                         </tr>
-                    @endforeach
+
+                        @endforeach
                 </tbody>
             </table>
         </div>
@@ -1015,6 +1090,32 @@ function updateSelectionUI() {
     if (selText) selText.textContent = count + ' data dipilih';
 }
 
+function formatStatNumber(value) {
+
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+
+    let num = parseFloat(value);
+
+    if (isNaN(num)) {
+        return value;
+    }
+
+    let formatted = num.toLocaleString('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
+
+    return formatted;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerText = text;
+    return div.innerHTML;
+}
+
 // ────────────────────────────────────────────────────────────────
 // MODAL TEMPLATE
 // ────────────────────────────────────────────────────────────────
@@ -1060,16 +1161,30 @@ function openTemplateModal() {
         document.getElementById('modalDataTableWrap').classList.remove('hidden');
         document.getElementById('modalDataBody').innerHTML = rows.map(r =>
             `<tr id="modal-row-${r.id}">
-                <td class="px-3 py-2 font-medium text-gray-700">${r.metadata}</td>
-                <td class="px-3 py-2 text-gray-500">${r.lokasi}</td>
-                <td class="px-3 py-2 text-gray-500">${r.waktu}</td>
-                <td class="px-3 py-2 text-gray-700">${r.nilai}</td>
+
+                <td class="px-3 py-2 font-medium text-gray-700">
+                    ${escapeHtml(r.metadata || '-')}
+                </td>
+
+                <td class="px-3 py-2 text-gray-500 text-xs">
+                    ${escapeHtml(r.lokasi && r.lokasi.trim() !== '' ? r.lokasi : 'All')}
+                </td>
+
+                <td class="px-3 py-2 text-gray-500 text-xs">
+                    ${escapeHtml(r.waktu && r.waktu.trim() !== '' ? r.waktu : 'All')}
+                </td>
+
+                <td class="px-3 py-2 text-gray-700 font-semibold">
+                    ${formatStatNumber(r.nilai)}
+                </td>
+
                 <td class="px-3 py-2 text-center">
                     <button onclick="removeFromModal('${r.id}')"
                             class="text-red-400 hover:text-red-600 transition-colors">
                         <i class="fas fa-times-circle"></i>
                     </button>
                 </td>
+
             </tr>`
         ).join('');
     }

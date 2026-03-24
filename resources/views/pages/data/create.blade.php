@@ -27,7 +27,8 @@
                         </p>
                         <div class="flex gap-2 mt-3">
                             <a href="{{ route('data.show', session('duplicate_warning.existing_id')) }}"
-                               class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-md font-medium transition-colors">
+                               class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5
+                                      rounded-md font-medium transition-colors">
                                 <i class="fas fa-eye mr-1"></i> Lihat Data Existing
                             </a>
                         </div>
@@ -36,7 +37,9 @@
             </div>
         @endif
 
-        {{-- TAB SWITCHER --}}
+        {{-- ══════════════════════════════════════════════
+             TAB SWITCHER
+        ══════════════════════════════════════════════ --}}
         <div class="flex border-b border-gray-200 mb-6">
             <button onclick="switchTab('manual')" id="tab-manual"
                 class="tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors
@@ -50,9 +53,9 @@
             </button>
         </div>
 
-        {{-- ═══════════════════════════════════════ --}}
-        {{-- TAB 1: INPUT MANUAL                    --}}
-        {{-- ═══════════════════════════════════════ --}}
+        {{-- ══════════════════════════════════════════════
+             TAB 1: INPUT MANUAL
+        ══════════════════════════════════════════════ --}}
         <div id="panel-manual">
             <form action="{{ route('data.store') }}" method="POST" class="space-y-5">
                 @csrf
@@ -66,7 +69,8 @@
                         </label>
                         <select name="metadata_id" id="metadataSelect" required
                             class="w-full border @error('metadata_id') border-red-400 @else border-gray-300 @enderror
-                                   rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                                   rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
+                                   focus:ring-sky-400 bg-white"
                             onchange="updateMetadataInfo(this)">
                             <option value="">-- Pilih Metadata --</option>
                             @foreach($metadataList as $meta)
@@ -79,11 +83,13 @@
                             @endforeach
                         </select>
                         @error('metadata_id')
-                            <p class="mt-1 text-xs text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                            <p class="mt-1 text-xs text-red-500">
+                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
+                            </p>
                         @enderror
-
-                        {{-- Info metadata yang dipilih --}}
-                        <div id="metadataInfo" class="hidden mt-2 px-3 py-2 bg-sky-50 border border-sky-100 rounded-md text-xs text-sky-700">
+                        <div id="metadataInfo"
+                             class="hidden mt-2 px-3 py-2 bg-sky-50 border border-sky-100
+                                    rounded-md text-xs text-sky-700">
                             <span id="metadataTipe"></span> •
                             Satuan: <span id="metadataSatuan"></span>
                         </div>
@@ -96,7 +102,8 @@
                         </label>
                         <select name="location_id" required
                             class="w-full border @error('location_id') border-red-400 @else border-gray-300 @enderror
-                                   rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                                   rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
+                                   focus:ring-sky-400 bg-white">
                             <option value="">-- Pilih Lokasi --</option>
                             @foreach($locationList as $loc)
                                 <option value="{{ $loc->location_id }}"
@@ -106,7 +113,9 @@
                             @endforeach
                         </select>
                         @error('location_id')
-                            <p class="mt-1 text-xs text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                            <p class="mt-1 text-xs text-red-500">
+                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
+                            </p>
                         @enderror
                     </div>
 
@@ -116,28 +125,30 @@
                             Waktu <span class="text-red-500">*</span>
                         </label>
                         <div class="flex gap-2">
-                            {{-- Pilih Tahun dulu --}}
                             <select id="filterTahun"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
+                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
                                 onchange="filterWaktu()">
                                 <option value="">Tahun</option>
                                 @foreach($timeList->pluck('year')->unique()->sortDesc() as $yr)
                                     <option value="{{ $yr }}">{{ $yr }}</option>
                                 @endforeach
                             </select>
-                            {{-- Pilih Bulan --}}
                             <select id="filterBulan"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
+                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
                                 onchange="filterWaktu()">
                                 <option value="">Bulan</option>
-                                @foreach(['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as $i => $bulan)
+                                @foreach(['Januari','Februari','Maret','April','Mei','Juni',
+                                          'Juli','Agustus','September','Oktober','November','Desember']
+                                         as $i => $bulan)
                                     <option value="{{ $i + 1 }}">{{ $bulan }}</option>
                                 @endforeach
                             </select>
-                            {{-- Pilih Hari (time_id) --}}
                             <select name="time_id" id="selectHari" required
                                 class="border @error('time_id') border-red-400 @else border-gray-300 @enderror
-                                       rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white flex-1">
+                                       rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
+                                       focus:ring-sky-400 bg-white flex-1">
                                 <option value="">Hari</option>
                                 @foreach($timeList as $t)
                                     <option value="{{ $t->time_id }}"
@@ -150,12 +161,14 @@
                             </select>
                         </div>
                         @error('time_id')
-                            <p class="mt-1 text-xs text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                            <p class="mt-1 text-xs text-red-500">
+                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
+                            </p>
                         @enderror
                     </div>
 
-                    {{-- Nilai (number) --}}
-                    <div id="fieldNumber">
+                    {{-- Nilai Angka --}}
+                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                             Nilai Angka
                             <span id="satuanLabel" class="text-gray-400 font-normal text-xs ml-1"></span>
@@ -172,407 +185,610 @@
 
                 </div>
 
-                {{-- Nilai Teks --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nilai Teks</label>
-                    <textarea name="text_value" rows="2"
-                        placeholder="Isi jika nilai berupa deskripsi atau teks..."
-                        class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none">{{ old('text_value') }}</textarea>
-                </div>
-
-                {{-- Kategori --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nilai Kategori</label>
-                    <input type="number" name="kategori_value" value="{{ old('kategori_value') }}"
-                        placeholder="Isi jika nilai berupa kode kategori..."
-                        class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-sky-400">
-                </div>
-
-                {{-- Keterangan lain --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Keterangan Lain</label>
-                    <input type="text" name="other" value="{{ old('other') }}" maxlength="100"
-                        placeholder="Keterangan tambahan (opsional)..."
-                        class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-sky-400">
-                </div>
-
-                {{-- Analisis Fenomena --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Analisis Fenomena</label>
-                    <textarea name="analisis_fenomena" rows="3"
-                        placeholder="Tuliskan analisis atau catatan fenomena terkait data ini (opsional)..."
-                        class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none">{{ old('analisis_fenomena') }}</textarea>
-                </div>
-
                 <div class="flex justify-end pt-2">
                     <button type="submit"
-                        class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-md shadow text-sm font-semibold
-                               flex items-center gap-2 transition-colors">
+                        class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-md shadow
+                               text-sm font-semibold flex items-center gap-2 transition-colors">
                         <i class="fas fa-save"></i> Simpan Data
                     </button>
                 </div>
             </form>
         </div>
 
-        {{-- ═══════════════════════════════════════ --}}
-        {{-- TAB 2: UPLOAD EXCEL                    --}}
-        {{-- ═══════════════════════════════════════ --}}
+        {{-- ══════════════════════════════════════════════
+             TAB 2: UPLOAD EXCEL
+             Preview dilakukan via AJAX ke server (DataImport).
+             Server membaca file, melakukan lookup time_id, deteksi
+             duplikat, dan mengembalikan JSON siap-render.
+        ══════════════════════════════════════════════ --}}
         <div id="panel-excel" class="hidden">
 
-            {{-- Info format --}}
-            <div class="mb-5 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-gray-900">
-                <p class="font-semibold flex items-center gap-2 mb-2 text-blue-6009">
-                    <i class="fas fa-info-circle"></i> Format Excel yang Diperlukan
+            {{-- Info Format Template --}}
+            <div class="mb-5 rounded-lg border p-4 text-sm"
+                 style="background:#f0f9ff; border-color:#bae6fd;">
+                <p class="font-semibold flex items-center gap-2 mb-2" style="color:#0369a1;">
+                    <i class="fas fa-info-circle"></i>
+                    Format Excel Template Metadata
                 </p>
-                <p class="text-xs text-gray-900 mb-2">Pastikan file Excel memiliki kolom header berikut di baris pertama:</p>
-                <div class="flex flex-wrap gap-2">
-                    @foreach(['metadata_id','location_id','time_id','number_value','text_value','kategori_value','other','analisis_fenomena'] as $col)
-                        <code class="bg-blue-100 text-gray-900 px-2 py-0.5 rounded text-xs font-mono">{{ $col }}</code>
+                <p class="text-xs text-gray-600 mb-3">
+                    Gunakan file template yang di-generate dari halaman
+                    <strong>Daftar Metadata → Export Template</strong>.
+                    Header ada di <strong>baris 3</strong> dengan struktur kolom:
+                </p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    @foreach(['metadata_id','nama_metadata','location_id','nama_lokasi'] as $col)
+                        <code class="px-2 py-0.5 rounded text-xs font-mono font-bold"
+                              style="background:#e0f2fe; color:#0369a1;">{{ $col }}</code>
                     @endforeach
+                    <code class="px-2 py-0.5 rounded text-xs font-mono"
+                          style="background:#fef3c7; color:#92400e;">2021</code>
+                    <code class="px-2 py-0.5 rounded text-xs font-mono"
+                          style="background:#fef3c7; color:#92400e;">2022</code>
+                    <code class="px-2 py-0.5 rounded text-xs font-mono"
+                          style="background:#fef3c7; color:#92400e;">… dst</code>
                 </div>
-                <p class="text-xs text-gray-900 mt-2">
-                    <strong>Wajib diisi:</strong> metadata_id, location_id, time_id.
-                    Kolom lainnya boleh kosong.
+                <p class="text-xs text-gray-500">
+                    Format kolom periode yang didukung:
+                    <code class="bg-gray-100 px-1 rounded">2022</code> (tahunan) ·
+                    <code class="bg-gray-100 px-1 rounded">2022_Q1</code> (quarter) ·
+                    <code class="bg-gray-100 px-1 rounded">2022_S1</code> (semester) ·
+                    <code class="bg-gray-100 px-1 rounded">Jan_2022</code> (bulanan)
                 </p>
-                <a href="{{ route('data.template_excel') }}"
-                   class="mt-2 inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-semibold underline">
-                    <i class="fas fa-download"></i> Download Template Excel
-                </a>
             </div>
 
-            {{-- Upload form --}}
-            <div id="uploadZone"
-                 class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-sky-400
-                        hover:bg-sky-50 transition-colors cursor-pointer"
+            {{-- Drop Zone --}}
+            <div id="dropZone"
+                 class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center
+                        transition-colors cursor-pointer"
+                 style="hover:border-sky-400; hover:background:#f0f9ff;"
                  onclick="document.getElementById('fileExcel').click()"
-                 ondragover="event.preventDefault(); this.classList.add('border-sky-400','bg-sky-50')"
-                 ondragleave="this.classList.remove('border-sky-400','bg-sky-50')"
+                 ondragover="event.preventDefault(); this.style.borderColor='#38bdf8'; this.style.background='#f0f9ff';"
+                 ondragleave="this.style.borderColor=''; this.style.background='';"
                  ondrop="handleDrop(event)">
-                <i class="fas fa-file-excel text-4xl text-gray-300 mb-3"></i>
-                <p class="text-gray-500 font-medium text-sm">Klik atau drag & drop file Excel di sini</p>
-                <p class="text-gray-400 text-xs mt-1">Format: .xlsx atau .xls • Maksimal 5MB</p>
-                <input type="file" id="fileExcel" accept=".xlsx,.xls" class="hidden" onchange="previewExcel(this)">
+                <i class="fas fa-cloud-upload-alt text-5xl text-gray-300 mb-3"></i>
+                <p class="text-gray-500 font-medium">Klik atau drag & drop file Excel template di sini</p>
+                <p class="text-gray-400 text-xs mt-1">Format: .xlsx atau .xls • Maksimal 10MB</p>
+                <input type="file" id="fileExcel" accept=".xlsx,.xls" class="hidden"
+                       onchange="onFileSelected(this.files[0])">
             </div>
 
-            {{-- File terpilih --}}
-            <div id="fileInfo" class="hidden mt-3 flex items-center gap-3 px-4 py-2.5 bg-gray-50 border rounded-lg text-sm">
-                <i class="fas fa-file-excel text-green-500"></i>
-                <span id="fileName" class="text-gray-700 font-medium flex-1"></span>
-                <span id="fileSize" class="text-gray-400 text-xs"></span>
-                <button onclick="clearFile()" class="text-red-400 hover:text-red-600 text-xs transition-colors">
-                    <i class="fas fa-times"></i> Hapus
+            {{-- File info bar --}}
+            <div id="fileInfoBar"
+                 class="hidden mt-3 flex items-center gap-3 px-4 py-2.5 bg-gray-50
+                        border border-gray-200 rounded-lg text-sm">
+                <i class="fas fa-file-excel text-green-500 text-lg"></i>
+                <div class="flex-1 min-w-0">
+                    <p id="fileInfoName" class="text-gray-700 font-medium truncate"></p>
+                    <p id="fileInfoSize" class="text-gray-400 text-xs"></p>
+                </div>
+                <button onclick="resetUpload()"
+                        class="text-xs text-red-400 hover:text-red-600 transition-colors flex items-center gap-1">
+                    <i class="fas fa-times"></i> Ganti File
                 </button>
             </div>
 
-            {{-- Loading preview --}}
-            <div id="loadingPreview" class="hidden mt-4 flex items-center gap-3 text-sky-600 text-sm">
-                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
-                Membaca file Excel...
+            {{-- Loading state --}}
+            <div id="loadingBar" class="hidden mt-4">
+                <div class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
+                     style="background:#f0f9ff; border:1px solid #bae6fd; color:#0369a1;">
+                    <svg class="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span id="loadingText">Membaca dan memvalidasi file Excel di server…</span>
+                </div>
+                <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div id="loadingBar_inner"
+                         class="h-full rounded-full animate-pulse"
+                         style="width:100%; background:#38bdf8;"></div>
+                </div>
             </div>
 
-            {{-- Preview result --}}
-            <div id="previewResult" class="hidden mt-5">
+            {{-- ── PREVIEW RESULT (diisi oleh JS setelah AJAX) ── --}}
+            <div id="previewSection" class="hidden mt-6 space-y-5">
 
-                {{-- Summary --}}
-                <div class="grid grid-cols-3 gap-3 mb-4" id="previewSummary"></div>
+                {{-- Statistik ringkasan --}}
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="statsGrid"></div>
 
-                {{-- Error rows --}}
-                <div id="errorSection" class="hidden mb-4">
-                    <p class="text-sm font-semibold text-red-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-exclamation-circle text-red-500"></i>
-                        Baris dengan Format Tidak Sesuai
+                {{-- Alert: periode tidak ditemukan di tabel time --}}
+                <div id="timeNotFoundAlert" class="hidden rounded-lg p-4 text-sm"
+                     style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c;">
+                    <p class="font-semibold flex items-center gap-2 mb-1">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Kolom Periode Tidak Ditemukan di Tabel Time
                     </p>
+                    <p id="timeNotFoundDetail" class="text-xs"></p>
+                    <p class="text-xs mt-1">
+                        Pastikan tabel <code>time</code> sudah berisi data untuk tahun/periode tersebut.
+                    </p>
+                </div>
+
+                {{-- Error baris --}}
+                <div id="errorSection" class="hidden">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                        <p class="text-sm font-semibold text-red-700">Baris Bermasalah</p>
+                    </div>
                     <div class="border border-red-200 rounded-lg overflow-hidden text-xs">
                         <table class="w-full">
                             <thead class="bg-red-50 text-red-600">
                                 <tr>
-                                    <th class="px-3 py-2 text-left">Baris</th>
-                                    <th class="px-3 py-2 text-left">Keterangan</th>
+                                    <th class="px-3 py-2 text-left w-20">Baris Excel</th>
+                                    <th class="px-3 py-2 text-left">Keterangan Masalah</th>
                                 </tr>
                             </thead>
-                            <tbody id="errorRows" class="divide-y divide-red-100"></tbody>
+                            <tbody id="errorBody" class="divide-y divide-red-100"></tbody>
                         </table>
                     </div>
                 </div>
 
-                {{-- Duplicate rows --}}
-                <div id="duplicateSection" class="hidden mb-4">
-                    <p class="text-sm font-semibold text-amber-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-copy text-amber-500"></i>
-                        Baris Data Duplikat
-                    </p>
+                {{-- Duplikat --}}
+                <div id="dupSection" class="hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <p class="text-sm font-semibold text-amber-700">
+                                Data Sudah Ada di Database
+                            </p>
+                        </div>
+                        <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                            <input type="checkbox" id="cbSkipDup" checked
+                                   class="rounded border-gray-300 text-sky-500 focus:ring-sky-400">
+                            Lewati duplikat saat import
+                        </label>
+                    </div>
                     <div class="border border-amber-200 rounded-lg overflow-hidden text-xs">
                         <table class="w-full">
-                            <thead class="bg-amber-50 text-amber-600">
+                            <thead class="bg-amber-50 text-amber-700">
                                 <tr>
-                                    <th class="px-3 py-2 text-left">Baris</th>
-                                    <th class="px-3 py-2 text-left">Keterangan</th>
+                                    <th class="px-3 py-2 text-left">Metadata</th>
+                                    <th class="px-3 py-2 text-left">Lokasi</th>
+                                    <th class="px-3 py-2 text-left">Periode</th>
+                                    <th class="px-3 py-2 text-right">Nilai</th>
                                 </tr>
                             </thead>
-                            <tbody id="duplicateRows" class="divide-y divide-amber-100"></tbody>
+                            <tbody id="dupBody" class="divide-y divide-amber-100"></tbody>
                         </table>
                     </div>
-                    <label class="flex items-center gap-2 mt-2 text-xs text-gray-600 cursor-pointer">
-                        <input type="checkbox" id="skipDuplicates" checked
-                            class="rounded border-gray-300 text-sky-500 focus:ring-sky-400">
-                        Lewati data duplikat (direkomendasikan)
-                    </label>
                 </div>
 
-                {{-- Valid data preview --}}
-                <div id="validSection" class="hidden mb-4">
-                    <p class="text-sm font-semibold text-green-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-check-circle text-green-500"></i>
-                        Data Valid — Siap Diimport
-                    </p>
-                    <div class="border border-green-200 rounded-lg overflow-auto max-h-64 text-xs">
-                        <table class="w-full">
+                {{-- Data valid (preview max 20 record) --}}
+                <div id="validSection" class="hidden">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-2 h-2 rounded-full bg-green-400"></span>
+                        <p class="text-sm font-semibold text-green-700">
+                            Data Valid — Siap Diimport
+                        </p>
+                    </div>
+                    <div class="border border-green-200 rounded-lg overflow-x-auto max-h-72">
+                        <table class="w-full text-xs">
                             <thead class="bg-green-50 text-green-700 sticky top-0">
-                                <tr id="previewTableHead"></tr>
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Metadata</th>
+                                    <th class="px-3 py-2 text-left">Lokasi</th>
+                                    <th class="px-3 py-2 text-left">Periode</th>
+                                    <th class="px-3 py-2 text-right">Nilai</th>
+                                </tr>
                             </thead>
-                            <tbody id="previewTableBody" class="divide-y divide-green-100"></tbody>
+                            <tbody id="validBody" class="divide-y divide-green-100"></tbody>
                         </table>
                     </div>
+                    <p id="validMore" class="hidden text-xs text-gray-400 text-right mt-1"></p>
                 </div>
 
-                {{-- Submit import --}}
-                <form id="importForm" action="{{ route('data.import_excel') }}" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <input type="file" name="file_excel" id="hiddenFileInput" class="hidden">
-                    <input type="hidden" name="skip_duplicates" id="skipDuplicatesInput" value="1">
+                {{-- Tombol Import --}}
+                <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <button onclick="resetUpload()"
+                            class="text-sm text-gray-500 hover:text-gray-700 transition-colors
+                                   flex items-center gap-1.5">
+                        <i class="fas fa-arrow-left"></i> Ganti File
+                    </button>
 
-                    <div class="flex justify-end gap-3 pt-2">
-                        <button type="button" onclick="clearFile()"
-                            class="border border-gray-300 text-gray-500 hover:bg-gray-50 px-4 py-2 rounded-md text-sm transition-colors">
-                            Batal
-                        </button>
-                        <button type="submit" id="btnImport" disabled
-                            class="bg-sky-600 hover:bg-sky-700 disabled:bg-gray-300 disabled:cursor-not-allowed
-                                   text-white px-6 py-2.5 rounded-md shadow text-sm font-semibold
-                                   flex items-center gap-2 transition-colors">
-                            <i class="fas fa-file-import"></i>
-                            <span id="importBtnText">Import Data</span>
-                        </button>
-                    </div>
-                </form>
+                    <button id="btnImport" onclick="doImport()" disabled
+                            class="flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-semibold
+                                   text-white shadow transition-colors
+                                   disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            style="background:#0284c7;"
+                            onmouseover="if(!this.disabled) this.style.background='#0369a1'"
+                            onmouseout="if(!this.disabled) this.style.background='#0284c7'">
+                        <i class="fas fa-file-import"></i>
+                        <span id="btnImportText">Import Data</span>
+                    </button>
+                </div>
+
             </div>
-        </div>
+
+            {{-- Import sedang berjalan --}}
+            <div id="importingBar" class="hidden mt-5">
+                <div class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
+                     style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;">
+                    <svg class="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    Menyimpan data ke database, mohon tunggu…
+                </div>
+            </div>
+
+            {{-- Hasil import --}}
+            <div id="importResult" class="hidden mt-4"></div>
+
+        </div>{{-- end panel-excel --}}
 
     </div>
 </div>
 
+{{-- ══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════ --}}
 <script>
-    // ═══════════════════════════════════════════
-    // TAB SWITCHER
-    // ═══════════════════════════════════════════
-    function switchTab(tab) {
-        document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
-        document.getElementById('panel-excel').classList.toggle('hidden', tab !== 'excel');
+const CSRF         = '{{ csrf_token() }}';
+const PREVIEW_URL  = '{{ route("data.preview_excel") }}';
+const IMPORT_URL   = '{{ route("data.import_excel") }}';
 
-        document.getElementById('tab-manual').className =
-            'tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ' +
-            (tab === 'manual' ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-400 hover:text-gray-600');
-        document.getElementById('tab-excel').className =
-            'tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ' +
-            (tab === 'excel' ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-400 hover:text-gray-600');
-    }
+/* ─────────────────────────────────────────────────────────────
+   STATE
+───────────────────────────────────────────────────────────── */
+let currentFile  = null;   // File object terpilih
+let previewData  = null;   // JSON dari server (hasil preview)
 
-    // ═══════════════════════════════════════════
-    // METADATA INFO
-    // ═══════════════════════════════════════════
-    function updateMetadataInfo(select) {
-        const opt    = select.options[select.selectedIndex];
-        const tipe   = opt.dataset.tipe;
-        const satuan = opt.dataset.satuan;
-        const info   = document.getElementById('metadataInfo');
+/* ─────────────────────────────────────────────────────────────
+   TAB SWITCHER
+───────────────────────────────────────────────────────────── */
+function switchTab(tab) {
+    document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
+    document.getElementById('panel-excel').classList.toggle('hidden', tab !== 'excel');
 
-        if (tipe || satuan) {
-            document.getElementById('metadataTipe').textContent   = 'Tipe: ' + (tipe || '-');
-            document.getElementById('metadataSatuan').textContent = satuan || '-';
-            document.getElementById('satuanLabel').textContent    = satuan ? '(' + satuan + ')' : '';
-            info.classList.remove('hidden');
-        } else {
-            info.classList.add('hidden');
-        }
-    }
-
-    // ═══════════════════════════════════════════
-    // FILTER WAKTU (Tahun → Bulan → Hari)
-    // ═══════════════════════════════════════════
-    function filterWaktu() {
-        const tahun = document.getElementById('filterTahun').value;
-        const bulan = document.getElementById('filterBulan').value;
-        const selectHari = document.getElementById('selectHari');
-        const allOptions = selectHari.querySelectorAll('option[data-year]');
-
-        allOptions.forEach(opt => {
-            const matchTahun = !tahun || opt.dataset.year === tahun;
-            const matchBulan = !bulan || opt.dataset.month === bulan;
-            opt.style.display = (matchTahun && matchBulan) ? '' : 'none';
-        });
-
-        // Reset hari jika tidak sesuai filter
-        const selected = selectHari.options[selectHari.selectedIndex];
-        if (selected && selected.style.display === 'none') {
-            selectHari.value = '';
-        }
-    }
-
-    // ═══════════════════════════════════════════
-    // EXCEL PREVIEW
-    // ═══════════════════════════════════════════
-    function handleDrop(e) {
-        e.preventDefault();
-        document.getElementById('uploadZone').classList.remove('border-sky-400', 'bg-sky-50');
-        const file = e.dataTransfer.files[0];
-        if (file) processFile(file);
-    }
-
-    function previewExcel(input) {
-        if (input.files[0]) processFile(input.files[0]);
-    }
-
-    function processFile(file) {
-    const allowed = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                     'application/vnd.ms-excel'];
-    if (!allowed.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
-        alert('File harus berformat .xlsx atau .xls');
-        return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-        alert('Ukuran file maksimal 5MB');
-        return;
-    }
-
-    document.getElementById('fileInfo').classList.remove('hidden');
-    document.getElementById('fileName').textContent = file.name;
-    document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
-    document.getElementById('loadingPreview').classList.remove('hidden');
-    document.getElementById('previewResult').classList.add('hidden');
-
-    // ── Baca Excel di browser pakai SheetJS ──
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data     = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet    = workbook.Sheets[workbook.SheetNames[0]];
-            const rows     = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-
-            document.getElementById('loadingPreview').classList.add('hidden');
-            renderPreviewClient(rows, file);
-        } catch (err) {
-            document.getElementById('loadingPreview').classList.add('hidden');
-            alert('Gagal membaca file Excel: ' + err.message);
-        }
-    };
-    reader.readAsArrayBuffer(file);
+    const activeClass   = 'border-sky-500 text-sky-600';
+    const inactiveClass = 'border-transparent text-gray-400 hover:text-gray-600';
+    document.getElementById('tab-manual').className =
+        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'manual' ? activeClass : inactiveClass}`;
+    document.getElementById('tab-excel').className =
+        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'excel' ? activeClass : inactiveClass}`;
 }
 
-function renderPreviewClient(rows, file) {
-    if (rows.length === 0) {
-        alert('File Excel kosong atau format tidak dikenali.');
+/* ─────────────────────────────────────────────────────────────
+   METADATA INFO (tab manual)
+───────────────────────────────────────────────────────────── */
+function updateMetadataInfo(select) {
+    const opt    = select.options[select.selectedIndex];
+    const info   = document.getElementById('metadataInfo');
+    if (opt.dataset.tipe || opt.dataset.satuan) {
+        document.getElementById('metadataTipe').textContent   = 'Tipe: ' + (opt.dataset.tipe || '-');
+        document.getElementById('metadataSatuan').textContent = opt.dataset.satuan || '-';
+        document.getElementById('satuanLabel').textContent    = opt.dataset.satuan ? `(${opt.dataset.satuan})` : '';
+        info.classList.remove('hidden');
+    } else {
+        info.classList.add('hidden');
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FILTER WAKTU (tab manual)
+───────────────────────────────────────────────────────────── */
+function filterWaktu() {
+    const tahun = document.getElementById('filterTahun').value;
+    const bulan = document.getElementById('filterBulan').value;
+    document.querySelectorAll('#selectHari option[data-year]').forEach(opt => {
+        const ok = (!tahun || opt.dataset.year === tahun)
+                && (!bulan || opt.dataset.month === bulan);
+        opt.style.display = ok ? '' : 'none';
+    });
+    const sel = document.getElementById('selectHari');
+    if (sel.selectedOptions[0]?.style.display === 'none') sel.value = '';
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FILE SELECTION & DRAG-DROP
+───────────────────────────────────────────────────────────── */
+function handleDrop(e) {
+    e.preventDefault();
+    const zone = document.getElementById('dropZone');
+    zone.style.borderColor = '';
+    zone.style.background  = '';
+    const file = e.dataTransfer.files[0];
+    if (file) onFileSelected(file);
+}
+
+function onFileSelected(file) {
+    // Validasi tipe & ukuran
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        showImportAlert('error', 'File harus berformat .xlsx atau .xls');
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        showImportAlert('error', 'Ukuran file maksimal 10MB');
         return;
     }
 
-    const requiredCols = ['metadata_id', 'location_id', 'time_id'];
+    currentFile = file;
+    previewData = null;
 
-    const errors     = [];
-    const duplicates = []; // cek duplikat tetap di server saat import
-    const validRows  = [];
+    // Tampilkan info file
+    document.getElementById('dropZone').classList.add('hidden');
+    const bar = document.getElementById('fileInfoBar');
+    bar.classList.remove('hidden');
+    document.getElementById('fileInfoName').textContent = file.name;
+    document.getElementById('fileInfoSize').textContent =
+        file.size > 1048576
+            ? (file.size / 1048576).toFixed(2) + ' MB'
+            : (file.size / 1024).toFixed(1) + ' KB';
 
-    rows.forEach((row, idx) => {
-        const rowNum = idx + 2;
-        // Validasi kolom wajib
-        const missing = requiredCols.filter(c => !row[c] && row[c] !== 0);
-        if (missing.length > 0) {
-            errors.push({ row: rowNum, message: `Kolom wajib kosong: ${missing.join(', ')}` });
-        } else {
-            validRows.push(row);
+    // Langsung jalankan preview ke server
+    doPreview();
+}
+
+function resetUpload() {
+    currentFile = null;
+    previewData = null;
+    document.getElementById('fileExcel').value   = '';
+    document.getElementById('dropZone').classList.remove('hidden');
+    document.getElementById('fileInfoBar').classList.add('hidden');
+    document.getElementById('loadingBar').classList.add('hidden');
+    document.getElementById('previewSection').classList.add('hidden');
+    document.getElementById('importingBar').classList.add('hidden');
+    document.getElementById('importResult').classList.add('hidden');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PREVIEW — AJAX ke DataController@previewExcel
+   Server menggunakan DataImport::preview() untuk:
+   • baca header baris 3
+   • kenali jenis kolom periode (tahunan/quarter/semester/bulanan)
+   • lookup time_id dari tabel `time`
+   • deteksi duplikat di DB
+   • kembalikan JSON { rows, errors, duplicates, period_cols, ... }
+───────────────────────────────────────────────────────────── */
+async function doPreview() {
+    document.getElementById('loadingBar').classList.remove('hidden');
+    document.getElementById('previewSection').classList.add('hidden');
+    document.getElementById('importResult').classList.add('hidden');
+
+    const form = new FormData();
+    form.append('_token', CSRF);
+    form.append('file_excel', currentFile);
+
+    try {
+        const resp = await fetch(PREVIEW_URL, { method: 'POST', body: form });
+        const json = await resp.json();
+
+        document.getElementById('loadingBar').classList.add('hidden');
+
+        if (!json.success) {
+            showImportAlert('error', json.message || 'Gagal membaca file.');
+            resetUpload();
+            return;
         }
-    });
 
-    const result = document.getElementById('previewResult');
-    result.classList.remove('hidden');
+        previewData = json;
+        renderPreview(json);
 
-    // Summary
-    document.getElementById('previewSummary').innerHTML = `
-        <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-            <p class="text-2xl font-bold text-green-700">${validRows.length}</p>
-            <p class="text-xs text-green-600 mt-0.5">Data Valid</p>
+    } catch (err) {
+        document.getElementById('loadingBar').classList.add('hidden');
+        showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
+        resetUpload();
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   RENDER PREVIEW
+───────────────────────────────────────────────────────────── */
+function renderPreview(json) {
+    const section = document.getElementById('previewSection');
+    section.classList.remove('hidden');
+
+    // ── Statistik ──
+    const periodLabel = {
+        'tahunan' : 'Tahunan',
+        'semester': 'Semester',
+        'quarter' : 'Quarter',
+        'bulanan' : 'Bulanan',
+        'unknown' : '?',
+    }[json.period_type] ?? json.period_type;
+
+    document.getElementById('statsGrid').innerHTML = `
+        <div class="rounded-lg p-3 text-center" style="background:#f0f9ff; border:1px solid #bae6fd;">
+            <p class="text-xl font-bold" style="color:#0369a1;">${json.total_rows}</p>
+            <p class="text-xs mt-0.5" style="color:#0369a1;">Baris Excel</p>
         </div>
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-            <p class="text-2xl font-bold text-amber-700">-</p>
-            <p class="text-xs text-amber-600 mt-0.5">Duplikat (dicek saat import)</p>
+        <div class="rounded-lg p-3 text-center" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+            <p class="text-xl font-bold" style="color:#166534;">${json.valid}</p>
+            <p class="text-xs mt-0.5" style="color:#166534;">Record Valid</p>
         </div>
-        <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-            <p class="text-2xl font-bold text-red-700">${errors.length}</p>
-            <p class="text-xs text-red-600 mt-0.5">Format Salah</p>
+        <div class="rounded-lg p-3 text-center" style="background:#fffbeb; border:1px solid #fde68a;">
+            <p class="text-xl font-bold" style="color:#92400e;">${json.duplicate}</p>
+            <p class="text-xs mt-0.5" style="color:#92400e;">Duplikat</p>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#fef2f2; border:1px solid #fecaca;">
+            <p class="text-xl font-bold" style="color:#b91c1c;">${json.error}</p>
+            <p class="text-xs mt-0.5" style="color:#b91c1c;">Baris Error</p>
         </div>`;
 
-    // Error rows
-    if (errors.length > 0) {
-        document.getElementById('errorSection').classList.remove('hidden');
-        document.getElementById('errorRows').innerHTML = errors.map(e =>
-            `<tr class="bg-red-50">
-                <td class="px-3 py-2 text-red-600 font-mono">Baris ${e.row}</td>
-                <td class="px-3 py-2 text-red-700">${e.message}</td>
-            </tr>`
-        ).join('');
+    // ── Alert: kolom periode tidak ada di tabel time ──
+    // Deteksi: semua errors yang mengandung "time_id tidak ditemukan"
+    const timeErrors = (json.errors || []).filter(e => e.message && e.message.includes('time_id'));
+    const timeNotFoundEl = document.getElementById('timeNotFoundAlert');
+    if (timeErrors.length > 0) {
+        const periods = [...new Set(timeErrors.map(e => e.period))].filter(Boolean);
+        document.getElementById('timeNotFoundDetail').textContent =
+            `Periode tidak terdaftar: ${periods.join(', ')}. ` +
+            `Tipe periode terdeteksi: ${periodLabel}.`;
+        timeNotFoundEl.classList.remove('hidden');
+    } else {
+        timeNotFoundEl.classList.add('hidden');
     }
 
-    // Valid rows preview (max 10 baris)
-    if (validRows.length > 0) {
-        document.getElementById('validSection').classList.remove('hidden');
-        const cols = Object.keys(validRows[0]);
+    // ── Errors ──
+    const errSection = document.getElementById('errorSection');
+    const errBody    = document.getElementById('errorBody');
+    if (json.errors && json.errors.length > 0) {
+        errSection.classList.remove('hidden');
+        errBody.innerHTML = json.errors.map(e => `
+            <tr class="bg-red-50">
+                <td class="px-3 py-2 text-red-500 font-mono">Baris ${esc(String(e.row))}</td>
+                <td class="px-3 py-2 text-red-700">${esc(e.message)}</td>
+            </tr>`).join('');
+    } else {
+        errSection.classList.add('hidden');
+    }
 
-        document.getElementById('previewTableHead').innerHTML =
-            cols.map(c => `<th class="px-3 py-2 text-left font-semibold">${c}</th>`).join('');
-
-        document.getElementById('previewTableBody').innerHTML =
-            validRows.slice(0, 10).map(row =>
-                `<tr class="hover:bg-green-50">
-                    ${cols.map(c => `<td class="px-3 py-2 text-gray-600">${row[c] ?? '-'}</td>`).join('')}
-                </tr>`
-            ).join('') +
-            (validRows.length > 10
-                ? `<tr><td colspan="${cols.length}" class="px-3 py-2 text-center text-gray-400 italic">
-                    ...dan ${validRows.length - 10} baris lainnya
+    // ── Duplikat ──
+    const dupSection = document.getElementById('dupSection');
+    const dupBody    = document.getElementById('dupBody');
+    if (json.duplicates && json.duplicates.length > 0) {
+        dupSection.classList.remove('hidden');
+        dupBody.innerHTML = json.duplicates.slice(0, 10).map(r => `
+            <tr class="hover:bg-amber-50">
+                <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
+                <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                <td class="px-3 py-2 text-gray-500">${esc(String(r.period_label))}</td>
+                <td class="px-3 py-2 text-right font-mono text-gray-700">${formatNum(r.number_value)}</td>
+            </tr>`).join('') +
+            (json.duplicates.length > 10
+                ? `<tr><td colspan="4" class="px-3 py-2 text-center text-amber-500 italic">
+                    …dan ${json.duplicates.length - 10} duplikat lainnya
                    </td></tr>`
                 : '');
+    } else {
+        dupSection.classList.add('hidden');
+    }
 
-        // Aktifkan tombol import
-        document.getElementById('btnImport').disabled = false;
-        document.getElementById('importBtnText').textContent = `Import ${validRows.length} Data`;
+    // ── Data valid ──
+    const validSection = document.getElementById('validSection');
+    const validBody    = document.getElementById('validBody');
+    const validMore    = document.getElementById('validMore');
+    if (json.rows && json.rows.length > 0) {
+        validSection.classList.remove('hidden');
+        const preview = json.rows.slice(0, 20);
+        validBody.innerHTML = preview.map((r, i) => `
+            <tr class="${i % 2 === 1 ? 'bg-green-50' : ''}">
+                <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
+                <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                <td class="px-3 py-2">
+                    <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                          style="background:#fef3c7; color:#b45309;">
+                        ${esc(String(r.period_label))}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-right font-mono text-gray-800 font-semibold">
+                    ${formatNum(r.number_value)}
+                </td>
+            </tr>`).join('');
 
-        // Set file ke hidden input untuk dikirim ke server
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        document.getElementById('hiddenFileInput').files = dt.files;
+        if (json.rows.length > 20) {
+            validMore.textContent = `Menampilkan 20 dari ${json.rows.length} record valid`;
+            validMore.classList.remove('hidden');
+        } else {
+            validMore.classList.add('hidden');
+        }
+    } else {
+        validSection.classList.add('hidden');
+    }
+
+    // ── Tombol import ──
+    const btn = document.getElementById('btnImport');
+    if (json.valid > 0) {
+        btn.disabled = false;
+        document.getElementById('btnImportText').textContent =
+            `Import ${json.valid.toLocaleString('id-ID')} Record`;
+    } else {
+        btn.disabled = true;
+        document.getElementById('btnImportText').textContent = 'Tidak Ada Data Valid';
     }
 }
 
-    function clearFile() {
-        document.getElementById('fileExcel').value   = '';
-        document.getElementById('fileInfo').classList.add('hidden');
-        document.getElementById('previewResult').classList.add('hidden');
-        document.getElementById('loadingPreview').classList.add('hidden');
-        document.getElementById('errorSection').classList.add('hidden');
-        document.getElementById('duplicateSection').classList.add('hidden');
-        document.getElementById('validSection').classList.add('hidden');
-        document.getElementById('btnImport').disabled = true;
-    }
+/* ─────────────────────────────────────────────────────────────
+   IMPORT — kirim file ke DataController@importExcel
+   Server menggunakan DataImport::import() dengan bulk insert
+───────────────────────────────────────────────────────────── */
+async function doImport() {
+    if (!currentFile || !previewData) return;
 
-    // Trigger old tab jika ada error
-    @if($errors->any() || session('duplicate_warning'))
-        switchTab('manual');
-    @endif
+    const skipDup = document.getElementById('cbSkipDup')?.checked ?? true;
+    const btn     = document.getElementById('btnImport');
+
+    // Konfirmasi
+    const msg = previewData.valid > 0
+        ? `Import ${previewData.valid} record data?\n` +
+          (skipDup && previewData.duplicate > 0 ? `${previewData.duplicate} duplikat akan dilewati.` : '')
+        : 'Tidak ada data valid untuk diimport.';
+
+    if (!confirm(msg)) return;
+
+    // UI loading
+    btn.disabled = true;
+    document.getElementById('importingBar').classList.remove('hidden');
+    document.getElementById('previewSection').classList.add('hidden');
+
+    const form = new FormData();
+    form.append('_token',         CSRF);
+    form.append('file_excel',     currentFile);
+    form.append('skip_duplicates', skipDup ? '1' : '0');
+
+    try {
+        const resp = await fetch(IMPORT_URL, {
+            method:  'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body:    form,
+        });
+        const json = await resp.json();
+
+        document.getElementById('importingBar').classList.add('hidden');
+
+        if (json.success) {
+            showImportAlert('success', json.message,
+                json.redirect ? `<a href="${json.redirect}" class="underline font-semibold ml-2">Ke Halaman Data →</a>` : '');
+            resetUpload();
+        } else {
+            showImportAlert('error', json.message || 'Import gagal.');
+            // Tampilkan kembali preview agar user bisa coba lagi
+            if (previewData) renderPreview(previewData);
+        }
+
+    } catch (err) {
+        document.getElementById('importingBar').classList.add('hidden');
+        showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
+        if (previewData) renderPreview(previewData);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────────── */
+function showImportAlert(type, msg, extra = '') {
+    const isErr = type === 'error';
+    const el    = document.getElementById('importResult');
+    el.innerHTML = `
+        <div class="flex items-start gap-3 px-4 py-3 rounded-lg text-sm"
+             style="background:${isErr ? '#fef2f2' : '#f0fdf4'};
+                    border:1px solid ${isErr ? '#fecaca' : '#bbf7d0'};
+                    color:${isErr ? '#b91c1c' : '#166534'};">
+            <i class="fas ${isErr ? 'fa-exclamation-circle text-red-400' : 'fa-check-circle text-green-500'} mt-0.5 shrink-0"></i>
+            <span>${esc(msg)}${extra}</span>
+        </div>`;
+    el.classList.remove('hidden');
+}
+
+function esc(str) {
+    if (str == null) return '-';
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function formatNum(val) {
+    if (val == null || val === '') return '-';
+    const n = parseFloat(val);
+    if (isNaN(n)) return esc(String(val));
+    // Format angka Indonesia: titik ribuan, koma desimal
+    return n % 1 === 0
+        ? n.toLocaleString('id-ID')
+        : n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Aktifkan tab yang benar saat load (jika ada error validation dari server)
+@if($errors->any() || session('duplicate_warning'))
+    switchTab('manual');
+@endif
 </script>
 @endsection
