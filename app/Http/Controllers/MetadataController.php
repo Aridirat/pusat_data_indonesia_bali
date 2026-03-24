@@ -592,7 +592,7 @@ class MetadataController extends Controller
 
     public function store(Request $request)
     {
-        $gambarPath = null;
+        $gambarPath = '-';
 
         if ($request->hasFile('gambar_rujukan')) {
 
