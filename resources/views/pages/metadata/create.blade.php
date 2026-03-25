@@ -273,7 +273,7 @@
                         <select name="tipe_group" id="tipe_group"
                                 class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
                                        focus:ring-sky-400 px-2 py-2 text-xs">
-                            <option value="2" {{ old('tipe_group','2') == '2' ? 'selected' : '' }}>Tidak</option>
+                            <option value="0" {{ old('tipe_group','0') == '0' ? 'selected' : '' }}>Tidak</option>
                             <option value="1" {{ old('tipe_group') == '1' ? 'selected' : '' }}>Ya</option>
                         </select>
                     </div>

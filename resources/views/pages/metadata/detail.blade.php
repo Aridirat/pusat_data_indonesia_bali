@@ -179,8 +179,9 @@
                 @foreach([
                     ['Konsep',       $metadata->konsep],
                     ['Definisi',     $metadata->definisi],
-                    ['Interpretasi', $metadata->interpretasi],
                     ['Asumsi',       $metadata->asumsi],
+                    ['Metodologi',   $metadata->metodologi],
+                    ['Penjelasan Metodologi', $metadata->penjelasan_metodologi],
                 ] as [$label, $value])
                     @if($value && $value !== 'N/A')
                         <div>
@@ -204,45 +205,69 @@
             <div class="space-y-4 text-sm">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Tipe Data</p>
-                        <span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                            {{ $metadata->tipe_data }}
-                        </span>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Ukuran Data</p>
-                        <p class="text-gray-700 font-medium">{{ $metadata->ukuran_data ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Satuan Data</p>
-                        <p class="text-gray-700 font-medium">{{ $metadata->satuan_data ?? '-' }}</p>
-                    </div>
-                    <div>
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Flag Desimal</p>
                         <p class="text-gray-700 font-medium">{{ $metadata->flag_desimal ? 'Ya' : 'Tidak' }}</p>
                     </div>
                 </div>
-
-                @if($metadata->rumus_perhitungan)
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rumus Perhitungan</p>
-                        <div class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 font-mono text-xs text-gray-700 leading-relaxed">
-                            {{ $metadata->rumus_perhitungan }}
+                <div class="space-y-4 text-sm">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Tipe Group</p>
+                            @if($metadata->tipe_group == 1)
+                                <span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                                    Bagian dari Group
+                                </span>
+                            @else
+                                <span class="bg-gray-100 text-gray-500 text-xs font-semibold px-2.5 py-1 rounded-full">
+                                    Berdiri Sendiri
+                                </span>
+                            @endif
                         </div>
-                    </div>
-                @endif
 
-                @if($metadata->domain_value)
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Domain Value</p>
-                        <p class="text-gray-700 leading-relaxed">{{ $metadata->domain_value }}</p>
+                        @if($metadata->tipe_group == 1 && $metadata->groupParent)
+                            <div>
+                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Metadata Induk</p>
+                                <a href="{{ route('metadata.detail', ['metadata' => $metadata->groupParent->metadata_id, 'from' => $from]) }}"
+                                class="text-sky-600 hover:text-sky-800 font-semibold transition-colors flex items-center gap-1">
+                                    <i class="fas fa-link text-xs"></i>
+                                    {{ $metadata->groupParent->nama }}
+                                </a>
+                            </div>
+                        @endif
                     </div>
-                @endif
+
+                    {{-- Tampilkan anggota group jika ini adalah induk --}}
+                    @if($metadata->groupChildren && $metadata->groupChildren->count() > 0)
+                        <div class="pt-3 border-t">
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                Metadata dalam Group Ini ({{ $metadata->groupChildren->count() }})
+                            </p>
+                            <div class="space-y-1.5">
+                                @foreach($metadata->groupChildren as $child)
+                                    <a href="{{ route('metadata.detail', ['metadata' => $child->metadata_id, 'from' => $from]) }}"
+                                    class="flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-sky-50
+                                            border rounded-lg text-xs transition-colors group">
+                                        <span class="font-medium text-gray-700 group-hover:text-sky-700">
+                                            {{ $child->nama }}
+                                        </span>
+                                        <span style="{{ match((int)$child->status) {
+                                            2 => 'background:#dcfce7; color:#15803d;',
+                                            3 => 'background:#f3f4f6; color:#6b7280;',
+                                            default => 'background:#fef3c7; color:#b45309;'
+                                        } }}" class="px-2 py-0.5 rounded-full text-xs font-semibold">
+                                            {{ match((int)$child->status) { 2=>'Active', 3=>'Inactive', default=>'Pending' } }}
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
 
         {{-- ── 3. INFORMASI PUBLIKASI ── --}}
-        <div class="bg-white rounded-xl shadow p-5">
+        <div class="bg-white rounded-xl shadow p-5 col-span-2">
             <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 pb-3 border-b">
                 <span style="background:#fffbeb; color:#f59e0b;"
                       class="w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0">
@@ -251,17 +276,66 @@
                 Informasi Publikasi
             </h2>
             <div class="space-y-4 text-sm">
+                <div x-data="{ open: false }">
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                        Gambar Rujukan
+                    </p>
+
+                    @if(!empty($metadata->gambar_rujukan))
+                        {{-- Thumbnail --}}
+                        <img src="{{ asset('storage/' . $metadata->gambar_rujukan) }}"
+                            alt="Gambar Rujukan"
+                            @click="open = true"
+                            class="w-28 h-20 object-cover rounded-md border cursor-pointer
+                                    hover:scale-105 transition-transform duration-200">
+
+                        {{-- Modal --}}
+                        <div x-show="open"
+                            x-transition
+                            @click="open = false"
+                            class="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+
+                            <img src="{{ asset('storage/' . $metadata->gambar_rujukan) }}"
+                                class="max-w-3xl max-h-[80vh] rounded-lg shadow-lg"
+                                @click.stop>
+                        </div>
+
+                    @else
+                        {{-- Placeholder --}}
+                        <div class="w-28 h-20 flex items-center justify-center
+                                    bg-gray-100 border border-gray-300 rounded-md">
+                            <i class="fas fa-image text-gray-400 text-lg"></i>
+                        </div>
+                    @endif
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Data Sumber</p>
-                        <p class="text-gray-700 font-medium">{{ $metadata->data_sumber ?? '-' }}</p>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Nama Rujukan</p>
+                        <p class="text-gray-700 font-medium">{{ $metadata->nama_rujukan }}</p>
                     </div>
                     <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Frekuensi</p>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Link Rujukan</p>
+                        <p class="text-gray-700 font-medium">{{ $metadata->link_rujukan }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Tahun Mulai Data</p>
+                        <p class="text-gray-700 font-medium">{{ $metadata->tahun_mulai_data ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Frekuensi Penerbitan</p>
                         <span class="bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full">
                             {{ $metadata->frekuensi_penerbitan ?? '-' }}
                         </span>
                     </div>
+
+                    @if($metadata->tahun_pertama_rilis)
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Tahun Pertama Rilis</p>
+                        <p class="text-gray-700 font-medium">
+                            {{ $metadata->tahun_pertama_rilis }}
+                        </p>
+                    </div>
+                    @endif
 
                     @if($metadata->bulan_pertama_rilis)
                         <div>
@@ -296,71 +370,6 @@
             </div>
         </div>
 
-        {{-- ── 4. GROUP & PENGELOMPOKAN ── --}}
-        <div class="bg-white rounded-xl shadow p-5">
-            <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 pb-3 border-b">
-                <span style="background:#fdf4ff; color:#a855f7;"
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0">
-                    <i class="fas fa-layer-group"></i>
-                </span>
-                Pengelompokan
-            </h2>
-            <div class="space-y-4 text-sm">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Tipe Group</p>
-                        @if($metadata->tipe_group == 1)
-                            <span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                                Bagian dari Group
-                            </span>
-                        @else
-                            <span class="bg-gray-100 text-gray-500 text-xs font-semibold px-2.5 py-1 rounded-full">
-                                Berdiri Sendiri
-                            </span>
-                        @endif
-                    </div>
-
-                    @if($metadata->tipe_group == 1 && $metadata->groupParent)
-                        <div>
-                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Metadata Induk</p>
-                            <a href="{{ route('metadata.detail', ['metadata' => $metadata->groupParent->metadata_id, 'from' => $from]) }}"
-                               class="text-sky-600 hover:text-sky-800 font-semibold transition-colors flex items-center gap-1">
-                                <i class="fas fa-link text-xs"></i>
-                                {{ $metadata->groupParent->nama }}
-                            </a>
-                        </div>
-                    @endif
-                </div>
-
-                {{-- Tampilkan anggota group jika ini adalah induk --}}
-                @if($metadata->groupChildren && $metadata->groupChildren->count() > 0)
-                    <div class="pt-3 border-t">
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                            Metadata dalam Group Ini ({{ $metadata->groupChildren->count() }})
-                        </p>
-                        <div class="space-y-1.5">
-                            @foreach($metadata->groupChildren as $child)
-                                <a href="{{ route('metadata.detail', ['metadata' => $child->metadata_id, 'from' => $from]) }}"
-                                   class="flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-sky-50
-                                          border rounded-lg text-xs transition-colors group">
-                                    <span class="font-medium text-gray-700 group-hover:text-sky-700">
-                                        {{ $child->nama }}
-                                    </span>
-                                    <span style="{{ match((int)$child->status) {
-                                        2 => 'background:#dcfce7; color:#15803d;',
-                                        3 => 'background:#f3f4f6; color:#6b7280;',
-                                        default => 'background:#fef3c7; color:#b45309;'
-                                    } }}" class="px-2 py-0.5 rounded-full text-xs font-semibold">
-                                        {{ match((int)$child->status) { 2=>'Active', 3=>'Inactive', default=>'Pending' } }}
-                                    </span>
-                                </a>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-            </div>
-        </div>
-
         {{-- ── 5. PENANGGUNG JAWAB (full width) ── --}}
         <div class="bg-white rounded-xl shadow p-5 lg:col-span-2">
             <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 pb-3 border-b">
@@ -373,7 +382,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 text-sm">
                 <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Produsen Data</p>
-                    <p class="text-gray-800 font-semibold">{{ $metadata->produsen_data ?? '-' }}</p>
+                    <p class="text-gray-800 font-semibold">{{ $metadata->produsen->nama_produsen ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Nama Contact Person</p>
