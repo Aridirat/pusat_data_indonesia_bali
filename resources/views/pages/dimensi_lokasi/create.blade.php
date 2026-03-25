@@ -1,194 +1,318 @@
 @extends('layouts.main')
 
 @section('content')
-
 <div class="py-6">
 
-<a href="{{ route('dimensi_lokasi.index') }}"
-    class="flex items-center font-semibold text-sky-600 ps-4 mb-4 hover:text-sky-900">
-    <i class="fas fa-angle-left"></i> Kembali
-</a>
+    <a href="{{ route('dimensi_lokasi.index') }}"
+       class="flex items-center gap-1 font-semibold text-sky-600 ps-4 mb-4 hover:text-sky-900 text-sm transition-colors">
+        <i class="fas fa-angle-left"></i> Kembali
+    </a>
 
-{{-- WARNING DUPLIKASI --}}
-@if(session('warning'))
-    <div class="flex gap-4 bg-yellow-100 border border-yellow-400 text-lg text-yellow-800 px-4 py-6 rounded shadow">
-        <div>
-            <i class="fas fa-exclamation-triangle"></i>
+    {{-- WARNING DUPLIKASI --}}
+    @if(session('warning'))
+        <div class="flex gap-3 bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-4 rounded-lg shadow-sm mb-4">
+            <i class="fas fa-exclamation-triangle mt-0.5 text-yellow-500"></i>
+            <span class="text-sm">{{ session('warning') }}</span>
         </div>
-        <div>
-            {{ session('warning') }}
-        </div>
-    </div>
-@endif
+    @endif
 
-<div class="mt-2 bg-white rounded-md shadow p-6">
+    <div class="mt-2 bg-white rounded-md shadow p-6 max-w-xl mx-auto">
 
-    <h1 class="text-xl font-bold text-gray-800 mb-6">
-    Tambah Lokasi
-    </h1>
+        <h1 class="text-xl font-bold text-gray-800 mb-6">Tambah Lokasi</h1>
 
+        <form action="{{ route('dimensi_lokasi.store') }}" method="POST" class="space-y-5">
+            @csrf
 
-        <form action="{{ route('dimensi_lokasi.store') }}" method="POST" class="space-y-6">
-        @csrf
-
+            {{-- PROVINSI (readonly) --}}
             <div>
-
-                <label>Provinsi</label>
-
-                <input type="text"
-                value="BALI"
-                class="w-full border rounded px-3 py-2 bg-gray-100"
-                readonly>
-
+                <label class="block text-sm font-medium text-gray-700 mb-1">Provinsi</label>
+                <input type="text" value="BALI"
+                       class="w-full border border-gray-200 rounded-md px-3 py-2.5 bg-gray-50 text-gray-500 text-sm"
+                       readonly>
             </div>
 
-
+            {{-- KABUPATEN --}}
             <div>
-
-            <label>Kabupaten</label>
-
-                <select id="kabupaten" name="kabupaten" class="w-full border rounded px-3 py-2">
-                <option value="">Pilih Kabupaten</option>
-                </select>
-
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Kabupaten <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <select id="kabupaten" name="kabupaten"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-800
+                                   focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
+                                   disabled:bg-gray-50 disabled:text-gray-400 transition-shadow appearance-none"
+                            disabled>
+                        <option value="">Memuat data...</option>
+                    </select>
+                    {{-- Spinner & chevron wrapper --}}
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-2">
+                        <span id="spin_kabupaten" class="hidden">
+                            <svg class="animate-spin h-4 w-4 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </span>
+                        <i id="chevron_kabupaten" class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                    </div>
+                </div>
+                <p id="hint_kabupaten" class="mt-1 text-xs text-sky-500 hidden">
+                    <i class="fas fa-circle-notch fa-spin mr-1"></i> Memuat daftar kabupaten...
+                </p>
             </div>
 
-
+            {{-- KECAMATAN --}}
             <div>
-
-                <label>Kecamatan</label>
-
-                <select id="kecamatan" name="kecamatan" class="w-full border rounded px-3 py-2">
-                <option value="">Pilih Kecamatan</option>
-                </select>
-
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Kecamatan <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <select id="kecamatan" name="kecamatan"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-800
+                                   focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
+                                   disabled:bg-gray-50 disabled:text-gray-400 transition-shadow appearance-none"
+                            disabled>
+                        <option value="">Pilih Kabupaten dulu</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-2">
+                        <span id="spin_kecamatan" class="hidden">
+                            <svg class="animate-spin h-4 w-4 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </span>
+                        <i id="chevron_kecamatan" class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                    </div>
+                </div>
+                <p id="hint_kecamatan" class="mt-1 text-xs text-sky-500 hidden">
+                    <i class="fas fa-circle-notch fa-spin mr-1"></i> Memuat daftar kecamatan...
+                </p>
             </div>
 
-
+            {{-- DESA --}}
             <div>
-
-                <label>Desa</label>
-
-                <select id="desa" name="desa" class="w-full border rounded px-3 py-2">
-                <option value="">Pilih Desa</option>
-                </select>
-
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Desa <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <select id="desa" name="desa"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-800
+                                   focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
+                                   disabled:bg-gray-50 disabled:text-gray-400 transition-shadow appearance-none"
+                            disabled>
+                        <option value="">Pilih Kecamatan dulu</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-2">
+                        <span id="spin_desa" class="hidden">
+                            <svg class="animate-spin h-4 w-4 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </span>
+                        <i id="chevron_desa" class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                    </div>
+                </div>
+                <p id="hint_desa" class="mt-1 text-xs text-sky-500 hidden">
+                    <i class="fas fa-circle-notch fa-spin mr-1"></i> Memuat daftar desa...
+                </p>
             </div>
 
-
+            {{-- BANJAR --}}
             <div>
-
-                <label>Banjar</label>
-
+                <label class="block text-sm font-medium text-gray-700 mb-1">Banjar</label>
                 <input type="text" name="banjar"
-                class="w-full border rounded px-3 py-2">
-
+                       class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-800
+                              focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent">
             </div>
 
-
+            {{-- RT --}}
             <div>
-
-                <label>RT</label>
-
+                <label class="block text-sm font-medium text-gray-700 mb-1">RT</label>
                 <input type="text" name="rt"
-                class="w-full border rounded px-3 py-2">
-
+                       class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-800
+                              focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent">
             </div>
 
+            {{-- Hidden fields --}}
             <input type="hidden" name="kode_kabupaten" id="kode_kabupaten">
             <input type="hidden" name="kode_kecamatan" id="kode_kecamatan">
-            <input type="hidden" name="kode_desa" id="kode_desa">
+            <input type="hidden" name="kode_desa"      id="kode_desa">
 
-            <div class="flex justify-end pt-4">
+            {{-- SUBMIT --}}
+            <div class="flex justify-end pt-2 border-t border-gray-100">
                 <button type="submit"
-                class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-md shadow">
-                Simpan
+                        class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-md shadow
+                               text-sm font-medium flex items-center gap-2 transition-colors">
+                    <i class="fas fa-save"></i> Simpan
                 </button>
             </div>
 
         </form>
-
     </div>
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded",function(){
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-fetch('/api/bali/kabupaten')
-.then(res=>res.json())
-.then(data=>{
+function debounce(func, delay) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
 
-let kab = document.getElementById('kabupaten');
+/**
+ * Set state loading pada sebuah select.
+ * @param {string} id   - id elemen select (tanpa #)
+ * @param {boolean} on  - true = loading, false = selesai
+ * @param {string} placeholder - teks option pertama saat loading selesai
+ */
+function setLoading(id, on, placeholder = 'Pilih...') {
+    const sel     = document.getElementById(id);
+    const spin    = document.getElementById(`spin_${id}`);
+    const chevron = document.getElementById(`chevron_${id}`);
+    const hint    = document.getElementById(`hint_${id}`);
 
-data.forEach(item=>{
-kab.innerHTML += `<option value="${item.nama}" data-kode="${item.kode}">${item.nama}</option>`;
+    if (on) {
+        sel.disabled = true;
+        sel.innerHTML = `<option value="">Memuat data...</option>`;
+        spin.classList.remove('hidden');
+        chevron.classList.add('hidden');
+        hint.classList.remove('hidden');
+    } else {
+        sel.disabled = false;
+        spin.classList.add('hidden');
+        chevron.classList.remove('hidden');
+        hint.classList.add('hidden');
+        // Pastikan opsi pertama adalah placeholder
+        if (sel.options[0]?.value !== '') {
+            sel.options[0].textContent = placeholder;
+        }
+    }
+}
+
+/**
+ * Reset select ke state kosong (disabled, belum ada data).
+ */
+function resetSelect(id, placeholder) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    sel.disabled = true;
+    document.getElementById(`spin_${id}`).classList.add('hidden');
+    document.getElementById(`chevron_${id}`).classList.remove('hidden');
+    document.getElementById(`hint_${id}`).classList.add('hidden');
+}
+
+// ─── Init: load Kabupaten on page ready ──────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    setLoading('kabupaten', true);
+
+    fetch('/api/bali/kabupaten')
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
+        .then(data => {
+            const kab = document.getElementById('kabupaten');
+            kab.innerHTML = '<option value="">Pilih Kabupaten</option>';
+            data.forEach(item => {
+                kab.innerHTML += `<option value="${item.nama}" data-kode="${item.kode}">${item.nama}</option>`;
+            });
+            setLoading('kabupaten', false, 'Pilih Kabupaten');
+        })
+        .catch(() => {
+            const kab = document.getElementById('kabupaten');
+            kab.innerHTML = '<option value="">Gagal memuat — coba refresh</option>';
+            setLoading('kabupaten', false);
+        });
+
 });
 
-});
+// ─── Kabupaten → load Kecamatan ───────────────────────────────────────────────
 
-});
+document.getElementById('kabupaten').addEventListener('change', debounce(function () {
+    const selected = this.options[this.selectedIndex];
+    const kodeKab  = selected.getAttribute('data-kode');
 
+    // Reset downstream
+    resetSelect('kecamatan', 'Pilih Kabupaten dulu');
+    resetSelect('desa', 'Pilih Kecamatan dulu');
+    document.getElementById('kode_kabupaten').value = '';
+    document.getElementById('kode_kecamatan').value = '';
+    document.getElementById('kode_desa').value      = '';
 
+    if (!kodeKab) return;
 
-document.getElementById('kabupaten').addEventListener('change',function(){
+    document.getElementById('kode_kabupaten').value = kodeKab;
+    setLoading('kecamatan', true);
 
-let selected = this.options[this.selectedIndex];
-let kodeKab = selected.getAttribute('data-kode');
+    fetch(`/api/bali/kecamatan?kab=${kodeKab}`)
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
+        .then(data => {
+            const kec = document.getElementById('kecamatan');
+            kec.innerHTML = '<option value="">Pilih Kecamatan</option>';
+            data.forEach(item => {
+                kec.innerHTML += `<option value="${item.nama}" data-kode="${item.kode}">${item.nama}</option>`;
+            });
+            setLoading('kecamatan', false, 'Pilih Kecamatan');
+        })
+        .catch(() => {
+            const kec = document.getElementById('kecamatan');
+            kec.innerHTML = '<option value="">Gagal memuat — coba lagi</option>';
+            setLoading('kecamatan', false);
+        });
 
-document.getElementById('kode_kabupaten').value = kodeKab;
+}, 300));
 
-fetch(`/api/bali/kecamatan?kab=${kodeKab}`)
-.then(res=>res.json())
-.then(data=>{
+// ─── Kecamatan → load Desa ────────────────────────────────────────────────────
 
-let kec = document.getElementById('kecamatan');
+document.getElementById('kecamatan').addEventListener('change', debounce(function () {
+    const selectedKec = this.options[this.selectedIndex];
+    const kodeKec     = selectedKec.getAttribute('data-kode');
+    const kodeKab     = document.getElementById('kabupaten').selectedOptions[0]?.getAttribute('data-kode');
 
-kec.innerHTML = '<option value="">Pilih Kecamatan</option>';
+    // Reset downstream
+    resetSelect('desa', 'Pilih Kecamatan dulu');
+    document.getElementById('kode_kecamatan').value = '';
+    document.getElementById('kode_desa').value      = '';
 
-data.forEach(item=>{
-kec.innerHTML += `<option value="${item.nama}" data-kode="${item.kode}">${item.nama}</option>`;
-});
+    if (!kodeKec || !kodeKab) return;
 
-});
+    document.getElementById('kode_kecamatan').value = kodeKec;
+    setLoading('desa', true);
 
-});
+    fetch(`/api/bali/desa?kab=${kodeKab}&kec=${kodeKec}`)
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
+        .then(data => {
+            const desa = document.getElementById('desa');
+            desa.innerHTML = '<option value="">Pilih Desa</option>';
+            data.forEach(item => {
+                desa.innerHTML += `<option value="${item.nama}" data-kode="${item.kode}">${item.nama}</option>`;
+            });
+            setLoading('desa', false, 'Pilih Desa');
+        })
+        .catch(() => {
+            const desa = document.getElementById('desa');
+            desa.innerHTML = '<option value="">Gagal memuat — coba lagi</option>';
+            setLoading('desa', false);
+        });
 
+}, 300));
 
+// ─── Desa → simpan kode ───────────────────────────────────────────────────────
 
-document.getElementById('kecamatan').addEventListener('change',function(){
-
-let selectedKec = this.options[this.selectedIndex];
-let kodeKec = selectedKec.getAttribute('data-kode');
-
-document.getElementById('kode_kecamatan').value = kodeKec;
-
-let selectedKab = document.getElementById('kabupaten').selectedOptions[0];
-let kodeKab = selectedKab.getAttribute('data-kode');
-
-fetch(`/api/bali/desa?kab=${kodeKab}&kec=${kodeKec}`)
-.then(res=>res.json())
-.then(data=>{
-
-let desa = document.getElementById('desa');
-
-desa.innerHTML = '<option value="">Pilih Desa</option>';
-
-data.forEach(item=>{
-desa.innerHTML += `<option value="${item.nama}" data-kode="${item.kode}">${item.nama}</option>`;
-});
-
-});
-
-});
-
-document.getElementById('desa').addEventListener('change',function(){
-
-let selectedDes = this.options[this.selectedIndex];
-let kodeDes = selectedDes.getAttribute('data-kode');
-
-document.getElementById('kode_desa').value = kodeDes;
-
-});
+document.getElementById('desa').addEventListener('change', debounce(function () {
+    const selected = this.options[this.selectedIndex];
+    document.getElementById('kode_desa').value = selected.getAttribute('data-kode') ?? '';
+}, 300));
 </script>
 
 @endsection

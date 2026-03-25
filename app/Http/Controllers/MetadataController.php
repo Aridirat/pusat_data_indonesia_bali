@@ -663,7 +663,7 @@ class MetadataController extends Controller
             'nama_contact_person'    => $request->nama_contact_person,
             'nomor_contact_person'   => $request->nomor_contact_person,
             'email_contact_person'   => $request->email_contact_person,
-            'tipe_group'             => $request->tipe_group ?? 2,
+            'tipe_group'             => $request->tipe_group ?? 0,
             'group_by'               => $request->tipe_group == 1 ? $request->group_by : null,
             'status'                 => self::STATUS_PENDING,
             'date_inputed'           => now(),

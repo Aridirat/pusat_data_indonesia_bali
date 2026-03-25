@@ -6,31 +6,36 @@ use App\Http\Controllers\Api\DataApiController;
 
 Route::prefix('bali')->group(function () {
 
-    Route::get('/kabupaten',[WilayahApiController::class,'kabupaten']);
-    Route::get('/kecamatan',[WilayahApiController::class,'kecamatan']);
-    Route::get('/desa',[WilayahApiController::class,'desa']);
+    /*
+    |--------------------------------------------------------------------------
+    | Wilayah API
+    |--------------------------------------------------------------------------
+    | Kabupaten jarang berubah & sering diakses pertama kali → cache-friendly.
+    | Kecamatan & Desa dipanggil setiap user ganti pilihan → butuh lebih longgar.
+    | Semua pakai throttle terpisah agar satu endpoint tidak memblok yang lain.
+    */
 
-    Route::prefix('v1')->group(function () {
+    // Kabupaten: dipanggil 1x per page load → throttle ketat sudah cukup
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::get('/kabupaten', [WilayahApiController::class, 'kabupaten']);
+    });
 
-    // Daftar semua metadata aktif
-    Route::get('/metadata', [DataApiController::class, 'metadata']);
+    // Kecamatan & Desa: dipanggil berulang saat user drill-down → lebih longgar
+    Route::middleware('throttle:120,1')->group(function () {
+        Route::get('/kecamatan', [WilayahApiController::class, 'kecamatan']);
+        Route::get('/desa',      [WilayahApiController::class, 'desa']);
+    });
 
-    // List data (bisa difilter via query params)
-    // GET /api/v1/data?metadata_id=3&year=2024&per_page=20
-    Route::get('/data', [DataApiController::class, 'index']);
+    /*
+    |--------------------------------------------------------------------------
+    | Data API v1
+    |--------------------------------------------------------------------------
+    | Endpoint data bisa diakses lebih sering (dashboard, filter, dsb.)
+    */
+    Route::prefix('v1')->middleware('throttle:120,1')->group(function () {
+        Route::get('/metadata',   [DataApiController::class, 'metadata']);
+        Route::get('/data',       [DataApiController::class, 'index']);
+        Route::get('/data/{id}',  [DataApiController::class, 'show']);
+    });
 
-    // Detail satu data
-    // GET /api/v1/data/42
-    Route::get('/data/{id}', [DataApiController::class, 'show']);
-
-});
-
-// ── Route Ter-autentikasi (butuh Bearer Token — Laravel Sanctum) ──
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
-
-    // Ambil data berdasarkan template tampilan user
-    // GET /api/v1/template/3
-    Route::get('/template/{tampilan_id}', [DataApiController::class, 'template']);
-
-});
 });

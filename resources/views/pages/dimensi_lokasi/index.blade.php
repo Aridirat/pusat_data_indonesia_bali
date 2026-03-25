@@ -39,9 +39,9 @@
     <!-- TABLE -->
     <div class="mt-6 border rounded-md overflow-hidden">
 
-        <table class="w-full text-sm">
+        <table class="w-full text-xs">
 
-            <thead class="bg-gray-100 text-gray-700">
+            <thead class="bg-gray-200 text-gray-700">
 
                 <tr>
                     <th class="p-3 text-left">
@@ -53,10 +53,20 @@
                             Provinsi
                         </a>
                     </th>
+                    <th class="p-3 text-left">
+                        <a href="?sort_by=provinsi&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
+                            Kode Prov.
+                        </a>
+                    </th>
 
                     <th class="p-3 text-left">
                         <a href="?sort_by=kabupaten&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Kabupaten
+                        </a>
+                    </th>
+                    <th class="p-3 text-left">
+                        <a href="?sort_by=kabupaten&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
+                            Kode Kab.
                         </a>
                     </th>
 
@@ -67,13 +77,28 @@
                     </th>
 
                     <th class="p-3 text-left">
+                        <a href="?sort_by=kecamatan&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
+                            Kode Kec.
+                        </a>
+                    </th>
+
+                    <th class="p-3 text-left">
                         <a href="?sort_by=desa&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Desa
                         </a>
                     </th>
 
-                    <th class="p-3 text-center">
-                        Aksi
+                    <th class="p-3 text-left">
+                        <a href="?sort_by=desa&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
+                            Kode Desa
+                        </a>
+                    </th>
+
+                    <th class="p-3 text-left">
+                        Banjar
+                    </th>
+                    <th class="p-3 text-left">
+                        RT
                     </th>
 
                 </tr>
@@ -87,7 +112,7 @@
 
                 <tr class="hover:bg-gray-50">
 
-                    <td class="p-3">
+                    <td class="p-3 bg-gray-50">
                         {{ ($data->currentPage() - 1) * $data->perPage() + $loop->iteration }}
                     </td>
                     
@@ -95,29 +120,40 @@
                         {{ $row->provinsi }}
                     </td>
 
+                    <td class="p-3 bg-gray-50">
+                        {{ $row->kode_provinsi }}
+                    </td>
+
                     <td class="p-3">
                         {{ $row->kabupaten }}
+                    </td>
+
+                    <td class="p-3 bg-gray-50">
+                        {{ $row->kode_kabupaten }}
                     </td>
 
                     <td class="p-3">
                         {{ $row->kecamatan }}
                     </td>
 
+                    <td class="p-3 bg-gray-50">
+                        {{ $row->kode_kecamatan }}
+                    </td>
+
                     <td class="p-3">
                         {{ $row->desa }}
                     </td>
 
-                    <td class="p-3 text-center">
+                    <td class="p-3 bg-gray-50">
+                        {{ $row->kode_desa }}
+                    </td>
 
-                        <div class="flex gap-2 justify-center">
+                    <td class="p-3">
+                        {{ $row->banjar }}
+                    </td>
 
-                            <a href="#"
-                            class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded text-xs">
-                                Detail
-                            </a>
-
-                        </div>
-
+                    <td class="p-3 bg-gray-50">
+                        {{ $row->rt }}
                     </td>
 
                 </tr>
