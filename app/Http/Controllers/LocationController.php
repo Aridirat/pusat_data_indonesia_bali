@@ -62,10 +62,6 @@ class LocationController extends Controller
         $banjar    = strtoupper(trim($request->banjar));
         $rt        = strtoupper(trim($request->rt));
 
-
-        /*
-        CEK DUPLIKASI DATA
-        */
         $duplicate = Location::where('kabupaten',$kabupaten)
                         ->where('kecamatan',$kecamatan)
                         ->where('desa',$desa)

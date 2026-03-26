@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
-import { dashboard } from '@/routes';
+import { router } from '@inertiajs/vue3';
 
 const mainNavItems: NavItem[] = [
     {

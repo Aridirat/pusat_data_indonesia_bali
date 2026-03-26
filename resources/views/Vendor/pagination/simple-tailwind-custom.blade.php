@@ -17,12 +17,10 @@
     {{-- Page Numbers --}}
     @foreach ($elements as $element)
 
-        {{-- jika berupa string "..." --}}
         @if (is_string($element))
             <span class="px-3 py-1">{{ $element }}</span>
         @endif
 
-        {{-- jika berupa array halaman --}}
         @if (is_array($element))
             @foreach ($element as $page => $url)
 

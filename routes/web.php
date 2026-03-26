@@ -57,7 +57,7 @@ Route::middleware([IsLogin::class])->group(function () {
         Route::post('/import-excel',  [DataController::class, 'importExcel'])->name('import_excel');
         Route::get('/template-excel', [DataController::class, 'downloadTemplateExcel'])->name('template_excel');
 
-        // ── [BARU] Export Data (Excel / PDF / JSON) ───────────
+        // ── Export Data (Excel / PDF / JSON) ───────────
         // Filter params: metadata_id, kabupaten, year (sama dengan index)
         Route::get('/export/excel', [DataExportController::class, 'excel'])->name('export.excel');
         Route::get('/export/pdf',   [DataExportController::class, 'pdf'])->name('export.pdf');
@@ -74,7 +74,6 @@ Route::middleware([IsLogin::class])->group(function () {
     });
 
     // ── Metadata ─────────────────────────────────────────────
-    // PENTING: Semua route statis/AJAX harus di atas wildcard /{metadata}
 
     Route::get( '/metadata',            [MetadataController::class, 'index'])->name('metadata.index');
     Route::get( '/metadata/create',     [MetadataController::class, 'create'])->name('metadata.create');
@@ -82,13 +81,11 @@ Route::middleware([IsLogin::class])->group(function () {
     Route::get( '/metadata/check-nama', [MetadataController::class, 'checkNama'])->name('metadata.check_nama');
     Route::get( '/metadata/approval',   [MetadataController::class, 'approval'])->name('metadata.approval');
 
-    // ── [BARU] Export Excel ───────────────────────────────────
     // count_only: digunakan modal untuk preview jumlah data (JSON)
     // export: download file .xlsx
     Route::get('/metadata/export/count', [MetadataController::class, 'exportCount'])->name('metadata.export.count');
     Route::get('/metadata/export',       [MetadataController::class, 'export'])->name('metadata.export');
 
-    // ── [BARU] Export Template Metadata ──────────────────────
     // Menghasilkan file .xlsx kosong berisi metadata_id + nama + kolom periode waktu
     Route::get('/metadata/template',     [MetadataController::class, 'exportTemplate'])->name('metadata.template');
 

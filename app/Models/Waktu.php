@@ -17,9 +17,6 @@ class Waktu extends Model
         return $this->hasMany(Data::class, 'time_id', 'time_id');
     }
 
-    /**
-     * Label lengkap: "1 Januari 2024"
-     */
     public function getFullDateAttribute(): string
     {
         try {

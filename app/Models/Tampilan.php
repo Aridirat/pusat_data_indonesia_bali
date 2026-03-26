@@ -11,7 +11,6 @@ class Tampilan extends Model
 
     protected $fillable = ['nama_tampilan', 'user_id', 'filter_params'];
 
-    // Cast filter_params otomatis jadi array
     protected $casts = [
         'filter_params' => 'array',
     ];

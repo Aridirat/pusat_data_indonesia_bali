@@ -10,11 +10,6 @@ use App\Models\ProdusenData;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 
-
-// ─────────────────────────────────────────────────────────────────────
-// READ FILTER: Hanya baca kolom yang dibutuhkan (0–24) dan membatasi
-// baris per-chunk saat membaca file besar. Ini mencegah PhpSpreadsheet
-// ─────────────────────────────────────────────────────────────────────
 class ChunkReadFilter implements IReadFilter
 {
     private $startRow;
@@ -35,25 +30,14 @@ class ChunkReadFilter implements IReadFilter
 class MetadataImportController extends Controller
 {
     // ─────────────────────────────────────────────────────────────
-    // TUNING — sesuaikan jika perlu
+    // TUNING
     // ─────────────────────────────────────────────────────────────
-
-    /**
-     * Jumlah baris Excel yang dibaca per siklus saat streaming.
-     * Nilai 300 adalah sweet-spot: cukup besar agar jumlah I/O kecil,
-     * cukup kecil agar RAM tidak melonjak pada laptop 8 GB.
-     */
     private const READ_CHUNK  = 300;
 
-    /**
-     * Jumlah baris yang di-INSERT ke DB dalam satu query.
-     * Satu INSERT dengan 100 baris jauh lebih cepat dari 100 INSERT
-     * satu-satu, dan lebih aman untuk memori daripada 500 sekaligus.
-     */
     private const INSERT_CHUNK = 100;
 
     // ─────────────────────────────────────────────────────────────
-    // MAPPING: indeks kolom Excel (0-based) → nama field
+    // MAPPING: indeks kolom Excel 
     // ─────────────────────────────────────────────────────────────
     private const COL = [
         0  => 'excel_id',
@@ -94,7 +78,6 @@ class MetadataImportController extends Controller
         'nama_contact_person', 'nomor_contact_person', 'email_contact_person',
     ];
 
-    // Regex untuk strip suffix wilayah dari ALIAS
     private const ALIAS_WILAYAH = [
         '/\s+di\s+(Kabupaten|Kab\.?|Kecamatan|Kec\.?|Kota|Provinsi|Prov\.?|Desa|Kelurahan|Kel\.?)\s+[\w\s]+$/iu',
         '/\s+(Kabupaten|Kab\.|Kecamatan|Kec\.|Kota|Provinsi|Prov\.|Desa|Kelurahan|Kel\.)\s+\w+(\s+\w+)*$/iu',
@@ -105,9 +88,7 @@ class MetadataImportController extends Controller
     ];
 
     // ═════════════════════════════════════════════════════════════
-    // PREVIEW — POST /metadata/import/preview
-    // Baca seluruh file untuk menampilkan ringkasan ke user.
-    // Preview tidak perlu chunked karena hanya membaca, tidak insert.
+    // PREVIEW — POST
     // ═════════════════════════════════════════════════════════════
     public function preview(Request $request)
     {
@@ -122,18 +103,15 @@ class MetadataImportController extends Controller
         try {
             $spreadsheet = IOFactory::load($request->file('file')->getRealPath());
             $rows        = $spreadsheet->getActiveSheet()->toArray(null, true, true, false);
-            array_shift($rows); // hapus baris header
+            array_shift($rows); 
 
-            // Bebaskan spreadsheet dari memori segera setelah data diambil
             $spreadsheet->disconnectWorksheets();
             unset($spreadsheet);
 
-            // Hash map nama DB lowercase → O(1) lookup
             $existingInDb = Metadata::pluck('nama')
                 ->map(fn($n) => $this->dedupKey($n))
                 ->flip()->all();
 
-            // cache produsen agar tidak query berulang
             $produsenCache = ProdusenData::pluck('nama_produsen', 'produsen_id')->toArray();
 
             $valid   = [];
@@ -204,29 +182,6 @@ class MetadataImportController extends Controller
         }
     }
 
-    // ═════════════════════════════════════════════════════════════
-    // IMPORT — POST /metadata/import/store
-    //
-    // Strategi hemat RAM untuk laptop 8 GB + SSD hampir penuh:
-    //
-    //  1. File Excel dibaca per READ_CHUNK baris menggunakan
-    //     ChunkReadFilter — PhpSpreadsheet hanya membaca segmen kecil
-    //     file ke RAM, bukan seluruh file sekaligus.
-    //
-    //  2. Setiap chunk yang sudah diproses langsung di-INSERT ke DB
-    //     dengan INSERT_CHUNK baris per query, lalu array-nya dikosongkan
-    //     agar GC PHP bisa membebaskan memori.
-    //
-    //  3. Seluruh operasi dibungkus satu DB::transaction() sehingga
-    //     jika terjadi error di tengah jalan, tidak ada data setengah-jadi
-    //     yang masuk ke database.
-    //
-    //  4. existingInDb dimuat SEKALI di awal sebagai hash map, bukan
-    //     query per-baris (menghindari N+1 query problem).
-    //
-    //  5. ProdusenData di-cache dalam array lokal agar nama produsen
-    //     tidak di-query ulang untuk setiap baris yang sama.
-    // ═════════════════════════════════════════════════════════════
     public function store(Request $request)
     {
         $request->validate([
@@ -242,15 +197,11 @@ class MetadataImportController extends Controller
         $now               = now()->toDateTimeString();
 
         try {
-            // ── Persiapan data lookup sekali di awal ──────────────
             $existingInDb = Metadata::pluck('nama')
                 ->map(fn($n) => $this->dedupKey($n))
                 ->flip()->all();
-
-            // Cache produsen berdasarkan nama agar tidak query berulang
             $produsenCache = [];
 
-            // Hitung total baris file untuk keperluan chunking
             $totalRows = $this->countExcelRows($filePath);
 
             $seen     = [];
@@ -264,24 +215,20 @@ class MetadataImportController extends Controller
                 &$existingInDb, &$produsenCache,
                 &$seen, &$inserted, &$skipped, &$toInsert
             ) {
-                // Iterasi per READ_CHUNK baris (mulai dari baris 2, baris 1 = header)
                 for ($startRow = 2; $startRow <= $totalRows; $startRow += self::READ_CHUNK) {
                     $endRow = min($startRow + self::READ_CHUNK - 1, $totalRows);
 
-                    // Baca hanya segmen baris ini ke RAM
                     $reader = IOFactory::createReaderForFile($filePath);
                     $reader->setReadFilter(new ChunkReadFilter($startRow, $endRow));
-                    $reader->setReadDataOnly(true); // skip style/format → lebih cepat
+                    $reader->setReadDataOnly(true);
 
                     $spreadsheet = $reader->load($filePath);
                     $chunkRows   = $spreadsheet->getActiveSheet()
                                                ->toArray(null, true, true, false);
 
-                    // Bebaskan memori segera setelah data diambil
                     $spreadsheet->disconnectWorksheets();
                     unset($spreadsheet, $reader);
 
-                    // Hapus baris header jika ikut terbaca (terjadi di chunk pertama)
                     if (!empty($chunkRows) && $chunkRows[0][0] !== null && !is_numeric($chunkRows[0][0])) {
                         array_shift($chunkRows);
                     }
@@ -297,13 +244,12 @@ class MetadataImportController extends Controller
 
                         if ($skipExisting && isset($existingInDb[$key])) { $skipped++; continue; }
 
-                        // Resolusi produsen_id dengan cache lokal
                         $produsenId = is_numeric($r['produsen_id']) ? (int)$r['produsen_id'] : null;
                         if (!$produsenId && !empty($r['_nama_produsen'])) {
                             $namaProd = trim($r['_nama_produsen']);
                             if (!isset($produsenCache[$namaProd])) {
                                 $p = ProdusenData::where('nama_produsen', $namaProd)->value('produsen_id');
-                                $produsenCache[$namaProd] = $p; // null jika tidak ketemu
+                                $produsenCache[$namaProd] = $p;
                             }
                             $produsenId = $produsenCache[$namaProd];
                         }
@@ -313,7 +259,6 @@ class MetadataImportController extends Controller
 
                         $toInsert[] = $this->buildRow($r, $produsenId, $userId, $now);
 
-                        // Flush ke DB setiap INSERT_CHUNK baris → bebaskan memori
                         if (count($toInsert) >= self::INSERT_CHUNK) {
                             DB::table('metadata')->insert($toInsert);
                             $inserted += count($toInsert);
@@ -321,16 +266,15 @@ class MetadataImportController extends Controller
                         }
                     }
 
-                    unset($chunkRows); // bantu GC
-                } // end for (chunk loop)
+                    unset($chunkRows);
+                }
 
-                // Insert sisa baris yang belum di-flush
                 if (!empty($toInsert)) {
                     DB::table('metadata')->insert($toInsert);
                     $inserted += count($toInsert);
                     $toInsert  = [];
                 }
-            }); // end DB::transaction
+            });
 
             return response()->json([
                 'success'  => true,
@@ -347,12 +291,6 @@ class MetadataImportController extends Controller
             ], 422);
         }
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // HELPER: countExcelRows
-    // Hitung jumlah baris terpakai tanpa memuat seluruh konten sel.
-    // Dipakai untuk menentukan range loop chunking.
-    // ─────────────────────────────────────────────────────────────
     private function countExcelRows(string $filePath): int
     {
         $reader = IOFactory::createReaderForFile($filePath);
@@ -380,7 +318,6 @@ class MetadataImportController extends Controller
             }
         }
 
-        // Tag: JSON array → comma-separated string
         if (!empty($r['tag'])) {
             $decoded = json_decode((string)$r['tag'], true);
             if (is_array($decoded)) {
@@ -389,7 +326,6 @@ class MetadataImportController extends Controller
         }
         if (empty(trim((string)($r['tag'] ?? '')))) $r['tag'] = '-';
 
-        // Normalisasi tipe_data: "Angka Numerik" → "Numerik"
         if (!empty($r['tipe_data'])) {
             $r['tipe_data'] = str_ireplace('Angka Numerik', 'Numerik', $r['tipe_data']);
         }
@@ -397,33 +333,12 @@ class MetadataImportController extends Controller
         return $r;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // HELPER: dedupKey
-    // Lowercase + normalkan spasi. Tidak strip nama wilayah karena
-    // "Kec. Sukawati" dan "Kec. Blahbatuh" adalah metadata berbeda.
-    // ─────────────────────────────────────────────────────────────
     private function dedupKey(?string $nama): string
     {
         if (empty($nama)) return '';
         return mb_strtolower(trim(preg_replace('/\s+/', ' ', $nama)));
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // HELPER: normalizeAlias
-    //
-    // FIX #1: Alias SELALU dikembalikan sebagai string (tidak pernah null).
-    // Logika:
-    //   - Jika alias memiliki suffix wilayah → strip wilayah → simpan hasil
-    //   - Jika alias TIDAK memiliki suffix wilayah → simpan apa adanya
-    //
-    // Sebelumnya: jika alias sama dengan input setelah strip → return null
-    // Sekarang  : selalu return string agar kolom alias di DB selalu terisi
-    //
-    // Contoh:
-    //   "Kepadatan Penduduk Kecamatan Sukawati" → "Kepadatan Penduduk"
-    //   "Jumlah Penduduk"                       → "Jumlah Penduduk" (tidak berubah)
-    //   null / ""                               → null (tidak ada data alias sama sekali)
-    // ─────────────────────────────────────────────────────────────
     private function normalizeAlias(?string $rawAlias): ?string
     {
         if ($rawAlias === null || trim($rawAlias) === '') return null;
@@ -434,8 +349,6 @@ class MetadataImportController extends Controller
         }
         $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
 
-        // FIX: kembalikan $cleaned apapun hasilnya (tidak null kalau sama dengan input)
-        // Jika proses strip menghapus semua karakter (edge case), fallback ke rawAlias
         return $cleaned !== '' ? $cleaned : trim($rawAlias);
     }
 
@@ -458,7 +371,6 @@ class MetadataImportController extends Controller
 
         return [
             'nama'                   => trim($r['nama']),
-            // FIX #1: normalizeAlias sekarang selalu menghasilkan string
             'alias'                  => $this->normalizeAlias($r['alias'] ?: $r['nama']),
 
             'konsep'                 => $r['konsep'],

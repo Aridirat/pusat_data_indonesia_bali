@@ -5,7 +5,7 @@
 <div class="mt-2 bg-white rounded-xl shadow p-6">
 
     {{-- ══════════════════════════════════════════════
-         HEADER
+        HEADER
     ══════════════════════════════════════════════ --}}
     <div class="flex justify-between items-start flex-wrap gap-3">
         <div>
@@ -76,7 +76,6 @@
     ══════════════════════════════════════════════ --}}
     <div class="flex items-center gap-2 mt-5">
         <form method="GET" class="flex items-center gap-2 flex-1">
-            {{-- Hidden inputs: pertahankan filter kolom saat search --}}
             <input type="hidden" name="filter_nama"        value="{{ request('filter_nama') }}">
             <input type="hidden" name="filter_klasifikasi" value="{{ request('filter_klasifikasi') }}">
             <input type="hidden" name="filter_tipe_data"   value="{{ request('filter_tipe_data') }}">
@@ -375,14 +374,13 @@
                             <option value="{{ $p->produsen_id }}">{{ $p->nama_produsen }}</option>
                         @endforeach
                     </select>
-                    <p class="text-xs text-gray-400 mt-1">Pilih produsen tertentu atau biarkan kosong untuk semua.</p>
                 </div>
 
                 {{-- Dropdown Frekuensi / Rentang Waktu --}}
                 <div class="mb-5">
                     <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                         <i class="fas fa-calendar-alt text-amber-400 mr-1"></i>
-                        Rentang Waktu Metadata
+                        Frekuensi Waktu Penerbitan Metadata
                     </label>
                     <select name="frekuensi" id="exportFrekuensi"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
@@ -394,7 +392,6 @@
                         <option value="Quarter">Quarter</option>
                         <option value="Bulanan">Bulanan</option>
                     </select>
-                    <p class="text-xs text-gray-400 mt-1">Filter berdasarkan frekuensi penerbitan metadata.</p>
                 </div>
 
                 {{-- Preview jumlah data (live, via AJAX) --}}
@@ -428,9 +425,7 @@
 </div>
 
 {{-- ══════════════════════════════════════════════════════════════
-     [BARU] MODAL EXPORT TEMPLATE METADATA
-     Menghasilkan file .xlsx kosong dengan header metadata_id,
-     nama_metadata, location_id, nama_lokasi, + kolom periode waktu
+    MODAL EXPORT TEMPLATE METADATA\
 ══════════════════════════════════════════════════════════════ --}}
 <div id="templateModal"
      class="fixed inset-0 z-50 hidden items-center justify-center"
@@ -454,9 +449,7 @@
         {{-- Body modal --}}
         <div class="px-6 py-5">
             <p class="text-sm text-gray-500 mb-5">
-                Hasilkan template Excel kosong yang siap diisi data.
-                Template berisi baris metadata milik produsen yang dipilih,
-                dengan kolom periode waktu sesuai rentang yang ditentukan.
+                Menghasilkan template Excel yang digunakan untuk proses input data.
             </p>
 
             <form id="templateForm" method="GET" action="{{ route('metadata.template') }}">
@@ -480,7 +473,7 @@
                 {{-- Dropdown Rentang Waktu (wajib, tanpa Tahunan) --}}
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                        <i class="fas fa-calendar-range text-amber-400 mr-1"></i>
+                        <i class="fas fa-calendar text-amber-400 mr-1"></i>
                         Rentang Waktu <span class="text-red-500">*</span>
                     </label>
                     <select name="rentang" id="tplRentang" required
@@ -488,13 +481,12 @@
                                    focus:outline-none focus:ring-2 focus:ring-violet-400 text-gray-700"
                             onchange="updateTplPreview()">
                         <option value="">— Pilih Rentang —</option>
-                        <option value="5-tahun">5 Tahun (2021–2025)</option>
-                        <option value="semester">Semester (10 kolom / 5 thn)</option>
-                        <option value="quarter">Quarter (20 kolom / 5 thn)</option>
-                        <option value="bulanan">Bulanan (60 kolom / 5 thn)</option>
+                        <option value="5-tahun">5 Tahun</option>
+                        <option value="semester">Semester</option>
+                        <option value="quarter">Quarter</option>
+                        <option value="bulanan">Bulanan</option>
                     </select>
-                    <p class="text-xs text-gray-400 mt-1">
-                        Catatan: Tahunan tidak tersedia pada template. Rentang selalu mencakup 5 tahun.
+                    <p class="text-xs text-gray-400 mt-1">Rentang waktu selalu dalam 5 tahun.
                     </p>
                 </div>
 
@@ -506,12 +498,11 @@
                     </label>
                     <input type="number" name="tahun_awal" id="tplTahun"
                            min="1990" max="2099"
-                           placeholder="Contoh: 2021"
+                           placeholder="Contoh: {{ date('Y') }}"
                            required
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
                                   focus:outline-none focus:ring-2 focus:ring-violet-400 text-gray-700"
                            oninput="updateTplPreview()">
-                    <p class="text-xs text-gray-400 mt-1">Periode dimulai dari tahun ini selama 5 tahun.</p>
                 </div>
 
                 {{-- Live Preview Kolom --}}
@@ -562,8 +553,7 @@
 ══════════════════════════════════════════════════════════════ --}}
 <script>
 /* ════════════════════════════════════════════════════════════════
-   FILTER SERVER-SIDE — push ke URL → server query → render baru
-   Dipilih karena data warehouse bisa ribuan baris.
+   FILTER SERVER-SIDE
 ════════════════════════════════════════════════════════════════ */
 function applyFilters() {
     const url = new URL(window.location.href);
@@ -656,7 +646,7 @@ document.getElementById('exportForm').addEventListener('submit', function() {
 });
 
 /* ════════════════════════════════════════════════════════════════
-   [BARU] MODAL EXPORT TEMPLATE METADATA
+   MODAL EXPORT TEMPLATE METADATA
 ════════════════════════════════════════════════════════════════ */
 const templateModal = document.getElementById('templateModal');
 const tplProdusen   = document.getElementById('tplProdusen');
@@ -681,8 +671,6 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Live Preview Kolom Periode ────────────────────────────────
-// Menampilkan contoh nama kolom sebelum user download,
-// sehingga user bisa memastikan pilihan sudah benar.
 
 const BULAN_PENDEK = ['Jan','Feb','Mar','Apr','Mei','Jun',
                       'Jul','Agu','Sep','Okt','Nov','Des'];

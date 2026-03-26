@@ -74,8 +74,6 @@ class Data extends Model
         return $query->where('status', self::STATUS_PENDING);
     }
 
-    // ─── HELPER ───────────────────────────────────────────────
-
     public function getStatusLabelAttribute(): string
     {
         return match ((int) $this->status) {

@@ -10,13 +10,6 @@ use Illuminate\Http\JsonResponse;
 
 class DataApiController extends Controller
 {
-    /**
-     * GET /api/data
-     * Endpoint publik untuk mengambil semua data (status AVAILABLE)
-     * Query params: metadata_id, location_id, year, month, per_page, page
-     *
-     * Contoh: GET /api/data?metadata_id=3&year=2024&per_page=20
-     */
     public function index(Request $request): JsonResponse
     {
         $query = Data::with(['metadata', 'location', 'time'])
@@ -50,10 +43,6 @@ class DataApiController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/data/{id}
-     * Detail satu data
-     */
     public function show($id): JsonResponse
     {
         $row = Data::with(['metadata', 'location', 'time', 'user'])
@@ -66,15 +55,8 @@ class DataApiController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/template/{tampilan_id}
-     * Ambil data sesuai template yang tersimpan (butuh auth token)
-     *
-     * Header: Authorization: Bearer {token}
-     */
     public function template(Request $request, $tampilanId): JsonResponse
     {
-        // Autentikasi via token (Sanctum)
         if (!$request->user()) {
             return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
         }
@@ -95,7 +77,6 @@ class DataApiController extends Controller
             ->whereIn('metadata_id', $metadataIds)
             ->orderBy('date_inputed', 'desc')
             ->get();
-            // ->map(fn($row) => self::formatRow($row));
 
         return response()->json([
             'status'   => 'success',
@@ -111,10 +92,6 @@ class DataApiController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/metadata
-     * Daftar semua metadata aktif (untuk referensi filter)
-     */
     public function metadata(): JsonResponse
     {
         $list = \App\Models\Metadata::active()
@@ -125,7 +102,6 @@ class DataApiController extends Controller
         return response()->json(['status' => 'success', 'data' => $list]);
     }
 
-    // ── Helper: format 1 baris data ke array JSON ──
     private static function formatRow(Data $row, bool $detail = false): array
     {
         $base = [

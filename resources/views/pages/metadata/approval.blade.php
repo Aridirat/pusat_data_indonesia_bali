@@ -5,7 +5,7 @@
 <div class="mt-2 bg-white rounded-xl shadow p-6">
 
     {{-- ══════════════════════════════════════════════
-         HEADER (tidak diubah dari aslinya)
+         HEADER
     ══════════════════════════════════════════════ --}}
     <div class="flex justify-between items-start">
         <div>
@@ -28,7 +28,7 @@
     <div id="ajaxAlert" class="hidden mt-4"></div>
 
     {{-- ══════════════════════════════════════════════
-         STATS (tidak diubah dari aslinya)
+         STATS
     ══════════════════════════════════════════════ --}}
     <div class="grid grid-cols-3 gap-4 mt-5">
         <div class="bg-amber-50 border border-amber-100 rounded-lg p-4 cursor-pointer hover:border-amber-300 transition-colors"
@@ -52,7 +52,7 @@
     </div>
 
     {{-- ══════════════════════════════════════════════
-         TAB + SEARCH (tidak diubah dari aslinya)
+         TAB + SEARCH 
     ══════════════════════════════════════════════ --}}
     <div class="flex border-b border-gray-200 mt-6">
         @php
@@ -81,7 +81,6 @@
             </button>
         @endforeach
 
-        {{-- Search — hidden inputs agar filter kolom tidak reset saat search --}}
         <form method="GET" id="searchForm" class="ml-auto flex items-center pb-1">
             <input type="hidden" name="status"             value="{{ $statusFilter }}">
             <input type="hidden" name="filter_klasifikasi" value="{{ request('filter_klasifikasi') }}">
@@ -115,7 +114,6 @@
                 <span id="selectedCount">0</span> baris dipilih
             </p>
             <div class="flex gap-2">
-                {{-- Approve Selected (tersembunyi sampai ada checkbox dicek) --}}
                 <button id="btnApproveSelected"
                         onclick="approveSelected()"
                         disabled
@@ -129,7 +127,6 @@
                     Approve Terpilih (<span id="selectedCountBtn">0</span>)
                 </button>
 
-                {{-- Approve All — menyetujui SEMUA pending (bukan hanya halaman ini) --}}
                 <button onclick="approveAll(this)"
                         class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold
                                text-white rounded-md shadow-sm transition-colors"
@@ -151,7 +148,6 @@
         <table class="w-full text-sm text-left" id="metadataTable">
             <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b">
 
-                {{-- Baris 1: Judul kolom (struktur aslinya dipertahankan) --}}
                 <tr>
                     @if((int)$statusFilter === 1)
                         <th class="px-4 py-3 w-10">
@@ -172,11 +168,10 @@
                     <th class="px-4 py-3 font-semibold text-center min-w-36">Aksi</th>
                 </tr>
 
-                {{-- [BARU] Baris 2: Filter per kolom (server-side) --}}
+                
                 <tr class="bg-white border-t border-gray-100">
                     <td class="px-2 py-1.5"></td>
 
-                    {{-- Filter: Nama (text, Enter untuk apply) --}}
                     <td class="px-2 py-1.5">
                         <input type="text" id="filterNama"
                                value="{{ request('filter_nama') }}"
@@ -186,7 +181,6 @@
                                onkeydown="if(event.key==='Enter') applyFilters()">
                     </td>
 
-                    {{-- Filter: Klasifikasi (select, auto-apply) --}}
                     <td class="px-2 py-1.5">
                         <select id="filterKlasifikasi"
                                 class="w-full border border-gray-200 rounded px-2 py-1 text-xs
@@ -202,7 +196,6 @@
                         </select>
                     </td>
 
-                    {{-- Filter: Produsen (select) --}}
                     <td class="px-2 py-1.5">
                         <select id="filterProdusen"
                                 class="w-full border border-gray-200 rounded px-2 py-1 text-xs
@@ -218,7 +211,6 @@
                         </select>
                     </td>
 
-                    {{-- Filter: Tipe Data (select) --}}
                     <td class="px-2 py-1.5">
                         <select id="filterTipeData"
                                 class="w-full border border-gray-200 rounded px-2 py-1 text-xs
@@ -234,7 +226,6 @@
                         </select>
                     </td>
 
-                    {{-- Filter: User (text) --}}
                     <td class="px-2 py-1.5">
                         <input type="text" id="filterUser"
                                value="{{ request('filter_user') }}"
@@ -244,7 +235,6 @@
                                onkeydown="if(event.key==='Enter') applyFilters()">
                     </td>
 
-                    {{-- Filter: Tanggal dari–sampai --}}
                     <td class="px-2 py-1.5">
                         <div class="flex gap-1">
                             <p class="text-xs text-gray-500 pt-1">Dari</p>
@@ -279,7 +269,6 @@
                 @forelse($data as $index => $item)
                     <tr class="hover:bg-gray-50 transition-colors" data-id="{{ $item->metadata_id }}">
 
-                        {{-- Checkbox (Pending) / Nomor urut (lainnya) --}}
                         @if((int)$statusFilter === 1)
                             <td class="px-4 py-3">
                                 <input type="checkbox"
@@ -306,7 +295,6 @@
                             </span>
                         </td>
 
-                        {{-- [FIX] Produsen via relasi, bukan $item->produsen_data (tidak ada di migrasi) --}}
                         <td class="px-4 py-3 text-gray-600 text-xs">
                             {{ $item->produsen?->nama_produsen
                                 ? Str::limit($item->produsen->nama_produsen, 30)
@@ -354,7 +342,7 @@
                                     Detail
                                 </a>
 
-                                {{-- [BARU] Quick Approve — hanya Pending --}}
+                                {{-- Quick Approve — hanya Pending --}}
                                 @if((int)$item->status === 1)
                                     <button onclick="quickApprove({{ $item->metadata_id }}, '{{ addslashes($item->nama) }}', this)"
                                             class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold
@@ -367,7 +355,6 @@
                                     </button>
                                 @endif
 
-                                {{-- [BARU] Quick Nonaktifkan — hanya Active --}}
                                 @if((int)$item->status === 2)
                                     <button onclick="quickReject({{ $item->metadata_id }}, '{{ addslashes($item->nama) }}', this)"
                                             class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold
@@ -379,8 +366,6 @@
                                         Nonaktifkan
                                     </button>
                                 @endif
-
-                                {{-- [BARU] Quick Aktifkan Kembali — hanya Inactive --}}
                                 @if((int)$item->status === 3)
                                     <button onclick="quickReactivate({{ $item->metadata_id }}, '{{ addslashes($item->nama) }}', this)"
                                             class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold
@@ -475,8 +460,6 @@ function switchTab(status) {
 
 /* ════════════════════════════════════════════════════════════════
    [BARU] FILTER SERVER-SIDE
-   Pendekatan server-side dipilih karena data warehouse bisa sangat
-   besar — tidak efisien memfilter ribuan baris di sisi client.
 ════════════════════════════════════════════════════════════════ */
 function applyFilters() {
     const url = new URL(window.location.href);
@@ -595,7 +578,7 @@ function checkTableEmpty() {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   [BARU] QUICK APPROVE per baris (AJAX)
+   QUICK APPROVE per baris (AJAX)
 ════════════════════════════════════════════════════════════════ */
 async function quickApprove(id, nama, btn) {
     if (!confirm(`Approve metadata "${nama}"?`)) return;
@@ -618,7 +601,7 @@ async function quickApprove(id, nama, btn) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   [BARU] QUICK REJECT (AJAX)
+   QUICK REJECT (AJAX)
 ════════════════════════════════════════════════════════════════ */
 async function quickReject(id, nama, btn) {
     if (!confirm(`Nonaktifkan metadata "${nama}"?`)) return;
@@ -641,7 +624,7 @@ async function quickReject(id, nama, btn) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   [BARU] QUICK REACTIVATE (AJAX)
+   QUICK REACTIVATE (AJAX)
 ════════════════════════════════════════════════════════════════ */
 async function quickReactivate(id, nama, btn) {
     if (!confirm(`Aktifkan kembali metadata "${nama}"?`)) return;
@@ -664,7 +647,7 @@ async function quickReactivate(id, nama, btn) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   [BARU] APPROVE SELECTED — checkbox terpilih (AJAX bulk)
+    APPROVE SELECTED — checkbox terpilih (AJAX bulk)
 ════════════════════════════════════════════════════════════════ */
 async function approveSelected() {
     const ids = [...document.querySelectorAll('.row-check:checked')].map(cb => cb.value);
@@ -694,7 +677,7 @@ async function approveSelected() {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   [BARU] APPROVE ALL — semua data pending di DB (AJAX)
+    APPROVE ALL — semua data pending di DB (AJAX)
 ════════════════════════════════════════════════════════════════ */
 async function approveAll(btn) {
     const total = parseInt('{{ $data->total() }}');

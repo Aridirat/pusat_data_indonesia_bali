@@ -3,7 +3,6 @@ import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
-import { dashboard } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

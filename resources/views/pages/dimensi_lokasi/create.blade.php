@@ -23,7 +23,7 @@
         <form action="{{ route('dimensi_lokasi.store') }}" method="POST" class="space-y-5">
             @csrf
 
-            {{-- PROVINSI (readonly) --}}
+            {{-- PROVINSI --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Provinsi</label>
                 <input type="text" value="BALI"
@@ -151,7 +151,6 @@
 </div>
 
 <script>
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function debounce(func, delay) {
     let timeout;
@@ -161,12 +160,7 @@ function debounce(func, delay) {
     };
 }
 
-/**
- * Set state loading pada sebuah select.
- * @param {string} id   - id elemen select (tanpa #)
- * @param {boolean} on  - true = loading, false = selesai
- * @param {string} placeholder - teks option pertama saat loading selesai
- */
+
 function setLoading(id, on, placeholder = 'Pilih...') {
     const sel     = document.getElementById(id);
     const spin    = document.getElementById(`spin_${id}`);
@@ -191,9 +185,6 @@ function setLoading(id, on, placeholder = 'Pilih...') {
     }
 }
 
-/**
- * Reset select ke state kosong (disabled, belum ada data).
- */
 function resetSelect(id, placeholder) {
     const sel = document.getElementById(id);
     sel.innerHTML = `<option value="">${placeholder}</option>`;
@@ -306,8 +297,6 @@ document.getElementById('kecamatan').addEventListener('change', debounce(functio
         });
 
 }, 300));
-
-// ─── Desa → simpan kode ───────────────────────────────────────────────────────
 
 document.getElementById('desa').addEventListener('change', debounce(function () {
     const selected = this.options[this.selectedIndex];

@@ -12,19 +12,6 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 // use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
-/**
- * DataExportController
- *
- * Menangani tiga format export data:
- *   GET /data/export/excel  → file .xlsx
- *   GET /data/export/pdf    → view PDF (dicetak browser / download via Browsershot)
- *   GET /data/export/json   → JSON API (bilingual label)
- *
- * Query params yang diterima (sama dengan data.index):
- *   metadata_id  (wajib)
- *   kabupaten    (opsional)
- *   year         (opsional, integer)
- */
 class DataExportController extends Controller
 {
     public function __construct(private readonly DataExportService $svc) {}
