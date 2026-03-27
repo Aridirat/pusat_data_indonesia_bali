@@ -15,7 +15,9 @@ Route::get('/login',  [AuthController::class, 'loginView'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout',[AuthController::class, 'logout']);
 
-Route::get('/', fn() => redirect()->route('data.index'));
+Route::get('/', function () {
+    return redirect()->route('data.index');
+})->name('home');
 
 // ─────────────────────────────────────────────────────────────
 // AUTHENTICATED ROUTES
