@@ -4,7 +4,6 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-// use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -19,24 +18,58 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen()
     {
-        $user = User::factory()->create(['password' => bcrypt('password')]);
+        $user = User::factory()->create([
+            'username' => 'testuser',
+            'password' => bcrypt('password'),
+            'activation' => 'activated'
+        ]);
 
         $response = $this->post('/login', [
-            'email' => $user->email,
+            'username' => 'testuser',
             'password' => 'password',
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('data.index'));
+        $response->assertRedirect('/');
     }
 
     public function test_users_can_logout()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'activation' => 'activated'
+        ]);
 
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
         $response->assertRedirect('/login');
+    }
+
+    public function test_login_fails_with_invalid_username()
+    {
+        $response = $this->post('/login', [
+            'username' => 'nonexistent',
+            'password' => 'password',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('username');
+    }
+
+    public function test_login_fails_with_inactive_account()
+    {
+        $user = User::factory()->create([
+            'username' => 'testuser',
+            'password' => bcrypt('password'),
+            'activation' => 'pending'
+        ]);
+
+        $response = $this->post('/login', [
+            'username' => 'testuser',
+            'password' => 'password',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors();
     }
 }
