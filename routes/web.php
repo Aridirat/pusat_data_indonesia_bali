@@ -9,9 +9,6 @@ use App\Http\Controllers\WaktuController;
 use App\Http\Controllers\DataController;
 use App\Http\Controllers\DataExportController;
 use App\Http\Middleware\IsLogin;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\PasswordController;
-use App\Http\Controllers\TwoFactorController;
 
 // ── Auth ─────────────────────────────────────────────────────
 Route::get('/login',  [AuthController::class, 'loginView'])->name('login');
@@ -107,16 +104,5 @@ Route::middleware([IsLogin::class])->group(function () {
     Route::post('/metadata/{metadata}/reject',     [MetadataController::class, 'reject'])->name('metadata.reject');
     Route::post('/metadata/{metadata}/reactivate', [MetadataController::class, 'reactivate'])->name('metadata.reactivate');
     Route::get( '/metadata/{metadata}',            [MetadataController::class, 'detail'])->name('metadata.detail');
-
-    // Password update
-    Route::get('/user/password/edit', [PasswordController::class, 'edit'])->name('user-password.edit');
-    Route::patch('/user/password', [PasswordController::class, 'update'])->name('user-password.update');
-
-    // Profile update
-    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    // Two Factor Authentication
-    Route::get('/two-factor', [TwoFactorController::class, 'show'])->name('two-factor.show');
+    
 });
