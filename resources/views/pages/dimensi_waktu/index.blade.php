@@ -30,30 +30,6 @@
         </div>
     @endif
 
-    {{-- STATS CARDS --}}
-    {{-- <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-        <div class="bg-sky-50 border border-sky-100 rounded-lg p-4">
-            <p class="text-xs text-sky-500 font-medium uppercase tracking-wide">Total Data</p>
-            <p class="text-2xl font-bold text-sky-700 mt-1">{{ number_format($data->total()) }}</p>
-            <p class="text-xs text-sky-400 mt-1">hari tercatat</p>
-        </div>
-        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4">
-            <p class="text-xs text-indigo-500 font-medium uppercase tracking-wide">Total Tahun</p>
-            <p class="text-2xl font-bold text-indigo-700 mt-1">{{ $availableYears->count() }}</p>
-            <p class="text-xs text-indigo-400 mt-1">tahun tersedia</p>
-        </div>
-        <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
-            <p class="text-xs text-emerald-500 font-medium uppercase tracking-wide">Tahun Terbaru</p>
-            <p class="text-2xl font-bold text-emerald-700 mt-1">{{ $availableYears->first() ?? '-' }}</p>
-            <p class="text-xs text-emerald-400 mt-1">paling baru</p>
-        </div>
-        <div class="bg-amber-50 border border-amber-100 rounded-lg p-4">
-            <p class="text-xs text-amber-500 font-medium uppercase tracking-wide">Tahun Terlama</p>
-            <p class="text-2xl font-bold text-amber-700 mt-1">{{ $availableYears->last() ?? '-' }}</p>
-            <p class="text-xs text-amber-400 mt-1">paling lama</p>
-        </div>
-    </div> --}}
-
     {{-- ACTION BAR --}}
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 gap-3">
         <a href="{{ route('dimensi_waktu.create') }}"

@@ -16,15 +16,22 @@ return new class extends Migration
             $table->string('name', 200);
             $table->string('username', 50);
             $table->string('email', 50)->unique();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->tinyInteger('block')->default(0);
             $table->dateTime('registerdate');
             $table->dateTime('lastvisitdate');
             $table->string('activation', 100);
+            
             $table->integer('group_id');
             $table->foreign('group_id')->references('group_id')->on('group')->onDelete('restrict')->onUpdate('restrict');
             $table->rememberToken();
+            
+            $table->text('two_factor_secret')->nullable();
+            $table->text('two_factor_recovery_codes')->nullable();
+            $table->timestamp('two_factor_confirmed_at')->nullable();
             $table->timestamps();
+
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

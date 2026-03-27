@@ -23,30 +23,32 @@ class AuthController extends Controller
             return back();
         }
         
-        $request->validate([
+        $validated = $request->validate([
             'username' => ['required', 'string'],
             'password' => ['required'],
         ]);
 
         // Cari user berdasarkan username
-        $user = User::where('username', $request->username)->first();
+        $user = User::where('username', $validated['username'])->first();
 
         // Username tidak ditemukan
         if (!$user) {
             return back()
-                ->with('error', 'Username tidak ditemukan.')
+                ->withErrors(['username' => 'Username tidak ditemukan.'])
                 ->withInput();
         }
 
         // Jika status tidak aktif
         if ($user->activation !== 'activated') {
-            return back()->with('error', 'Akun belum aktif.');
+            return back()
+                ->withErrors(['username' => 'Akun belum aktif.'])
+                ->withInput();
         }
 
         // Password salah
-        if (!Hash::check($request->password, $user->password)) {
+        if (!Hash::check($validated['password'], $user->password)) {
             return back()
-                ->with('error', 'Password yang Anda masukkan salah.')
+                ->withErrors(['username' => 'Password yang Anda masukkan salah.'])
                 ->withInput();
         }
 
@@ -55,7 +57,6 @@ class AuthController extends Controller
         $request->session()->regenerate();
         return redirect('/')->with('success', 'Berhasil masuk.');
     }
-
 
     public function logout(Request $request)
     {

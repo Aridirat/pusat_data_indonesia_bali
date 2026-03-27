@@ -9,8 +9,6 @@ class Metadata extends Model
     protected $table      = 'metadata';
     protected $primaryKey = 'metadata_id';
     public $timestamps    = false;
-
-    // ── STATUS CONSTANTS ──────────────────────────────────────
     const STATUS_PENDING  = 1;
     const STATUS_ACTIVE   = 2;
     const STATUS_INACTIVE = 3;

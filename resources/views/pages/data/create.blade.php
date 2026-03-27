@@ -37,9 +37,7 @@
             </div>
         @endif
 
-        {{-- ══════════════════════════════════════════════
-             TAB SWITCHER
-        ══════════════════════════════════════════════ --}}
+        {{-- TAB SWITCHER --}}
         <div class="flex border-b border-gray-200 mb-6">
             <button onclick="switchTab('manual')" id="tab-manual"
                 class="tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors
@@ -53,9 +51,7 @@
             </button>
         </div>
 
-        {{-- ══════════════════════════════════════════════
-             TAB 1: INPUT MANUAL
-        ══════════════════════════════════════════════ --}}
+        {{-- TAB 1: INPUT MANUAL --}}
         <div id="panel-manual">
             <form action="{{ route('data.store') }}" method="POST" class="space-y-5">
                 @csrf
@@ -195,12 +191,7 @@
             </form>
         </div>
 
-        {{-- ══════════════════════════════════════════════
-             TAB 2: UPLOAD EXCEL
-             Preview dilakukan via AJAX ke server (DataImport).
-             Server membaca file, melakukan lookup time_id, deteksi
-             duplikat, dan mengembalikan JSON siap-render.
-        ══════════════════════════════════════════════ --}}
+        {{-- TAB 2: UPLOAD EXCEL --}}
         <div id="panel-excel" class="hidden">
 
             {{-- Info Format Template --}}
@@ -212,27 +203,27 @@
                 </p>
                 <p class="text-xs text-gray-600 mb-3">
                     Gunakan file template yang di-generate dari halaman
-                    <strong>Daftar Metadata → Export Template</strong>.
-                    Header ada di <strong>baris 3</strong> dengan struktur kolom:
+                    <strong>Daftar Metadata → Export Template</strong>
+                    dengan struktur kolom:
                 </p>
                 <div class="flex flex-wrap gap-1.5 mb-3">
-                    @foreach(['metadata_id','nama_metadata','location_id','nama_lokasi'] as $col)
+                    @foreach(['metadata_id','nama_metadata','kode_wilayah','nama_lokasi'] as $col)
                         <code class="px-2 py-0.5 rounded text-xs font-mono font-bold"
                               style="background:#e0f2fe; color:#0369a1;">{{ $col }}</code>
                     @endforeach
                     <code class="px-2 py-0.5 rounded text-xs font-mono"
-                          style="background:#fef3c7; color:#92400e;">2021</code>
+                          style="background:#fef3c7; color:#92400e;">{{ date('Y') }}</code>
                     <code class="px-2 py-0.5 rounded text-xs font-mono"
-                          style="background:#fef3c7; color:#92400e;">2022</code>
+                          style="background:#fef3c7; color:#92400e;">{{ date('Y') + 1}}</code>
                     <code class="px-2 py-0.5 rounded text-xs font-mono"
                           style="background:#fef3c7; color:#92400e;">… dst</code>
                 </div>
                 <p class="text-xs text-gray-500">
                     Format kolom periode yang didukung:
-                    <code class="bg-gray-100 px-1 rounded">2022</code> (tahunan) ·
-                    <code class="bg-gray-100 px-1 rounded">2022_Q1</code> (quarter) ·
-                    <code class="bg-gray-100 px-1 rounded">2022_S1</code> (semester) ·
-                    <code class="bg-gray-100 px-1 rounded">Jan_2022</code> (bulanan)
+                    <code class="bg-gray-100 px-1 rounded">{{ date('Y') }}</code> (Tahunan) ·
+                    <code class="bg-gray-100 px-1 rounded">{{ date('Y') }}_Q1</code> (Quarter) ·
+                    <code class="bg-gray-100 px-1 rounded">{{ date('Y') }}_S1</code> (Semester) ·
+                    <code class="bg-gray-100 px-1 rounded">Jan_{{ date('Y') }}</code> (Bulanan)
                 </p>
             </div>
 
@@ -240,7 +231,6 @@
             <div id="dropZone"
                  class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center
                         transition-colors cursor-pointer"
-                 style="hover:border-sky-400; hover:background:#f0f9ff;"
                  onclick="document.getElementById('fileExcel').click()"
                  ondragover="event.preventDefault(); this.style.borderColor='#38bdf8'; this.style.background='#f0f9ff';"
                  ondragleave="this.style.borderColor=''; this.style.background='';"
@@ -278,14 +268,13 @@
                     <span id="loadingText">Membaca dan memvalidasi file Excel di server…</span>
                 </div>
                 <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div id="loadingBar_inner"
-                         class="h-full rounded-full animate-pulse"
+                    <div class="h-full rounded-full animate-pulse"
                          style="width:100%; background:#38bdf8;"></div>
                 </div>
             </div>
 
-            {{-- ── PREVIEW RESULT (diisi oleh JS setelah AJAX) ── --}}
-            <div id="previewSection" class="hidden mt-6 space-y-5">
+            {{-- PREVIEW RESULT --}}
+            <div id="previewSection" class="hidden mt-6 space-y-4">
 
                 {{-- Statistik ringkasan --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="statsGrid"></div>
@@ -304,51 +293,80 @@
                 </div>
 
                 {{-- Error baris --}}
-                <div id="errorSection" class="hidden">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="w-2 h-2 rounded-full bg-red-400"></span>
-                        <p class="text-sm font-semibold text-red-700">Baris Bermasalah</p>
+                <div id="errorSection" class="hidden rounded-xl overflow-hidden border border-red-200">
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-red-50 cursor-pointer select-none"
+                         onclick="toggleSection('err')">
+                        <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
+                        <p class="text-sm font-semibold text-red-700 flex-1">Terdapat baris bermasalah</p>
+                        <span id="errBadge"
+                              class="text-xs font-medium px-2 py-0.5 rounded-full
+                                     bg-red-100 text-red-600 border border-red-200"></span>
+                        <svg id="errChevron" class="w-4 h-4 text-red-400 transition-transform duration-200"
+                             viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 6l4 4 4-4"/>
+                        </svg>
                     </div>
-                    <div class="border border-red-200 rounded-lg overflow-hidden text-xs">
-                        <table class="w-full">
+                    <div id="errBody" class="hidden border-t border-red-200">
+                        <table class="w-full text-xs">
                             <thead class="bg-red-50 text-red-600">
                                 <tr>
-                                    <th class="px-3 py-2 text-left w-20">Baris Excel</th>
-                                    <th class="px-3 py-2 text-left">Keterangan Masalah</th>
+                                    <th class="px-3 py-2 text-left font-medium w-28">Baris Excel</th>
+                                    <th class="px-3 py-2 text-left font-medium">Keterangan masalah</th>
                                 </tr>
                             </thead>
-                            <tbody id="errorBody" class="divide-y divide-red-100"></tbody>
+                            <tbody id="errTableBody" class="divide-y divide-red-100"></tbody>
                         </table>
+                        <button id="errShowMore"
+                                class="hidden w-full flex items-center justify-center gap-1.5 py-2 text-xs
+                                       text-red-500 border-t border-red-100 hover:bg-red-50 transition-colors"
+                                onclick="showMore('err')">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"
+                                 stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4"/></svg>
+                            <span id="errShowMoreTxt"></span>
+                        </button>
                     </div>
                 </div>
 
                 {{-- Duplikat --}}
-                <div id="dupSection" class="hidden">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                            <p class="text-sm font-semibold text-amber-700">
-                                Data Sudah Ada di Database
-                            </p>
-                        </div>
-                        <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                <div id="dupSection" class="hidden rounded-xl overflow-hidden border border-amber-200">
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-amber-50 cursor-pointer select-none"
+                         onclick="toggleSection('dup')">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+                        <p class="text-sm font-semibold text-amber-700 flex-1">Data sudah ada di database</p>
+                        <span id="dupBadge"
+                              class="text-xs font-medium px-2 py-0.5 rounded-full
+                                     bg-amber-100 text-amber-600 border border-amber-200"></span>
+                        <label class="flex items-center gap-1.5 text-xs text-amber-600 cursor-pointer ml-1"
+                               onclick="event.stopPropagation()">
                             <input type="checkbox" id="cbSkipDup" checked
-                                   class="rounded border-gray-300 text-sky-500 focus:ring-sky-400">
-                            Lewati duplikat saat import
+                                   class="rounded border-amber-300 text-amber-500 focus:ring-amber-400">
+                            Lewati duplikat
                         </label>
+                        <svg id="dupChevron" class="w-4 h-4 text-amber-400 transition-transform duration-200 ml-1"
+                             viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 6l4 4 4-4"/>
+                        </svg>
                     </div>
-                    <div class="border border-amber-200 rounded-lg overflow-hidden text-xs">
-                        <table class="w-full">
+                    <div id="dupBody" class="hidden border-t border-amber-200">
+                        <table class="w-full text-xs">
                             <thead class="bg-amber-50 text-amber-700">
                                 <tr>
-                                    <th class="px-3 py-2 text-left">Metadata</th>
-                                    <th class="px-3 py-2 text-left">Lokasi</th>
-                                    <th class="px-3 py-2 text-left">Periode</th>
-                                    <th class="px-3 py-2 text-right">Nilai</th>
+                                    <th class="px-3 py-2 text-left font-medium">Metadata</th>
+                                    <th class="px-3 py-2 text-left font-medium">Lokasi</th>
+                                    <th class="px-3 py-2 text-left font-medium">Periode</th>
+                                    <th class="px-3 py-2 text-right font-medium">Nilai</th>
                                 </tr>
                             </thead>
-                            <tbody id="dupBody" class="divide-y divide-amber-100"></tbody>
+                            <tbody id="dupTableBody" class="divide-y divide-amber-100"></tbody>
                         </table>
+                        <button id="dupShowMore"
+                                class="hidden w-full flex items-center justify-center gap-1.5 py-2 text-xs
+                                       text-amber-500 border-t border-amber-100 hover:bg-amber-50 transition-colors"
+                                onclick="showMore('dup')">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"
+                                 stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4"/></svg>
+                            <span id="dupShowMoreTxt"></span>
+                        </button>
                     </div>
                 </div>
 
@@ -356,9 +374,7 @@
                 <div id="validSection" class="hidden">
                     <div class="flex items-center gap-2 mb-2">
                         <span class="w-2 h-2 rounded-full bg-green-400"></span>
-                        <p class="text-sm font-semibold text-green-700">
-                            Data Valid — Siap Diimport
-                        </p>
+                        <p class="text-sm font-semibold text-green-700">Data Valid — Siap Diimport</p>
                     </div>
                     <div class="border border-green-200 rounded-lg overflow-x-auto max-h-72">
                         <table class="w-full text-xs">
@@ -383,7 +399,6 @@
                                    flex items-center gap-1.5">
                         <i class="fas fa-arrow-left"></i> Ganti File
                     </button>
-
                     <button id="btnImport" onclick="doImport()" disabled
                             class="flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-semibold
                                    text-white shadow transition-colors
@@ -396,7 +411,7 @@
                     </button>
                 </div>
 
-            </div>
+            </div>{{-- end previewSection --}}
 
             {{-- Import sedang berjalan --}}
             <div id="importingBar" class="hidden mt-5">
@@ -422,37 +437,46 @@
      JAVASCRIPT
 ══════════════════════════════════════════════════════════════ --}}
 <script>
-const CSRF         = '{{ csrf_token() }}';
-const PREVIEW_URL  = '{{ route("data.preview_excel") }}';
-const IMPORT_URL   = '{{ route("data.import_excel") }}';
+const CSRF        = '{{ csrf_token() }}';
+const PREVIEW_URL = '{{ route("data.preview_excel") }}';
+const IMPORT_URL  = '{{ route("data.import_excel") }}';
 
 /* ─────────────────────────────────────────────────────────────
-   STATE
+   STATE — scope global agar bisa diakses dari onclick HTML
 ───────────────────────────────────────────────────────────── */
-let currentFile  = null;   // File object terpilih
-let previewData  = null;   // JSON dari server (hasil preview)
+let currentFile = null;
+let previewData = null;
+
+// State pagination collapse per section
+// Dideklarasikan di luar renderPreview() agar toggleSection,
+// renderRows, showMore bisa mengaksesnya dari onclick="..."
+const ROWS_PER_PAGE = 5;
+const sectionState  = {
+    err: { data: [], shown: 0 },
+    dup: { data: [], shown: 0 },
+};
 
 /* ─────────────────────────────────────────────────────────────
    TAB SWITCHER
 ───────────────────────────────────────────────────────────── */
 function switchTab(tab) {
     document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
-    document.getElementById('panel-excel').classList.toggle('hidden', tab !== 'excel');
+    document.getElementById('panel-excel').classList.toggle('hidden',  tab !== 'excel');
 
-    const activeClass   = 'border-sky-500 text-sky-600';
-    const inactiveClass = 'border-transparent text-gray-400 hover:text-gray-600';
+    const active   = 'border-sky-500 text-sky-600';
+    const inactive = 'border-transparent text-gray-400 hover:text-gray-600';
     document.getElementById('tab-manual').className =
-        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'manual' ? activeClass : inactiveClass}`;
+        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'manual' ? active : inactive}`;
     document.getElementById('tab-excel').className =
-        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'excel' ? activeClass : inactiveClass}`;
+        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'excel' ? active : inactive}`;
 }
 
 /* ─────────────────────────────────────────────────────────────
    METADATA INFO (tab manual)
 ───────────────────────────────────────────────────────────── */
 function updateMetadataInfo(select) {
-    const opt    = select.options[select.selectedIndex];
-    const info   = document.getElementById('metadataInfo');
+    const opt  = select.options[select.selectedIndex];
+    const info = document.getElementById('metadataInfo');
     if (opt.dataset.tipe || opt.dataset.satuan) {
         document.getElementById('metadataTipe').textContent   = 'Tipe: ' + (opt.dataset.tipe || '-');
         document.getElementById('metadataSatuan').textContent = opt.dataset.satuan || '-';
@@ -491,7 +515,6 @@ function handleDrop(e) {
 }
 
 function onFileSelected(file) {
-    // Validasi tipe & ukuran
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
         showImportAlert('error', 'File harus berformat .xlsx atau .xls');
         return;
@@ -504,7 +527,6 @@ function onFileSelected(file) {
     currentFile = file;
     previewData = null;
 
-    // Tampilkan info file
     document.getElementById('dropZone').classList.add('hidden');
     const bar = document.getElementById('fileInfoBar');
     bar.classList.remove('hidden');
@@ -514,31 +536,25 @@ function onFileSelected(file) {
             ? (file.size / 1048576).toFixed(2) + ' MB'
             : (file.size / 1024).toFixed(1) + ' KB';
 
-    // Langsung jalankan preview ke server
     doPreview();
 }
 
 function resetUpload() {
     currentFile = null;
     previewData = null;
-    document.getElementById('fileExcel').value   = '';
+    document.getElementById('fileExcel').value = '';
     document.getElementById('dropZone').classList.remove('hidden');
     document.getElementById('fileInfoBar').classList.add('hidden');
     document.getElementById('loadingBar').classList.add('hidden');
     document.getElementById('previewSection').classList.add('hidden');
     document.getElementById('importingBar').classList.add('hidden');
     document.getElementById('importResult').classList.add('hidden');
+
+    // Reset state pagination
+    sectionState.err = { data: [], shown: 0 };
+    sectionState.dup = { data: [], shown: 0 };
 }
 
-/* ─────────────────────────────────────────────────────────────
-   PREVIEW — AJAX ke DataController@previewExcel
-   Server menggunakan DataImport::preview() untuk:
-   • baca header baris 3
-   • kenali jenis kolom periode (tahunan/quarter/semester/bulanan)
-   • lookup time_id dari tabel `time`
-   • deteksi duplikat di DB
-   • kembalikan JSON { rows, errors, duplicates, period_cols, ... }
-───────────────────────────────────────────────────────────── */
 async function doPreview() {
     document.getElementById('loadingBar').classList.remove('hidden');
     document.getElementById('previewSection').classList.add('hidden');
@@ -572,18 +588,17 @@ async function doPreview() {
 
 /* ─────────────────────────────────────────────────────────────
    RENDER PREVIEW
+   Hanya bertanggung jawab mengisi UI dari data JSON.
+   Fungsi collapse (toggleSection, renderRows, showMore)
+   sengaja diletakkan di luar fungsi ini (scope global).
 ───────────────────────────────────────────────────────────── */
 function renderPreview(json) {
-    const section = document.getElementById('previewSection');
-    section.classList.remove('hidden');
+    document.getElementById('previewSection').classList.remove('hidden');
 
     // ── Statistik ──
     const periodLabel = {
-        'tahunan' : 'Tahunan',
-        'semester': 'Semester',
-        'quarter' : 'Quarter',
-        'bulanan' : 'Bulanan',
-        'unknown' : '?',
+        tahunan : 'Tahunan', semester: 'Semester',
+        quarter : 'Quarter', bulanan : 'Bulanan', unknown: '?',
     }[json.period_type] ?? json.period_type;
 
     document.getElementById('statsGrid').innerHTML = `
@@ -604,54 +619,20 @@ function renderPreview(json) {
             <p class="text-xs mt-0.5" style="color:#b91c1c;">Baris Error</p>
         </div>`;
 
-    // ── Alert: kolom periode tidak ada di tabel time ──
-    // Deteksi: semua errors yang mengandung "time_id tidak ditemukan"
-    const timeErrors = (json.errors || []).filter(e => e.message && e.message.includes('time_id'));
+    // ── Alert kolom periode tidak ada di tabel time ──
+    const timeErrors    = (json.errors || []).filter(e => e.message?.includes('time_id'));
     const timeNotFoundEl = document.getElementById('timeNotFoundAlert');
     if (timeErrors.length > 0) {
         const periods = [...new Set(timeErrors.map(e => e.period))].filter(Boolean);
         document.getElementById('timeNotFoundDetail').textContent =
-            `Periode tidak terdaftar: ${periods.join(', ')}. ` +
-            `Tipe periode terdeteksi: ${periodLabel}.`;
+            `Periode tidak terdaftar: ${periods.join(', ')}. Tipe periode terdeteksi: ${periodLabel}.`;
         timeNotFoundEl.classList.remove('hidden');
     } else {
         timeNotFoundEl.classList.add('hidden');
     }
 
-    // ── Errors ──
-    const errSection = document.getElementById('errorSection');
-    const errBody    = document.getElementById('errorBody');
-    if (json.errors && json.errors.length > 0) {
-        errSection.classList.remove('hidden');
-        errBody.innerHTML = json.errors.map(e => `
-            <tr class="bg-red-50">
-                <td class="px-3 py-2 text-red-500 font-mono">Baris ${esc(String(e.row))}</td>
-                <td class="px-3 py-2 text-red-700">${esc(e.message)}</td>
-            </tr>`).join('');
-    } else {
-        errSection.classList.add('hidden');
-    }
-
-    // ── Duplikat ──
-    const dupSection = document.getElementById('dupSection');
-    const dupBody    = document.getElementById('dupBody');
-    if (json.duplicates && json.duplicates.length > 0) {
-        dupSection.classList.remove('hidden');
-        dupBody.innerHTML = json.duplicates.slice(0, 10).map(r => `
-            <tr class="hover:bg-amber-50">
-                <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
-                <td class="px-3 py-2 text-gray-500">${esc(String(r.period_label))}</td>
-                <td class="px-3 py-2 text-right font-mono text-gray-700">${formatNum(r.number_value)}</td>
-            </tr>`).join('') +
-            (json.duplicates.length > 10
-                ? `<tr><td colspan="4" class="px-3 py-2 text-center text-amber-500 italic">
-                    …dan ${json.duplicates.length - 10} duplikat lainnya
-                   </td></tr>`
-                : '');
-    } else {
-        dupSection.classList.add('hidden');
-    }
+    // ── Error & Duplikat — isi state lalu serahkan ke initSections ──
+    initSections(json);
 
     // ── Data valid ──
     const validSection = document.getElementById('validSection');
@@ -659,8 +640,7 @@ function renderPreview(json) {
     const validMore    = document.getElementById('validMore');
     if (json.rows && json.rows.length > 0) {
         validSection.classList.remove('hidden');
-        const preview = json.rows.slice(0, 20);
-        validBody.innerHTML = preview.map((r, i) => `
+        validBody.innerHTML = json.rows.slice(0, 20).map((r, i) => `
             <tr class="${i % 2 === 1 ? 'bg-green-50' : ''}">
                 <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
                 <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
@@ -674,7 +654,6 @@ function renderPreview(json) {
                     ${formatNum(r.number_value)}
                 </td>
             </tr>`).join('');
-
         if (json.rows.length > 20) {
             validMore.textContent = `Menampilkan 20 dari ${json.rows.length} record valid`;
             validMore.classList.remove('hidden');
@@ -698,8 +677,107 @@ function renderPreview(json) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   IMPORT — kirim file ke DataController@importExcel
-   Server menggunakan DataImport::import() dengan bulk insert
+   COLLAPSE SECTIONS — scope global (dipanggil dari onclick HTML)
+───────────────────────────────────────────────────────────── */
+
+// Inisialisasi data ke sectionState dan tampilkan / sembunyikan section
+function initSections(json) {
+    // Reset state setiap kali preview baru masuk
+    sectionState.err = { data: json.errors     || [], shown: 0 };
+    sectionState.dup = { data: json.duplicates || [], shown: 0 };
+
+    const errSection = document.getElementById('errorSection');
+    if (sectionState.err.data.length > 0) {
+        document.getElementById('errBadge').textContent = sectionState.err.data.length + ' baris';
+        errSection.classList.remove('hidden');
+        // Pastikan collapsed (tutup ulang setiap preview baru)
+        document.getElementById('errBody').classList.add('hidden');
+        document.getElementById('errChevron').style.transform = '';
+    } else {
+        errSection.classList.add('hidden');
+    }
+
+    const dupSection = document.getElementById('dupSection');
+    if (sectionState.dup.data.length > 0) {
+        document.getElementById('dupBadge').textContent = sectionState.dup.data.length + ' entri';
+        dupSection.classList.remove('hidden');
+        document.getElementById('dupBody').classList.add('hidden');
+        document.getElementById('dupChevron').style.transform = '';
+    } else {
+        dupSection.classList.add('hidden');
+    }
+}
+
+// Toggle buka / tutup panel
+function toggleSection(type) {
+    const bodyId   = type === 'err' ? 'errBody'    : 'dupBody';
+    const chevId   = type === 'err' ? 'errChevron' : 'dupChevron';
+    const body     = document.getElementById(bodyId);
+    const chevron  = document.getElementById(chevId);
+    const isOpen   = !body.classList.contains('hidden');
+
+    body.classList.toggle('hidden', isOpen);
+    chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+
+    // Render baris pertama kali saat dibuka
+    if (!isOpen && sectionState[type].shown === 0) {
+        sectionState[type].shown = ROWS_PER_PAGE;
+        renderRows(type);
+    }
+}
+
+// Render baris tabel sesuai jumlah yang sudah di-shown
+function renderRows(type) {
+    const s         = sectionState[type];
+    const rows      = s.data.slice(0, s.shown);
+    const remaining = s.data.length - s.shown;
+
+    if (type === 'err') {
+        document.getElementById('errTableBody').innerHTML = rows.map((e, i) => `
+            <tr class="${i % 2 !== 0 ? 'bg-red-50' : ''}">
+                <td class="px-3 py-2 font-mono text-red-500">Baris ${esc(String(e.row))}</td>
+                <td class="px-3 py-2 text-red-700">${esc(e.message)}</td>
+            </tr>`).join('');
+
+        const btn = document.getElementById('errShowMore');
+        if (remaining > 0) {
+            btn.classList.remove('hidden');
+            document.getElementById('errShowMoreTxt').textContent =
+                `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
+        } else {
+            btn.classList.add('hidden');
+        }
+    } else {
+        document.getElementById('dupTableBody').innerHTML = rows.map((r, i) => `
+            <tr class="${i % 2 !== 0 ? 'bg-amber-50' : ''}">
+                <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
+                <td class="px-3 py-2 text-gray-500">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                <td class="px-3 py-2 text-gray-500 font-mono">${esc(String(r.period_label))}</td>
+                <td class="px-3 py-2 text-right font-mono text-gray-700">${formatNum(r.number_value)}</td>
+            </tr>`).join('');
+
+        const btn = document.getElementById('dupShowMore');
+        if (remaining > 0) {
+            btn.classList.remove('hidden');
+            document.getElementById('dupShowMoreTxt').textContent =
+                `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
+        } else {
+            btn.classList.add('hidden');
+        }
+    }
+}
+
+// Muat lebih banyak baris
+function showMore(type) {
+    sectionState[type].shown = Math.min(
+        sectionState[type].shown + ROWS_PER_PAGE,
+        sectionState[type].data.length
+    );
+    renderRows(type);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   IMPORT
 ───────────────────────────────────────────────────────────── */
 async function doImport() {
     if (!currentFile || !previewData) return;
@@ -707,22 +785,22 @@ async function doImport() {
     const skipDup = document.getElementById('cbSkipDup')?.checked ?? true;
     const btn     = document.getElementById('btnImport');
 
-    // Konfirmasi
     const msg = previewData.valid > 0
         ? `Import ${previewData.valid} record data?\n` +
-          (skipDup && previewData.duplicate > 0 ? `${previewData.duplicate} duplikat akan dilewati.` : '')
+          (skipDup && previewData.duplicate > 0
+              ? `${previewData.duplicate} duplikat akan dilewati.`
+              : '')
         : 'Tidak ada data valid untuk diimport.';
 
     if (!confirm(msg)) return;
 
-    // UI loading
     btn.disabled = true;
     document.getElementById('importingBar').classList.remove('hidden');
     document.getElementById('previewSection').classList.add('hidden');
 
     const form = new FormData();
-    form.append('_token',         CSRF);
-    form.append('file_excel',     currentFile);
+    form.append('_token',          CSRF);
+    form.append('file_excel',      currentFile);
     form.append('skip_duplicates', skipDup ? '1' : '0');
 
     try {
@@ -737,11 +815,12 @@ async function doImport() {
 
         if (json.success) {
             showImportAlert('success', json.message,
-                json.redirect ? `<a href="${json.redirect}" class="underline font-semibold ml-2">Ke Halaman Data →</a>` : '');
+                json.redirect
+                    ? `<a href="${json.redirect}" class="underline font-semibold ml-2">Ke Halaman Data →</a>`
+                    : '');
             resetUpload();
         } else {
             showImportAlert('error', json.message || 'Import gagal.');
-            // Tampilkan kembali preview agar user bisa coba lagi
             if (previewData) renderPreview(previewData);
         }
 
@@ -780,13 +859,14 @@ function formatNum(val) {
     if (val == null || val === '') return '-';
     const n = parseFloat(val);
     if (isNaN(n)) return esc(String(val));
-    // Format angka Indonesia: titik ribuan, koma desimal
     return n % 1 === 0
         ? n.toLocaleString('id-ID')
         : n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Aktifkan tab yang benar saat load (jika ada error validation dari server)
+/* ─────────────────────────────────────────────────────────────
+   INIT — redirect ke tab manual jika ada error validasi
+───────────────────────────────────────────────────────────── */
 @if($errors->any() || session('duplicate_warning'))
     switchTab('manual');
 @endif

@@ -117,7 +117,7 @@
                     </div>
                 </div>
 
-            </div>{{-- end sectionFullYear --}}
+            </div>
 
             {{-- ════════════════════════════════════════════ --}}
             {{-- SECTION: CUSTOM HIERARKI (mode baru)        --}}
@@ -143,13 +143,11 @@
                 <div class="space-y-4">
                     @foreach($hierarki as $i => $item)
                     <div class="relative">
-                        {{-- Connector line (semua kecuali item pertama) --}}
                         @if($i > 0)
                         <div class="absolute -top-4 left-[18px] w-px h-4 bg-gray-200"></div>
                         @endif
 
                         <div class="flex items-start gap-3">
-                            {{-- Icon dot --}}
                             <div class="mt-2.5 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                                 <i class="{{ $item['icon'] }} text-gray-400 text-sm"></i>
                             </div>
@@ -201,7 +199,7 @@
                     </p>
                 </div>
 
-            </div>{{-- end sectionCustom --}}
+            </div>
 
             {{-- SUBMIT --}}
             <div class="flex justify-end pt-4 border-t border-gray-100 mt-6">
@@ -322,10 +320,8 @@ function updateCustomPreview() {
     const badge    = document.getElementById('customPreviewBadge');
     const preText  = document.getElementById('customPreviewText');
 
-    // Ambil nilai; kosong dianggap 0
     const vals = customFields.map(f => f.value.trim() !== '' ? parseInt(f.value) : null);
 
-    // Cek apakah minimal 1 field diisi
     const anyFilled = vals.some(v => v !== null);
 
     if (!anyFilled) {
@@ -334,20 +330,16 @@ function updateCustomPreview() {
         return;
     }
 
-    // Temukan level terbawah yang diisi → semua di bawahnya jadi 0
-    // Validasi: tidak boleh ada gap (isi level bawah tapi level atas kosong)
     let lastFilledIndex = -1;
     for (let i = 0; i < vals.length; i++) {
         if (vals[i] !== null) lastFilledIndex = i;
     }
 
-    // Cek gap: semua field sebelum lastFilledIndex harus terisi
     let hasGap = false;
     for (let i = 0; i <= lastFilledIndex; i++) {
         if (vals[i] === null) { hasGap = true; break; }
     }
 
-    // Bangun row preview
     const row = fieldNames.map((name, i) => {
         const v = (vals[i] !== null && i <= lastFilledIndex) ? vals[i] : 0;
         return `${name}: <strong>${v === 0 && i > lastFilledIndex ? '<span class="text-gray-400">0 (ALL)</span>' : v}</strong>`;
@@ -356,7 +348,6 @@ function updateCustomPreview() {
     preText.innerHTML = row.join(' &nbsp;|&nbsp; ');
     badge.classList.remove('hidden');
 
-    // Disable submit jika ada gap (validasi client-side)
     btnSubmit.disabled = hasGap;
 }
 
@@ -365,7 +356,6 @@ customFields.forEach(f => f.addEventListener('input', updateCustomPreview));
 // ─── Init ─────────────────────────────────────────────────────────────────────
 switchMode(getMode());
 
-// Trigger jika ada old value setelah validation error
 if (inputTahun.value) updateFullYearPreview();
 if (customFields.some(f => f.value)) updateCustomPreview();
 </script>

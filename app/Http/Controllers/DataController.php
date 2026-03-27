@@ -104,7 +104,7 @@ class DataController extends Controller
 
     public function searchMetadata(Request $request)
     {
-        $q     = $request->get('q', '');
+        $q     = $request->input('q', '');
         $limit = $q === '' ? 200 : 30;
         $query = Metadata::where('status', 2)->orderBy('nama');
         if ($q !== '') $query->where('nama', 'like', "%{$q}%");
@@ -113,7 +113,7 @@ class DataController extends Controller
 
     public function searchYear(Request $request)
     {
-        $q     = $request->get('q', '');
+        $q     = $request->input('q', '');
         $query = Waktu::select('year')->distinct();
         if ($q !== '') $query->where('year', 'like', "{$q}%");
         return response()->json($query->orderByDesc('year')->pluck('year'));
@@ -176,10 +176,6 @@ class DataController extends Controller
     // ═══════════════════════════════════════════════════════════
     // IMPORT EXCEL — PREVIEW (AJAX)
     // ─────────────────────────────────────────────────────────
-    // Membaca file Excel template metadata (baris 3 = header,
-    // kolom A-D tetap, kolom E+ = periode waktu), mengembalikan
-    // JSON preview tanpa menyimpan ke DB.
-    // ═══════════════════════════════════════════════════════════
     public function previewExcel(Request $request)
     {
         $request->validate([
@@ -208,9 +204,6 @@ class DataController extends Controller
     // ═══════════════════════════════════════════════════════════
     // IMPORT EXCEL — SIMPAN KE DB
     // ─────────────────────────────────────────────────────────
-    // Membaca file yang sama, menyimpan semua record ke tabel
-    // `data` dalam batch (bulk insert) untuk performa optimal.
-    // ═══════════════════════════════════════════════════════════
     public function importExcel(Request $request)
     {
         $request->validate([
@@ -227,7 +220,6 @@ class DataController extends Controller
 
             $result = $import->import($path);
 
-            // ── Kembalikan JSON jika AJAX, redirect jika form biasa ──
             if ($request->wantsJson()) {
                 return response()->json(array_merge($result, [
                     'redirect' => route('data.index'),
@@ -248,16 +240,14 @@ class DataController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════
-    // TEMPLATE EXCEL LAMA (data.index upload format lama)
-    // Pertahankan agar rute lama tidak error
+    // TEMPLATE EXCEL
     // ═══════════════════════════════════════════════════════════
     public function downloadTemplateExcel()
     {
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet       = $spreadsheet->getActiveSheet();
         $headers     = ['A1'=>'metadata_id','B1'=>'location_id','C1'=>'time_id',
-                        'D1'=>'number_value','E1'=>'text_value','F1'=>'kategori_value',
-                        'G1'=>'other','H1'=>'analisis_fenomena'];
+                        'D1'=>'number_value'];
 
         foreach ($headers as $cell => $val) $sheet->setCellValue($cell, $val);
         $sheet->getStyle('A1:H1')->applyFromArray([
@@ -266,9 +256,9 @@ class DataController extends Controller
             'alignment' => ['horizontal'=>'center'],
         ]);
         $sheet->setCellValue('A2', 1); $sheet->setCellValue('B2', 1); $sheet->setCellValue('C2', 1);
-        $sheet->setCellValue('D2', 100.50); $sheet->setCellValue('E2', 'Contoh nilai teks');
+        $sheet->setCellValue('D2', 100.50);
 
-        foreach (range('A','H') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
+        foreach (range('A','D') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
         $sheet->setTitle('Template Data');
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
@@ -284,7 +274,7 @@ class DataController extends Controller
     // ═══════════════════════════════════════════════════════════
     public function approval(Request $request)
     {
-        $status = $request->get('status', 0);
+        $status = $request->input('status', 0);
         $query  = Data::with(['metadata', 'location', 'time', 'user'])->where('status', $status);
         if ($request->filled('metadata_id')) $query->where('metadata_id', $request->metadata_id);
 

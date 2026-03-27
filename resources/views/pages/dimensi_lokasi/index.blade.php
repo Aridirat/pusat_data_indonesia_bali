@@ -10,8 +10,10 @@
         </div>
 
         <div class="text-right text-sm text-gray-500">
-            <p id="current-date">Loading date...</p>
-            <p id="current-time">Loading time...</p>
+            <div class="text-right text-sm text-gray-500">
+                <p id="current-date">Loading date...</p>
+                <p id="current-time" class="font-mono text-sky-600 font-semibold"></p>
+            </div>
         </div>
     </div>
 
@@ -49,47 +51,37 @@
                     </th>
 
                     <th class="p-3 text-left">
-                        <a href="?sort_by=provinsi&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
-                            Provinsi
-                        </a>
+                        Provinsi
                     </th>
                     <th class="p-3 text-left">
-                        <a href="?sort_by=provinsi&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Kode Prov.
-                        </a>
                     </th>
 
                     <th class="p-3 text-left">
-                        <a href="?sort_by=kabupaten&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Kabupaten
                         </a>
                     </th>
                     <th class="p-3 text-left">
-                        <a href="?sort_by=kabupaten&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Kode Kab.
                         </a>
                     </th>
 
                     <th class="p-3 text-left">
-                        <a href="?sort_by=kecamatan&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Kecamatan
                         </a>
                     </th>
 
                     <th class="p-3 text-left">
-                        <a href="?sort_by=kecamatan&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Kode Kec.
                         </a>
                     </th>
 
                     <th class="p-3 text-left">
-                        <a href="?sort_by=desa&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Desa
                         </a>
                     </th>
 
                     <th class="p-3 text-left">
-                        <a href="?sort_by=desa&sort_dir={{ $sortDir == 'asc' ? 'desc':'asc' }}">
                             Kode Desa
                         </a>
                     </th>
@@ -181,6 +173,21 @@
         {{ $data->links() }}
     </div>
     @endif
+
+    <script>
+        // Live clock & date
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            document.getElementById('current-date').textContent =
+                now.toLocaleDateString('id-ID', dateOptions);
+            document.getElementById('current-time').textContent =
+                now.toLocaleTimeString('id-ID', timeOptions);
+        }
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
 
 </div>
 @endsection

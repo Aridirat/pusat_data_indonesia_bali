@@ -385,7 +385,6 @@
         document.getElementById('bulkApproveForm').submit();
     }
 
-    // Tutup modal saat klik backdrop
     document.getElementById('confirmModal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });

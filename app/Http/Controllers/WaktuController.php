@@ -8,9 +8,6 @@ use Carbon\Carbon;
 
 class WaktuController extends Controller
 {
-    /**
-     * Tampilkan halaman index dimensi waktu
-     */
     public function index(Request $request)
     {
         $query = DB::table('time');
@@ -36,29 +33,11 @@ class WaktuController extends Controller
         return view('pages.dimensi_waktu.index', compact('data', 'availableYears'));
     }
 
-    /**
-     * Tampilkan form tambah dimensi waktu
-     */
     public function create()
     {
         return view('pages.dimensi_waktu.create');
     }
 
-    /**
-     * Entry point store() — routing ke handler sesuai mode.
-     *
-     * Request payload untuk mode "full_year":
-     *   mode  = full_year
-     *   tahun = 2024
-     *
-     * Request payload untuk mode "custom":
-     *   mode           = custom
-     *   custom_decade  = 2020          (wajib minimal 1)
-     *   custom_year    = 2024          (opsional)
-     *   custom_quarter = 2             (opsional, wajib ada year jika diisi)
-     *   custom_month   = 5             (opsional, wajib ada quarter jika diisi)
-     *   custom_day     = 15            (opsional, wajib ada month jika diisi)
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -73,7 +52,7 @@ class WaktuController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MODE 1: Generate Full Year (behaviour lama, tidak berubah)
+    // MODE 1: Generate Full Year 
     // ─────────────────────────────────────────────────────────────────────────
 
     private function storeFullYear(Request $request)
@@ -91,7 +70,7 @@ class WaktuController extends Controller
 
         $exists = DB::table('time')
             ->where('year', $tahun)
-            ->where('month', '!=', 0) // hindari collision dengan row custom
+            ->where('month', '!=', 0)
             ->exists();
 
         if ($exists) {
@@ -116,7 +95,7 @@ class WaktuController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MODE 2: Custom Hierarki (mode baru — insert 1 row)
+    // MODE 2: Custom Hierarki
     // ─────────────────────────────────────────────────────────────────────────
 
     private function storeCustom(Request $request)
@@ -146,7 +125,7 @@ class WaktuController extends Controller
             'custom_day.max'          => 'Hari maksimal 31.',
         ]);
 
-        // ── Ambil nilai dari request (null = tidak diisi) ──────────────────
+        // ── Ambil nilai dari request ──────────────────
         $decade  = $request->filled('custom_decade')  ? (int) $request->custom_decade  : null;
         $year    = $request->filled('custom_year')    ? (int) $request->custom_year    : null;
         $quarter = $request->filled('custom_quarter') ? (int) $request->custom_quarter : null;
@@ -237,13 +216,6 @@ class WaktuController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Validasi hierarki: level bawah tidak boleh diisi jika level atasnya kosong.
-     *
-     * Aturan:
-     *   year    butuh decade
-     *   quarter butuh year
-     *   month   butuh quarter
-     *   day     butuh month
      *
      * @return array{field: string, message: string}|null  null = valid
      */
@@ -285,10 +257,6 @@ class WaktuController extends Controller
         return null;
     }
 
-    /**
-     * Buat label ringkas untuk flash message.
-     * Contoh: "Dekade: 2020 | Year: 2024 | Quarter: 2 | Month: 0 (ALL) | Day: 0 (ALL)"
-     */
     private function buildRowLabel(array $row): string
     {
         $parts = [];
@@ -298,10 +266,6 @@ class WaktuController extends Controller
         return implode(' | ', $parts);
     }
 
-    /**
-     * Generate array of rows untuk semua hari dalam satu tahun.
-     * (Tidak diubah dari versi asli)
-     */
     private function generateDaysInYear(int $year): array
     {
         $rows    = [];
