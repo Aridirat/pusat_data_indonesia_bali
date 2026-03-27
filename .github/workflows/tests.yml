@@ -54,9 +54,15 @@ jobs:
 
       - name: Run Migrations
         run: php artisan migrate
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
 
       - name: Build Assets
         run: npm run build
 
       - name: Tests
         run: ./vendor/bin/phpunit
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
