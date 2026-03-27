@@ -34,19 +34,19 @@
         <div class="bg-amber-50 border border-amber-100 rounded-lg p-4 cursor-pointer hover:border-amber-300 transition-colors"
              onclick="switchTab(1)">
             <p class="text-xs text-amber-500 font-semibold uppercase tracking-wide">Pending</p>
-            <p class="text-2xl font-bold text-amber-700 mt-1" id="statPending">{{ number_format($countPending) }}</p>
+            <p class="text-2xl font-bold text-amber-700 mt-1" id="statPending">{{ number_format($countPending, 0, ',', '.') }}</p>
             <p class="text-xs text-amber-400 mt-1">menunggu verifikasi</p>
         </div>
         <div class="bg-green-50 border border-green-100 rounded-lg p-4 cursor-pointer hover:border-green-300 transition-colors"
              onclick="switchTab(2)">
             <p class="text-xs text-green-500 font-semibold uppercase tracking-wide">Active</p>
-            <p class="text-2xl font-bold text-green-700 mt-1" id="statActive">{{ number_format($countActive) }}</p>
+            <p class="text-2xl font-bold text-green-700 mt-1" id="statActive">{{ number_format($countActive, 0, ',', '.') }}</p>
             <p class="text-xs text-green-400 mt-1">metadata aktif</p>
         </div>
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-gray-400 transition-colors"
              onclick="switchTab(3)">
             <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Inactive</p>
-            <p class="text-2xl font-bold text-gray-600 mt-1" id="statInactive">{{ number_format($countInactive) }}</p>
+            <p class="text-2xl font-bold text-gray-600 mt-1" id="statInactive">{{ number_format($countInactive, 0, ',', '.') }}</p>
             <p class="text-xs text-gray-400 mt-1">metadata nonaktif</p>
         </div>
     </div>
@@ -106,7 +106,7 @@
     </div>
 
     {{-- ══════════════════════════════════════════════
-         [BARU] TOOLBAR — hanya muncul di tab Pending
+        TOOLBAR — hanya muncul di tab Pending
     ══════════════════════════════════════════════ --}}
     @if((int)$statusFilter === 1 && $data->total() > 0)
         <div class="flex items-center justify-between mt-4 mb-1">
@@ -144,8 +144,8 @@
     {{-- ══════════════════════════════════════════════
          TABLE
     ══════════════════════════════════════════════ --}}
-    <div class="mt-2 border rounded-lg overflow-x-auto">
-        <table class="w-full text-sm text-left" id="metadataTable">
+    <div class="mt-2 border rounded-lg">
+        <table class="w-full text-sm text-left">
             <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b">
 
                 <tr>
@@ -163,7 +163,6 @@
                     <th class="px-4 py-3 font-semibold min-w-36">Produsen</th>
                     <th class="px-4 py-3 font-semibold min-w-24">Tipe Data</th>
                     <th class="px-4 py-3 font-semibold min-w-28">Diinput Oleh</th>
-                    <th class="px-4 py-3 font-semibold min-w-28">Tanggal Input</th>
                     <th class="px-4 py-3 font-semibold text-center min-w-24">Status</th>
                     <th class="px-4 py-3 font-semibold text-center min-w-36">Aksi</th>
                 </tr>
@@ -235,26 +234,8 @@
                                onkeydown="if(event.key==='Enter') applyFilters()">
                     </td>
 
-                    <td class="px-2 py-1.5">
-                        <div class="flex gap-1">
-                            <p class="text-xs text-gray-500 pt-1">Dari</p>
-                            <input type="date" id="filterDateFrom"
-                                   value="{{ request('filter_date_from') }}" title="Dari tanggal"
-                                   class="w-full border border-gray-200 rounded px-1 py-1 text-xs
-                                          focus:outline-none focus:ring-1 focus:ring-sky-300"
-                                   onchange="applyFilters()">
-                            <p class="text-xs text-gray-500 pt-1">-</p>
-                            <input type="date" id="filterDateTo"
-                                   value="{{ request('filter_date_to') }}" title="Sampai tanggal"
-                                   class="w-full border border-gray-200 rounded px-1 py-1 text-xs
-                                          focus:outline-none focus:ring-1 focus:ring-sky-300"
-                                   onchange="applyFilters()">
-                        </div>
-                    </td>
-
                     <td class="px-2 py-1.5"></td>
 
-                    {{-- Reset Filter --}}
                     <td class="px-2 py-1.5 text-center">
                         <button onclick="resetFilters()"
                                 class="text-xs text-gray-400 hover:text-red-400 transition-colors whitespace-nowrap"
@@ -307,12 +288,6 @@
                             {{ $item->user?->name ?? '-' }}
                         </td>
 
-                        <td class="px-4 py-3 text-gray-500 text-xs">
-                            {{ $item->date_inputed
-                                ? \Carbon\Carbon::parse($item->date_inputed)->translatedFormat('d M Y')
-                                : '-' }}
-                        </td>
-
                         <td class="px-4 py-3 text-center">
                             @php
                                 $badge = match((int)$item->status) {
@@ -327,11 +302,9 @@
                             </span>
                         </td>
 
-                        {{-- Kolom Aksi --}}
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-1.5 flex-wrap">
 
-                                {{-- Detail (semua tab) --}}
                                 <a href="{{ route('metadata.detail', ['metadata' => $item->metadata_id, 'from' => 'approval']) }}"
                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold
                                           text-white rounded-md transition-colors shadow-sm"
@@ -342,7 +315,6 @@
                                     Detail
                                 </a>
 
-                                {{-- Quick Approve — hanya Pending --}}
                                 @if((int)$item->status === 1)
                                     <button onclick="quickApprove({{ $item->metadata_id }}, '{{ addslashes($item->nama) }}', this)"
                                             class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold

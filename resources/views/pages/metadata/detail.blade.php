@@ -77,7 +77,6 @@
                 </div>
             </div>
 
-            {{-- Quick info pills --}}
             <div class="flex flex-wrap gap-3 mt-5 pt-4 border-t border-gray-100">
                 <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
                     <i class="fas fa-tag text-sky-400"></i>
