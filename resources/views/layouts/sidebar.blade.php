@@ -54,28 +54,28 @@ $menus = [
         ]
     ],
 
-    (object)[
-        "title" => "Kelola Pengguna",
-        "path" => "#",
-        "icon" => "fas fa-users",
-        "active" => in_array(request()->segment(1), ['group','pengguna']),
-        "children" => [
+    // (object)[
+    //     "title" => "Kelola Pengguna",
+    //     "path" => "#",
+    //     "icon" => "fas fa-users",
+    //     "active" => in_array(request()->segment(1), ['group','pengguna']),
+    //     "children" => [
 
-            (object)[
-                "title" => "Group",
-                "path" => "group",
-                "icon" => "fas fa-users-cog",
-                "active" => request()->segment(1) === 'group'
-            ],
+    //         (object)[
+    //             "title" => "Group",
+    //             "path" => "group",
+    //             "icon" => "fas fa-users-cog",
+    //             "active" => request()->segment(1) === 'group'
+    //         ],
 
-            (object)[
-                "title" => "Pengguna",
-                "path" => "pengguna",
-                "icon" => "fas fa-user",
-                "active" => request()->segment(1) === 'pengguna'
-            ]
-        ]
-    ],
+    //         (object)[
+    //             "title" => "Pengguna",
+    //             "path" => "pengguna",
+    //             "icon" => "fas fa-user",
+    //             "active" => request()->segment(1) === 'pengguna'
+    //         ]
+    //     ]
+    // ],
 
 ];
 
