@@ -6,7 +6,7 @@
     @if(app()->environment('testing'))
     {{-- Vite dimatikan saat testing --}}
     @else
-        @vite('resources/js/app.ts')
+        @vite(['resources/js/app.ts', 'resources/css/app.css'])
     @endif
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"

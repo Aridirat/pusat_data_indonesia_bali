@@ -1,0 +1,68 @@
+services:
+  # ─────────────────────────────────────────
+  # App (PHP 8.2 + Nginx via Supervisor)
+  # ─────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pusat_data_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+      - ./storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - pusat_data_network
+
+  # ─────────────────────────────────────────
+  # Database — MySQL (sama seperti lokal kamu)
+  # ─────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: pusat_data_db
+    restart: unless-stopped
+    ports:
+      - "3307:3306"   # 3307 di host supaya tidak bentrok dengan MySQL lokal kamu
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-db_pusat_data_indonesia_bali}
+      MYSQL_USER: ${DB_USERNAME:-pusat_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pusat_data_network
+
+  # ─────────────────────────────────────────
+  # Redis (untuk cache & session)
+  # ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pusat_data_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pusat_data_network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  pusat_data_network:
+    driver: bridge

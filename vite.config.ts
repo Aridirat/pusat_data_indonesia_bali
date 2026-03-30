@@ -7,14 +7,20 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/js/app.ts'],
+            input: ['resources/js/app.ts','resources/css/app.css'],
             ssr: 'resources/js/ssr.ts',
             refresh: true,
         }),
         tailwindcss(),
-        wayfinder({
-            formVariants: true,
-        }),
+
+        // Dinonaktifkan saat Docker build karena wayfinder butuh
+        // koneksi ke app/routes yang belum tersedia saat build time.
+        // Set DISABLE_WAYFINDER=true di Dockerfile untuk skip ini.
+        ...(process.env.DISABLE_WAYFINDER
+            ? []
+            : [wayfinder({ formVariants: true })]
+        ),
+
         vue({
             template: {
                 transformAssetUrls: {
