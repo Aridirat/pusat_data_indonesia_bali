@@ -46,26 +46,23 @@ RUN docker-php-ext-install \
     xml \
     soap
 
-# Install imagick — pakai apk (Alpine), bukan apt-get (Debian/Ubuntu)
+# Install imagick
 RUN pecl install imagick \
     && docker-php-ext-enable imagick
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
-# Hapus build tools setelah selesai (image lebih kecil)
+# Hapus build tools setelah selesai
 RUN apk del autoconf g++ make
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files first (layer caching)
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies
 RUN composer install \
     --no-dev \
     --no-scripts \
@@ -73,16 +70,27 @@ RUN composer install \
     --prefer-dist \
     --optimize-autoloader
 
-# Copy package.json dulu (layer caching)
 COPY package.json package-lock.json* ./
 
-# Install Node dependencies
 RUN npm ci --ignore-scripts
 
-# Copy seluruh project
 COPY . .
 
-# Buat direktori yang dibutuhkan & set permissions
+ARG DISABLE_WAYFINDER=true
+ENV DISABLE_WAYFINDER=${DISABLE_WAYFINDER}
+RUN npm run build
+
+RUN rm -rf node_modules
+
+RUN composer dump-autoload --optimize
+
+COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/app.ini
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN mkdir -p /var/log/supervisor /var/run
+
 RUN mkdir -p \
     storage/app/public \
     storage/framework/cache \
@@ -95,36 +103,11 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-# Build assets Vite — nonaktifkan wayfinder saat build Docker
-ARG DISABLE_WAYFINDER=true
-ENV DISABLE_WAYFINDER=${DISABLE_WAYFINDER}
-RUN npm run build
-
-# Hapus node_modules setelah build (tidak dibutuhkan di production)
-RUN rm -rf node_modules
-
-# Generate optimized autoloader
-RUN composer dump-autoload --optimize
-
-# Copy konfigurasi Nginx
-COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
-
-# Copy konfigurasi PHP
-COPY docker/php/php.ini /usr/local/etc/php/conf.d/app.ini
-COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
-
-# Copy konfigurasi Supervisor
-COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Buat direktori yang dibutuhkan & set permissions
-RUN mkdir -p /var/log/supervisor /var/run
-
-# Copy entrypoint script
+# Copy entrypoint — 2 RUN terpisah, tidak pakai \n literal
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh \n    && sed -i "s///" /entrypoint.sh
+RUN sed -i 's/\r//' /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Expose port
 EXPOSE 80
 
-# Jalankan Supervisor (mengelola Nginx + PHP-FPM sekaligus)
 CMD ["/entrypoint.sh"]
