@@ -6,7 +6,7 @@
     @if(app()->environment('testing'))
     {{-- Vite dimatikan saat testing --}}
     @else
-        @vite('resources/js/app.ts')
+        @vite(['resources/js/app.ts', 'resources/css/app.css'])
     @endif
     <title>Login</title>
 </head>

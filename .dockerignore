@@ -1,31 +1,46 @@
 # Git
 .git
 .gitignore
+.gitattributes
 
-# Environment
+# Docker files sendiri
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Environment (JANGAN masuk image!)
 .env
+.env.*
+!.env.example
 
-# IDE specific files
-.vscode/
-.idea/
-*.swp
-*.swo
+# Dependencies (di-install ulang di dalam container)
+/vendor
+/node_modules
 
-# Dependencies
-node_modules/
-vendor/
+# Storage & cache (di-mount atau di-buat ulang)
+/storage/app/public
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/bootstrap/cache
 
-# Cache & logs
-storage/logs
-storage/framework/cache
-storage/framework/sessions
-storage/framework/views
-storage/logs/*
-bootstrap/cache/*
+# Log
+*.log
+/storage/logs
 
-# OS / Editor
-.DS_Store
+# Test & development tools
+/tests
+phpunit.xml
+.phpunit.result.cache
+.phpunit.cache
+
+# IDE & OS
+.idea
+.vscode
+*.DS_Store
 Thumbs.db
 
-# Documentation
-README.md
+# Build artifacts
+/public/hot
+/public/storage
+mix-manifest.json

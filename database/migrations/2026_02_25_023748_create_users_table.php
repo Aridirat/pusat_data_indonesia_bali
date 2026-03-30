@@ -23,6 +23,7 @@ return new class extends Migration
             $table->dateTime('lastvisitdate');
             $table->string('activation', 100);
             
+            
             $table->integer('group_id');
             $table->foreign('group_id')->references('group_id')->on('group')->onDelete('restrict')->onUpdate('restrict');
             $table->rememberToken();
