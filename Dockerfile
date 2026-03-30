@@ -96,7 +96,8 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
 # Build assets Vite — nonaktifkan wayfinder saat build Docker
-ENV DISABLE_WAYFINDER=true
+ARG DISABLE_WAYFINDER=true
+ENV DISABLE_WAYFINDER=${DISABLE_WAYFINDER}
 RUN npm run build
 
 # Hapus node_modules setelah build (tidak dibutuhkan di production)
@@ -118,8 +119,12 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Buat direktori yang dibutuhkan & set permissions
 RUN mkdir -p /var/log/supervisor /var/run
 
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh \n    && sed -i "s///" /entrypoint.sh
+
 # Expose port
 EXPOSE 80
 
 # Jalankan Supervisor (mengelola Nginx + PHP-FPM sekaligus)
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/entrypoint.sh"]
