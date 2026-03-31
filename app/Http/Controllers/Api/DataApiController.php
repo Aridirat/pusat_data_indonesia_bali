@@ -28,7 +28,7 @@ class DataApiController extends Controller
             $query->whereHas('time', fn($q) => $q->where('month', $request->month));
         }
 
-        $perPage = min((int) $request->get('per_page', 25), 100);
+        $perPage = min((int) $request->input('per_page', 25), 100);
         $result  = $query->orderBy('date_inputed', 'desc')->paginate($perPage);
 
         return response()->json([
