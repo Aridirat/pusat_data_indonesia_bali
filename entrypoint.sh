@@ -22,7 +22,8 @@ chmod -R 755 storage bootstrap/cache
 
 # ── 2. Clear config cache dulu (supaya env vars Railway terbaca) ──────
 php artisan config:clear
-php artisan cache:clear
+php artisan cache:clear || true
+
 
 # ── 3. Jalankan migration otomatis ────────────────────────────────────
 echo "🗄️  Running migrations..."
