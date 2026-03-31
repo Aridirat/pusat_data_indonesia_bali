@@ -4,6 +4,10 @@ set -e
 echo "🚀 Starting Pusat Data Indonesia Bali..."
 echo "   Environment: ${APP_ENV}"
 echo "   DB Host: ${DB_HOST}"
+echo "   PORT: ${PORT}"
+
+# Inject PORT ke nginx config
+sed -i "s/LISTEN_PORT/${PORT}/g" /etc/nginx/http.d/default.conf
 
 # ── 1. Pastikan storage directories ada (penting kalau pakai Volume) ──
 mkdir -p storage/app/public \
