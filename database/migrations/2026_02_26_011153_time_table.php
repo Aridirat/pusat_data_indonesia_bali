@@ -15,9 +15,9 @@ return new class extends Migration
             $table->integer('time_id')->autoIncrement();
             $table->integer('decade');     
             $table->integer('year');       
+            $table->integer('semester');       
             $table->integer('quarter');    
-            $table->integer('month');      
-            $table->integer('day');        
+            $table->integer('month');        
         });
     }
 

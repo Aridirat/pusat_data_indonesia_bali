@@ -74,13 +74,11 @@
             <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b">
                 <tr>
                     <th class="px-4 py-3 font-semibold">No</th>
-                    <th class="px-4 py-3 font-semibold">Time ID</th>
                     <th class="px-4 py-3 font-semibold">Dekade</th>
                     <th class="px-4 py-3 font-semibold">Tahun</th>
+                    <th class="px-4 py-3 font-semibold">Semester</th>
                     <th class="px-4 py-3 font-semibold">Kuartal</th>
                     <th class="px-4 py-3 font-semibold">Bulan</th>
-                    <th class="px-4 py-3 font-semibold">Hari</th>
-                    <th class="px-4 py-3 font-semibold">Tanggal Lengkap</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -88,9 +86,6 @@
                     <tr class="hover:bg-sky-50 transition-colors">
                         <td class="px-4 py-3 text-gray-400">
                             {{ $data->firstItem() + $index }}
-                        </td>
-                        <td class="px-4 py-3 font-mono text-gray-500 text-xs">
-                            {{ $row->time_id }}
                         </td>
                         <td class="px-4 py-3 text-gray-700">
                             {{ $row->decade }}an
@@ -100,29 +95,24 @@
                         </td>
                         <td class="px-4 py-3">
                             <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                                {{ $row->semester == 1 ? 'bg-cyan-100 text-cyan-700' : '' }}
+                                {{ $row->semester == 2 ? 'bg-green-100 text-green-700' : '' }}
+                            ">
+                                Semester {{ $row->semester }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium
                                 {{ $row->quarter == 1 ? 'bg-sky-100 text-sky-700' : '' }}
                                 {{ $row->quarter == 2 ? 'bg-emerald-100 text-emerald-700' : '' }}
                                 {{ $row->quarter == 3 ? 'bg-amber-100 text-amber-700' : '' }}
                                 {{ $row->quarter == 4 ? 'bg-rose-100 text-rose-700' : '' }}
                             ">
-                                Q{{ $row->quarter }}
+                                Kuartal {{ $row->quarter }}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-gray-700">
                             {{ \Carbon\Carbon::create($row->year, $row->month, 1)->translatedFormat('F') }}
-                        </td>
-                        <td class="px-4 py-3 text-gray-700">
-                            {{ $row->day }}
-                        </td>
-                        <td class="px-4 py-3 text-gray-600">
-                            @php
-                                try {
-                                    $date = \Carbon\Carbon::create($row->year, $row->month, $row->day);
-                                    echo $date->translatedFormat('d F Y');
-                                } catch (\Exception $e) {
-                                    echo '-';
-                                }
-                            @endphp
                         </td>
                     </tr>
                 @empty
@@ -158,7 +148,7 @@
     // Live clock & date
     function updateDateTime() {
         const now = new Date();
-        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'numeric' };
         const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
         document.getElementById('current-date').textContent =
             now.toLocaleDateString('id-ID', dateOptions);
