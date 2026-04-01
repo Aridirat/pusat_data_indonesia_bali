@@ -25,6 +25,7 @@ class WaktuController extends Controller
 
         $availableYears = DB::table('time')
             ->select('year')
+            ->where('year', '!=', 0)
             ->distinct()
             ->orderBy('year', 'desc')
             ->pluck('year');
