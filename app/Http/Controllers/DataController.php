@@ -23,7 +23,7 @@ class DataController extends Controller
     // ═══════════════════════════════════════════════════════════
     public function index(Request $request)
     {
-        $hasFilter = $request->hasAny(['metadata_id', 'kabupaten', 'kecamatan', 'desa', 'year', 'search', 'template_id']);
+        $hasFilter = $request->hasAny(['metadata_id', 'nama_wilayah', 'year', 'search', 'template_id']);
 
         if ($request->filled('template_id')) {
             $tampilan = Tampilan::where('tampilan_id', $request->template_id)
@@ -34,9 +34,7 @@ class DataController extends Controller
                 $fp = $tampilan->filter_params;
                 $request->merge(array_filter([
                     'metadata_id' => $fp['metadata_id'] ?? null,
-                    'kabupaten'   => $fp['kabupaten']   ?? null,
-                    'kecamatan'   => $fp['kecamatan']   ?? null,
-                    'desa'        => $fp['desa']         ?? null,
+                    'nama_wilayah'   => $fp['nama_wilayah']   ?? null,
                     'year'        => $fp['year']         ?? null,
                 ]));
             }
@@ -49,11 +47,9 @@ class DataController extends Controller
 
             if ($request->filled('metadata_id')) $query->where('metadata_id', $request->metadata_id);
 
-            if ($request->filled('kabupaten') || $request->filled('kecamatan') || $request->filled('desa')) {
+            if ($request->filled('nama_wilayah')) {
                 $query->whereHas('location', function ($q) use ($request) {
-                    if ($request->filled('kabupaten')) $q->where('kabupaten', $request->kabupaten);
-                    if ($request->filled('kecamatan')) $q->where('kecamatan', $request->kecamatan);
-                    if ($request->filled('desa'))      $q->where('desa',      $request->desa);
+                    if ($request->filled('nama_wilayah')) $q->where('nama_wilayah', $request->nama_wilayah);
                 });
             }
 
@@ -71,12 +67,12 @@ class DataController extends Controller
         }
 
         $metadataList       = Metadata::where('status', 2)->orderBy('nama')->get(['metadata_id', 'nama']);
-        $kabupatenList      = Location::select('kabupaten')->distinct()->orderBy('kabupaten')->pluck('kabupaten');
+        $wilayahList      = Location::select('nama_wilayah')->distinct()->orderBy('nama_wilayah')->pluck('nama_wilayah');
         $availableTemplates = Tampilan::where('user_id', Auth::user()->user_id)->orderBy('tampilan_id', 'desc')->get();
         $pendingCount       = Data::where('status', Data::STATUS_PENDING)->count();
 
         return view('pages.data.index', compact(
-            'data', 'metadataList', 'kabupatenList',
+            'data', 'metadataList', 'wilayahList',
             'availableTemplates', 'pendingCount', 'hasFilter'
         ));
     }
@@ -125,8 +121,8 @@ class DataController extends Controller
     public function create()
     {
         $metadataList = Metadata::select('metadata_id', 'nama', 'tipe_data', 'satuan_data')->orderBy('nama')->get();
-        $locationList = Location::select('location_id', 'provinsi', 'kabupaten', 'kecamatan', 'desa')->orderBy('kabupaten')->get();
-        $timeList     = Waktu::select('time_id', 'year', 'month', 'day')->orderBy('year', 'desc')->orderBy('month')->orderBy('day')->get();
+        $locationList = Location::select('location_id', 'nama_wilayah')->orderBy('nama_wilayah')->get();
+        $timeList     = Waktu::select('time_id', 'year', 'month')->orderBy('year', 'desc')->orderBy('month')->get();
         return view('pages.data.create', compact('metadataList', 'locationList', 'timeList'));
     }
 

@@ -104,7 +104,7 @@
                             @foreach($locationList as $loc)
                                 <option value="{{ $loc->location_id }}"
                                     {{ old('location_id') == $loc->location_id ? 'selected' : '' }}>
-                                    {{ $loc->kabupaten }} — {{ $loc->kecamatan }}, {{ $loc->desa }}
+                                    {{ $loc->nama_wilayah }}
                                 </option>
                             @endforeach
                         </select>

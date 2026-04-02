@@ -34,7 +34,7 @@
             {{-- KABUPATEN --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Kabupaten <span class="text-red-500">*</span>
+                    Kabupaten 
                 </label>
                 <div class="relative">
                     <select id="kabupaten" name="kabupaten"
@@ -44,7 +44,6 @@
                             disabled>
                         <option value="">Memuat data...</option>
                     </select>
-                    {{-- Spinner & chevron wrapper --}}
                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-2">
                         <span id="spin_kabupaten" class="hidden">
                             <svg class="animate-spin h-4 w-4 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -63,7 +62,7 @@
             {{-- KECAMATAN --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Kecamatan <span class="text-red-500">*</span>
+                    Kecamatan 
                 </label>
                 <div class="relative">
                     <select id="kecamatan" name="kecamatan"
@@ -91,7 +90,7 @@
             {{-- DESA --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Desa <span class="text-red-500">*</span>
+                    Desa 
                 </label>
                 <div class="relative">
                     <select id="desa" name="desa"
@@ -116,26 +115,15 @@
                 </p>
             </div>
 
-            {{-- BANJAR --}}
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Banjar</label>
-                <input type="text" name="banjar"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-800
-                              focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent">
-            </div>
-
-            {{-- RT --}}
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">RT</label>
-                <input type="text" name="rt"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-800
-                              focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent">
-            </div>
-
             {{-- Hidden fields --}}
+            <input type="hidden" name="kode_provinsi" value="51">
             <input type="hidden" name="kode_kabupaten" id="kode_kabupaten">
             <input type="hidden" name="kode_kecamatan" id="kode_kecamatan">
             <input type="hidden" name="kode_desa"      id="kode_desa">
+
+            <input type="hidden" name="nama_kabupaten" id="nama_kabupaten">
+            <input type="hidden" name="nama_kecamatan" id="nama_kecamatan">
+            <input type="hidden" name="nama_desa"      id="nama_desa">
 
             {{-- SUBMIT --}}
             <div class="flex justify-end pt-2 border-t border-gray-100">
@@ -160,7 +148,6 @@ function debounce(func, delay) {
     };
 }
 
-
 function setLoading(id, on, placeholder = 'Pilih...') {
     const sel     = document.getElementById(id);
     const spin    = document.getElementById(`spin_${id}`);
@@ -178,7 +165,6 @@ function setLoading(id, on, placeholder = 'Pilih...') {
         spin.classList.add('hidden');
         chevron.classList.remove('hidden');
         hint.classList.add('hidden');
-        // Pastikan opsi pertama adalah placeholder
         if (sel.options[0]?.value !== '') {
             sel.options[0].textContent = placeholder;
         }
@@ -233,6 +219,9 @@ document.getElementById('kabupaten').addEventListener('change', debounce(functio
     document.getElementById('kode_kabupaten').value = '';
     document.getElementById('kode_kecamatan').value = '';
     document.getElementById('kode_desa').value      = '';
+    document.getElementById('nama_kabupaten').value = selected.value ?? '';
+    document.getElementById('nama_kecamatan').value = '';
+    document.getElementById('nama_desa').value      = '';
 
     if (!kodeKab) return;
 
@@ -263,6 +252,7 @@ document.getElementById('kabupaten').addEventListener('change', debounce(functio
 // ─── Kecamatan → load Desa ────────────────────────────────────────────────────
 
 document.getElementById('kecamatan').addEventListener('change', debounce(function () {
+    // BUG FIX: nama variabel diubah dari 'selected' → 'selectedKec' (konsisten)
     const selectedKec = this.options[this.selectedIndex];
     const kodeKec     = selectedKec.getAttribute('data-kode');
     const kodeKab     = document.getElementById('kabupaten').selectedOptions[0]?.getAttribute('data-kode');
@@ -271,6 +261,9 @@ document.getElementById('kecamatan').addEventListener('change', debounce(functio
     resetSelect('desa', 'Pilih Kecamatan dulu');
     document.getElementById('kode_kecamatan').value = '';
     document.getElementById('kode_desa').value      = '';
+    // BUG FIX: 'selected' → 'selectedKec'
+    document.getElementById('nama_kecamatan').value = selectedKec.value ?? '';
+    document.getElementById('nama_desa').value      = '';
 
     if (!kodeKec || !kodeKab) return;
 
@@ -298,10 +291,14 @@ document.getElementById('kecamatan').addEventListener('change', debounce(functio
 
 }, 300));
 
+// ─── Desa → simpan kode & nama ────────────────────────────────────────────────
+
 document.getElementById('desa').addEventListener('change', debounce(function () {
     const selected = this.options[this.selectedIndex];
     document.getElementById('kode_desa').value = selected.getAttribute('data-kode') ?? '';
+    document.getElementById('nama_desa').value = selected.value ?? '';
 }, 300));
+
 </script>
 
 @endsection

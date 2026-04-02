@@ -4,9 +4,7 @@
 
 @php
     $activeMetadataId   = request('metadata_id', '');
-    $activeKabupaten    = request('kabupaten', '');
-    $activeKecamatan    = request('kecamatan', '');
-    $activeDesa         = request('desa', '');
+    $activeWilayah    = request('nama_wilayah', '');
     $activeYear         = request('year', '');
     $activeSearch       = request('search', '');
     $activeTemplateId   = request('template_id', '');
@@ -149,19 +147,19 @@
                 </div>
             </div>
 
-            {{-- ── Kabupaten ── --}}
+            {{-- ── Wilayah ── --}}
             <div>
                 <label class="block text-xs text-gray-500 font-medium mb-1">
-                    <i class="fas fa-map-marker-alt mr-1 text-gray-400"></i> Kabupaten
+                    <i class="fas fa-map-marker-alt mr-1 text-gray-400"></i> Wilayah
                 </label>
-                <select name="kabupaten" id="kabupatenSelect"
+                <select name="wilayah" id="wilayahSelect"
                     class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm
                            focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
-                    onchange="onKabupatenChange(this.value); onFilterChange()">
-                    <option value="">Semua Kabupaten</option>
-                    @foreach($kabupatenList as $kab)
-                        <option value="{{ $kab }}" {{ $activeKabupaten == $kab ? 'selected' : '' }}>
-                            {{ $kab }}
+                    onchange="onWilayahChange(this.value); onFilterChange()">
+                    <option value="">Semua wilayah</option>
+                    @foreach($wilayahList as $wilayah)
+                        <option value="{{ $wilayah }}" {{ $activeWilayah == $wilayah ? 'selected' : '' }}>
+                            {{ $wilayah }}
                         </option>
                     @endforeach
                 </select>
@@ -190,7 +188,7 @@
             </div>
 
             {{-- ── Kecamatan (dependent) ── --}}
-            <div>
+            {{-- <div>
                 <label class="block text-xs text-gray-500 font-medium mb-1">
                     <i class="fas fa-map mr-1 text-gray-400"></i> Kecamatan
                 </label>
@@ -199,14 +197,12 @@
                            focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white
                            disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                     onchange="onKecamatanChange(this.value); onFilterChange()"
-                    {{ !$activeKabupaten ? 'disabled' : '' }}>
+                    {{ !$activeWilayah ? 'disabled' : '' }}>
                     <option value="">
-                        {{ $activeKabupaten ? 'Semua Kecamatan' : '— Pilih kabupaten dulu —' }}
+                        {{ $activeWilayah ? 'Semua Kecamatan' : '— Pilih wilayah dulu —' }}
                     </option>
                 </select>
             </div>
-
-            {{-- ── Desa (dependent) ── --}}
             <div>
                 <label class="block text-xs text-gray-500 font-medium mb-1">
                     <i class="fas fa-home mr-1 text-gray-400"></i> Desa
@@ -221,7 +217,7 @@
                         {{ $activeKecamatan ? 'Semua Desa' : '— Pilih kecamatan dulu —' }}
                     </option>
                 </select>
-            </div>
+            </div> --}}
 
             {{-- ── Search teks ── --}}
             <div>
@@ -263,19 +259,9 @@
                             <i class="fas fa-database mr-1 text-sky-300 text-xs"></i>{{ $activeMetadataNama }}
                         </span>
                     @endif
-                    @if($activeKabupaten)
+                    @if($activeWilayah)
                         <span class="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs px-2 py-0.5 rounded-full">
-                            <i class="fas fa-map-marker-alt mr-1 text-emerald-300 text-xs"></i>{{ $activeKabupaten }}
-                        </span>
-                    @endif
-                    @if($activeKecamatan)
-                        <span class="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs px-2 py-0.5 rounded-full">
-                            {{ $activeKecamatan }}
-                        </span>
-                    @endif
-                    @if($activeDesa)
-                        <span class="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs px-2 py-0.5 rounded-full">
-                            {{ $activeDesa }}
+                            <i class="fas fa-map-marker-alt mr-1 text-emerald-300 text-xs"></i>{{ $activeWilayah }}
                         </span>
                     @endif
                     @if($activeYear)
@@ -361,9 +347,7 @@
 
                             if($row->location){
                                 $lokasiText = implode(', ', array_filter([
-                                    $row->location->kabupaten ?? null,
-                                    $row->location->kecamatan ?? null,
-                                    $row->location->desa ?? null
+                                    $row->location->nama_wilayah ?? null,
                                 ]));
                             }
                         @endphp
@@ -407,12 +391,7 @@
                                 @if($row->location)
 
                                     <p class="font-medium text-gray-700">
-                                        {{ $row->location->kabupaten ?? 'All' }}
-                                    </p>
-
-                                    <p class="text-gray-400">
-                                        {{ $row->location->kecamatan ?? 'All' }},
-                                        {{ $row->location->desa ?? 'All' }}
+                                        {{ $row->location->nama_wilayah ?? 'All' }}
                                     </p>
 
                                 @else
@@ -610,9 +589,7 @@
         @csrf
         <input type="hidden" name="nama_tampilan"      id="formTemplateName">
         <input type="hidden" name="filter_metadata_id" id="formFilterMetadataId" value="{{ $activeMetadataId }}">
-        <input type="hidden" name="filter_kabupaten"   id="formFilterKabupaten"  value="{{ $activeKabupaten }}">
-        <input type="hidden" name="filter_kecamatan"   id="formFilterKecamatan"  value="{{ $activeKecamatan }}">
-        <input type="hidden" name="filter_desa"        id="formFilterDesa"       value="{{ $activeDesa }}">
+        <input type="hidden" name="filter_kabupaten"   id="formFilterKabupaten"  value="{{ $activeWilayah }}">
         <input type="hidden" name="filter_year"        id="formFilterYear"       value="{{ $activeYear }}">
         <div id="formDataIds"></div>
     </form>
@@ -639,8 +616,6 @@
             metadataId:   document.getElementById('metadataId').value.trim(),
             metadataNama: document.getElementById('metadataSearch').value.trim(),
             kabupaten:    document.getElementById('kabupatenSelect').value.trim(),
-            kecamatan:    document.getElementById('kecamatanSelect').value.trim(),
-            desa:         document.getElementById('desaSelect').value.trim(),
             year:         document.getElementById('yearSearch').value.trim(),
         };
     }

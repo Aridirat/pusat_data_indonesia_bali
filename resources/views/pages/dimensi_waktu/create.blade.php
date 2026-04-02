@@ -8,15 +8,14 @@
         <i class="fas fa-angle-left"></i> Kembali
     </a>
 
-    <div class="mt-2 bg-white rounded-md shadow p-6 max-w-xl mx-auto">
+    <div class="mt-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-xl mx-auto">
 
         <h1 class="text-xl font-bold text-gray-800 mb-1">Tambah Dimensi Waktu</h1>
-        <p class="text-sm text-gray-400 mb-6">Generate otomatis atau input manual hierarki waktu</p>
+        <p class="text-sm text-gray-400 mb-6">Generate otomatis per level atau input manual satu baris</p>
 
-        {{-- ERROR ALERT --}}
         @if($errors->any())
             <div class="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+                <i class="fas fa-exclamation-circle text-red-500 mt-0.5 shrink-0"></i>
                 <span>{{ $errors->first() }}</span>
             </div>
         @endif
@@ -34,182 +33,135 @@
                                {{ old('mode', 'full_year') === 'full_year' ? 'checked' : '' }}>
                         <div class="peer-checked:border-sky-500 peer-checked:bg-sky-50 peer-checked:text-sky-700
                                     border border-gray-200 rounded-lg p-3 text-sm text-center transition-all
-                                    hover:border-sky-300">
+                                    hover:border-sky-300 select-none">
                             <i class="fas fa-calendar-alt block text-lg mb-1"></i>
-                            <span class="font-semibold">Generate Full Year</span>
-                            <p class="text-xs text-gray-400 mt-0.5">365/366 baris sekaligus</p>
+                            <span class="font-semibold">Generate by Year</span>
                         </div>
                     </label>
-                    <label class="flex-1 cursor-pointer">
+                    {{-- <label class="flex-1 cursor-pointer">
                         <input type="radio" name="mode" value="custom" id="modeCustom"
                                class="sr-only peer"
                                {{ old('mode') === 'custom' ? 'checked' : '' }}>
                         <div class="peer-checked:border-sky-500 peer-checked:bg-sky-50 peer-checked:text-sky-700
                                     border border-gray-200 rounded-lg p-3 text-sm text-center transition-all
-                                    hover:border-sky-300">
+                                    hover:border-sky-300 select-none">
                             <i class="fas fa-sliders-h block text-lg mb-1"></i>
-                            <span class="font-semibold">Custom Hierarki</span>
-                            <p class="text-xs text-gray-400 mt-0.5">1 baris, level bebas</p>
+                            <span class="font-semibold">Custom Time</span>
                         </div>
-                    </label>
+                    </label> --}}
                 </div>
             </div>
 
-            {{-- ════════════════════════════════════════════ --}}
-            {{-- SECTION: GENERATE FULL YEAR (mode lama)     --}}
-            {{-- ════════════════════════════════════════════ --}}
+            {{-- SECTION A: GENERATE BY YEAR --}}
             <div id="sectionFullYear">
 
-                <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                         Tahun <span class="text-red-500">*</span>
                     </label>
-                    <input
-                        type="number"
-                        name="tahun"
-                        id="inputTahun"
-                        min="1900"
-                        max="2100"
-                        value="{{ old('tahun') }}"
-                        placeholder="Contoh: 2025"
-                        class="w-full border @error('tahun') border-red-400 @else border-gray-300 @enderror
-                               rounded-md px-4 py-2.5 text-gray-800 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
-                               transition-shadow"
-                        autocomplete="off"
-                    >
+                    <input type="number" name="tahun" id="inputTahun"
+                           min="1900" max="2100"
+                           value="{{ old('tahun') }}"
+                           placeholder="Contoh: {{ date('Y') }}"
+                           class="w-full border @error('tahun') border-red-400 @else border-gray-300 @enderror
+                                  rounded-lg px-4 py-2.5 text-gray-800 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-shadow"
+                           autocomplete="off">
                     @error('tahun')
                         <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
                             <i class="fas fa-exclamation-circle"></i> {{ $message }}
                         </p>
                     @enderror
-                    <p class="mt-1.5 text-xs text-gray-400">Rentang tahun yang diperbolehkan: 1900 – 2100</p>
+                    <p class="mt-1 text-xs text-gray-400">Rentang tahun yang diperbolehkan: 1900 - 2100</p>
                 </div>
 
-                {{-- PREVIEW CARD --}}
+                {{-- Stop Level Picker --}}
+                <div class="mb-5">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Generate sampai level <span class="text-red-500">*</span>
+                    </label>
+
+                    @php
+                        $levels = [
+                            'decade'   => ['label' => 'Dekade',   'icon' => 'fas fa-layer-group',   'desc' => '1 baris'],
+                            'year'     => ['label' => 'Tahun',    'icon' => 'fas fa-calendar',      'desc' => '1 baris'],
+                            'semester' => ['label' => 'Semester', 'icon' => 'fas fa-th-large',      'desc' => '2 baris'],
+                            'quarter'  => ['label' => 'Kuartal',  'icon' => 'fas fa-th',            'desc' => '4 baris'],
+                            'month'    => ['label' => 'Bulan',    'icon' => 'fas fa-calendar-week', 'desc' => '12 baris'],
+                        ];
+                        $oldLevel = old('stop_level', 'month');
+                    @endphp
+
+                    <div class="grid grid-cols-5 gap-2">
+                        @foreach($levels as $val => $item)
+                        <label class="cursor-pointer">
+                            <input type="radio" name="stop_level" value="{{ $val }}"
+                                   class="sr-only peer"
+                                   {{ $oldLevel === $val ? 'checked' : '' }}>
+                            <div class="peer-checked:border-sky-500 peer-checked:text-sky-700 text-gray-500 peer-checked:bg-sky-50
+                                        border border-gray-200 rounded-lg p-2 text-center
+                                        transition-all hover:border-sky-300 h-full flex flex-col items-center justify-center gap-1">
+
+                                <i class="{{ $item['icon'] }} text-base 
+                                        "></i>
+
+                                <span class="font-semibold leading-tight text-[11px]
+                                            ">
+                                    {{ $item['label'] }}
+                                </span>
+
+                                <span class="text-[10px]
+                                            ">
+                                    {{ $item['desc'] }}
+                                </span>
+                            </div>
+                        </label>
+                        @endforeach
+                    </div>
+                    @error('stop_level')
+                        <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                            <i class="fas fa-exclamation-circle"></i> {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                {{-- Preview Card --}}
                 <div id="previewCard"
-                     class="hidden mb-6 border border-sky-200 bg-sky-50 rounded-lg p-4 text-sm text-sky-800">
+                     class="hidden mb-5 border border-sky-200 bg-sky-50 rounded-lg p-4 text-sm text-sky-800">
                     <p class="font-semibold text-sky-700 mb-3 flex items-center gap-2">
-                        <i class="fas fa-calendar-alt"></i>
-                        Preview Generate
+                        <i class="fas fa-eye"></i> Preview Generate
                     </p>
-                    <div class="grid grid-cols-2 gap-y-2 gap-x-4">
+                    <div class="grid grid-cols-3 gap-y-2 gap-x-4 text-xs">
                         <div>
-                            <span class="text-sky-500 text-xs">Tahun</span>
-                            <p id="prevTahun" class="font-bold text-sky-800 text-lg">-</p>
+                            <span class="text-sky-500">Tahun</span>
+                            <p id="prevTahun" class="font-bold text-sky-800 text-base">-</p>
                         </div>
                         <div>
-                            <span class="text-sky-500 text-xs">Total Hari</span>
-                            <p id="prevTotalHari" class="font-bold text-sky-800 text-lg">-</p>
-                        </div>
-                        <div>
-                            <span class="text-sky-500 text-xs">Dekade</span>
+                            <span class="text-sky-500">Dekade</span>
                             <p id="prevDekade" class="font-semibold">-</p>
                         </div>
                         <div>
-                            <span class="text-sky-500 text-xs">Tahun Kabisat</span>
-                            <p id="prevKabisat" class="font-semibold">-</p>
+                            <span class="text-sky-500">Jumlah Baris</span>
+                            <p id="prevRows" class="font-semibold">-</p>
                         </div>
                     </div>
                     <div class="mt-3 pt-3 border-t border-sky-200">
-                        <p class="text-xs text-sky-500 mb-2 font-medium">Distribusi per Kuartal</p>
-                        <div class="grid grid-cols-4 gap-2" id="prevQuarters"></div>
+                        <p class="text-xs text-sky-600 font-medium mb-1">Contoh baris yang akan dibuat:</p>
+                        <pre id="prevSample" class="font-mono text-[11px] bg-white border border-sky-100 rounded p-2 whitespace-pre-wrap leading-relaxed"></pre>
                     </div>
                 </div>
 
             </div>
+            
 
-            {{-- ════════════════════════════════════════════ --}}
-            {{-- SECTION: CUSTOM HIERARKI (mode baru)        --}}
-            {{-- ════════════════════════════════════════════ --}}
-            <div id="sectionCustom" class="hidden">
-
-                <p class="text-xs text-gray-400 mb-4">
-                    Isi dari level teratas sampai level yang diinginkan.
-                    Level yang dikosongkan akan disimpan sebagai <strong>ALL (0)</strong>.
-                </p>
-
-                {{-- Hirarki: decade → year → quarter → month → day --}}
-                @php
-                    $hierarki = [
-                        ['field' => 'custom_decade',  'label' => 'Dekade',  'icon' => 'fas fa-layer-group',   'placeholder' => 'Contoh: 2020', 'hint' => 'Kelipatan 10 (1900–2100)', 'min' => 1900, 'max' => 2100],
-                        ['field' => 'custom_year',    'label' => 'Tahun',   'icon' => 'fas fa-calendar',      'placeholder' => 'Contoh: 2024', 'hint' => '1900–2100',               'min' => 1900, 'max' => 2100],
-                        ['field' => 'custom_quarter', 'label' => 'Kuartal', 'icon' => 'fas fa-th-large',      'placeholder' => '1, 2, 3, atau 4', 'hint' => 'Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Okt-Des', 'min' => 1, 'max' => 4],
-                        ['field' => 'custom_month',   'label' => 'Bulan',   'icon' => 'fas fa-calendar-week', 'placeholder' => '1–12',         'hint' => '1=Januari … 12=Desember', 'min' => 1,  'max' => 12],
-                        ['field' => 'custom_day',     'label' => 'Hari',    'icon' => 'fas fa-calendar-day',  'placeholder' => '1–31',         'hint' => 'Tanggal dalam bulan',     'min' => 1,  'max' => 31],
-                    ];
-                @endphp
-
-                <div class="space-y-4">
-                    @foreach($hierarki as $i => $item)
-                    <div class="relative">
-                        @if($i > 0)
-                        <div class="absolute -top-4 left-[18px] w-px h-4 bg-gray-200"></div>
-                        @endif
-
-                        <div class="flex items-start gap-3">
-                            <div class="mt-2.5 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                                <i class="{{ $item['icon'] }} text-gray-400 text-sm"></i>
-                            </div>
-
-                            {{-- Input --}}
-                            <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    {{ $item['label'] }}
-                                    <span class="text-gray-400 font-normal text-xs">(opsional)</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    name="{{ $item['field'] }}"
-                                    id="{{ $item['field'] }}"
-                                    min="{{ $item['min'] }}"
-                                    max="{{ $item['max'] }}"
-                                    value="{{ old($item['field']) }}"
-                                    placeholder="{{ $item['placeholder'] }}"
-                                    class="w-full border @error($item['field']) border-red-400 @else border-gray-300 @enderror
-                                           rounded-md px-3 py-2 text-gray-800 text-sm
-                                           focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent
-                                           transition-shadow"
-                                    autocomplete="off"
-                                >
-                                @error($item['field'])
-                                    <p class="mt-1 text-xs text-red-500 flex items-center gap-1">
-                                        <i class="fas fa-exclamation-circle"></i> {{ $message }}
-                                    </p>
-                                @enderror
-                                <p class="mt-1 text-xs text-gray-400">{{ $item['hint'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-
-                {{-- Custom Preview Badge --}}
-                <div id="customPreviewBadge"
-                     class="hidden mt-5 border border-emerald-200 bg-emerald-50 rounded-lg p-3 text-sm text-emerald-800">
-                    <p class="font-semibold text-emerald-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-check-circle"></i> Preview Row
-                    </p>
-                    <div class="font-mono text-xs bg-white border border-emerald-100 rounded p-2" id="customPreviewText">
-                        –
-                    </div>
-                    <p class="mt-2 text-xs text-emerald-600">
-                        <i class="fas fa-info-circle"></i>
-                        Nilai <strong>0</strong> = ALL (mencakup seluruh sub-level)
-                    </p>
-                </div>
-
-            </div>
-
-            {{-- SUBMIT --}}
             <div class="flex justify-end pt-4 border-t border-gray-100 mt-6">
                 <button type="submit" id="btnSubmit"
                     class="bg-sky-600 hover:bg-sky-700 disabled:bg-gray-300 disabled:cursor-not-allowed
-                           text-white px-6 py-2.5 rounded-md shadow text-sm font-medium
+                           text-white px-6 py-2.5 rounded-lg shadow-sm text-sm font-medium
                            flex items-center gap-2 transition-colors"
                     disabled>
                     <i class="fas fa-save" id="btnIcon"></i>
-                    <span id="btnLabel">Generate & Simpan</span>
+                    <span id="btnLabel">Generate &amp; Simpan</span>
                 </button>
             </div>
         </form>
@@ -218,36 +170,26 @@
 </div>
 
 <script>
-// ─── Konstanta ───────────────────────────────────────────────────────────────
-const quarterColors = [
-    'bg-sky-100 text-sky-700',
-    'bg-emerald-100 text-emerald-700',
-    'bg-amber-100 text-amber-700',
-    'bg-rose-100 text-rose-700',
-];
-const quarterMonths = [[1,2,3],[4,5,6],[7,8,9],[10,11,12]];
+const LEVEL_ROWS = { decade: 1, year: 1, semester: 2, quarter: 4, month: 12 };
+const MONTH_NAMES = ['','Januari','Februari','Maret','April','Mei','Juni',
+                     'Juli','Agustus','September','Oktober','November','Desember'];
 
-// ─── Element refs ─────────────────────────────────────────────────────────────
-const radios         = document.querySelectorAll('input[name="mode"]');
-const sectionFull    = document.getElementById('sectionFullYear');
-const sectionCustom  = document.getElementById('sectionCustom');
-const inputTahun     = document.getElementById('inputTahun');
-const previewCard    = document.getElementById('previewCard');
-const btnSubmit      = document.getElementById('btnSubmit');
-const btnLabel       = document.getElementById('btnLabel');
-const btnIcon        = document.getElementById('btnIcon');
+const radios      = document.querySelectorAll('input[name="mode"]');
+const sectionFull = document.getElementById('sectionFullYear');
+const sectionCust = document.getElementById('sectionCustom');
+const inputTahun  = document.getElementById('inputTahun');
+const previewCard = document.getElementById('previewCard');
+const btnSubmit   = document.getElementById('btnSubmit');
+const btnLabel    = document.getElementById('btnLabel');
+const btnIcon     = document.getElementById('btnIcon');
 
-// Custom fields (ordered by hierarchy)
-const customFields = [
-    document.getElementById('custom_decade'),
-    document.getElementById('custom_year'),
-    document.getElementById('custom_quarter'),
-    document.getElementById('custom_month'),
-    document.getElementById('custom_day'),
-];
-const fieldNames = ['decade', 'year', 'quarter', 'month', 'day'];
+const inputDecade  = document.getElementById('custom_decade');
+const inputYear    = document.getElementById('custom_year');
+const selSemester  = document.getElementById('custom_semester');
+const selQuarter   = document.getElementById('custom_quarter');
+const selMonth     = document.getElementById('custom_month');
 
-// ─── Mode switching ───────────────────────────────────────────────────────────
+// ── Mode switching ────────────────────────────────────────────────────────────
 function getMode() {
     return document.querySelector('input[name="mode"]:checked')?.value ?? 'full_year';
 }
@@ -255,32 +197,41 @@ function getMode() {
 function switchMode(mode) {
     if (mode === 'full_year') {
         sectionFull.classList.remove('hidden');
-        sectionCustom.classList.add('hidden');
+        sectionCust.classList.add('hidden');
         btnLabel.textContent = 'Generate & Simpan';
         btnIcon.className    = 'fas fa-cogs';
         updateFullYearPreview();
     } else {
         sectionFull.classList.add('hidden');
-        sectionCustom.classList.remove('hidden');
-        btnLabel.textContent = 'Simpan Row';
+        sectionCust.classList.remove('hidden');
+        btnLabel.textContent = 'Simpan Baris';
         btnIcon.className    = 'fas fa-save';
-        previewCard.classList.add('hidden');
         updateCustomPreview();
     }
 }
 
 radios.forEach(r => r.addEventListener('change', () => switchMode(getMode())));
 
-// ─── Full Year: Preview ───────────────────────────────────────────────────────
-function isLeapYear(year) {
-    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+// ── Full Year preview ─────────────────────────────────────────────────────────
+function getSelectedLevel() {
+    return document.querySelector('input[name="stop_level"]:checked')?.value ?? 'month';
 }
-function daysInMonth(year, month) {
-    return new Date(year, month, 0).getDate();
+
+function buildSampleText(decade, year, level) {
+    const d = decade, y = year;
+    const map = {
+        decade:   `decade=${d} | year=0 | semester=0 | quarter=0 | month=0`,
+        year:     `decade=${d} | year=${y} | semester=0 | quarter=0 | month=0`,
+        semester: `decade=${d} | year=${y} | semester=1 | quarter=0 | month=0\ndecade=${d} | year=${y} | semester=2 | quarter=0 | month=0`,
+        quarter:  `decade=${d} | year=${y} | semester=1 | quarter=1 | month=0\ndecade=${d} | year=${y} | semester=1 | quarter=2 | month=0\ndecade=${d} | year=${y} | semester=2 | quarter=3 | month=0\ndecade=${d} | year=${y} | semester=2 | quarter=4 | month=0`,
+        month:    `decade=${d} | year=${y} | semester=1 | quarter=1 | month=1  (Januari)\ndecade=${d} | year=${y} | semester=1 | quarter=1 | month=2  (Februari)\n... hingga ...\ndecade=${d} | year=${y} | semester=2 | quarter=4 | month=12 (Desember)`,
+    };
+    return map[level] ?? '';
 }
 
 function updateFullYearPreview() {
-    const year = parseInt(inputTahun.value);
+    const year  = parseInt(inputTahun.value);
+    const level = getSelectedLevel();
 
     if (!year || year < 1900 || year > 2100) {
         previewCard.classList.add('hidden');
@@ -288,75 +239,98 @@ function updateFullYearPreview() {
         return;
     }
 
-    const leap      = isLeapYear(year);
-    const totalDays = leap ? 366 : 365;
-    const decade    = Math.floor(year / 10) * 10;
-
-    document.getElementById('prevTahun').textContent     = year;
-    document.getElementById('prevTotalHari').textContent = totalDays + ' hari';
-    document.getElementById('prevDekade').textContent    = decade + 'an';
-    document.getElementById('prevKabisat').textContent   = leap ? '✅ Ya' : '❌ Tidak';
-
-    const quartersEl = document.getElementById('prevQuarters');
-    quartersEl.innerHTML = '';
-    quarterMonths.forEach((months, i) => {
-        const days = months.reduce((sum, m) => sum + daysInMonth(year, m), 0);
-        quartersEl.innerHTML += `
-            <div class="rounded-md px-2 py-1.5 text-center ${quarterColors[i]}">
-                <p class="text-xs font-semibold">Q${i + 1}</p>
-                <p class="text-sm font-bold">${days}</p>
-                <p class="text-xs opacity-70">hari</p>
-            </div>`;
-    });
+    const decade = Math.floor(year / 10) * 10;
+    document.getElementById('prevTahun').textContent  = year;
+    document.getElementById('prevDekade').textContent = decade + 'an';
+    document.getElementById('prevRows').textContent   = LEVEL_ROWS[level] + ' baris';
+    document.getElementById('prevSample').textContent = buildSampleText(decade, year, level);
 
     previewCard.classList.remove('hidden');
     btnSubmit.disabled = false;
 }
 
 inputTahun.addEventListener('input', updateFullYearPreview);
+document.querySelectorAll('input[name="stop_level"]').forEach(r =>
+    r.addEventListener('change', updateFullYearPreview)
+);
 
-// ─── Custom Hierarki: Preview & Validasi ─────────────────────────────────────
-function updateCustomPreview() {
-    const badge    = document.getElementById('customPreviewBadge');
-    const preText  = document.getElementById('customPreviewText');
+// ── Cascading dropdowns ───────────────────────────────────────────────────────
+function filterQuarters(semVal) {
+    const opts       = selQuarter.querySelectorAll('option[data-sem]');
+    const currentVal = selQuarter.value;
 
-    const vals = customFields.map(f => f.value.trim() !== '' ? parseInt(f.value) : null);
-
-    const anyFilled = vals.some(v => v !== null);
-
-    if (!anyFilled) {
-        badge.classList.add('hidden');
-        btnSubmit.disabled = true;
-        return;
-    }
-
-    let lastFilledIndex = -1;
-    for (let i = 0; i < vals.length; i++) {
-        if (vals[i] !== null) lastFilledIndex = i;
-    }
-
-    let hasGap = false;
-    for (let i = 0; i <= lastFilledIndex; i++) {
-        if (vals[i] === null) { hasGap = true; break; }
-    }
-
-    const row = fieldNames.map((name, i) => {
-        const v = (vals[i] !== null && i <= lastFilledIndex) ? vals[i] : 0;
-        return `${name}: <strong>${v === 0 && i > lastFilledIndex ? '<span class="text-gray-400">0 (ALL)</span>' : v}</strong>`;
+    opts.forEach(opt => {
+        const belongs = semVal == 0 || opt.dataset.sem == semVal;
+        opt.hidden    = !belongs;
+        opt.disabled  = !belongs;
     });
 
-    preText.innerHTML = row.join(' &nbsp;|&nbsp; ');
-    badge.classList.remove('hidden');
+    const stillValid = selQuarter.querySelector(`option[value="${currentVal}"]:not([disabled])`);
+    if (!stillValid && currentVal !== '0') selQuarter.value = '0';
 
-    btnSubmit.disabled = hasGap;
+    filterMonths(selQuarter.value, semVal);
 }
 
-customFields.forEach(f => f.addEventListener('input', updateCustomPreview));
+function filterMonths(qVal, semVal) {
+    const opts       = selMonth.querySelectorAll('option[data-q]');
+    const currentVal = selMonth.value;
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+    opts.forEach(opt => {
+        const qOk    = qVal   == 0 || opt.dataset.q   == qVal;
+        const semOk  = semVal == 0 || opt.dataset.sem == semVal;
+        opt.hidden   = !(qOk && semOk);
+        opt.disabled = !(qOk && semOk);
+    });
+
+    const stillValid = selMonth.querySelector(`option[value="${currentVal}"]:not([disabled])`);
+    if (!stillValid && currentVal !== '0') selMonth.value = '0';
+}
+
+// selSemester.addEventListener('change', () => { filterQuarters(selSemester.value); updateCustomPreview(); });
+// selQuarter.addEventListener('change',  () => { filterMonths(selQuarter.value, selSemester.value); updateCustomPreview(); });
+// selMonth.addEventListener('change',    updateCustomPreview);
+// inputDecade.addEventListener('input',  updateCustomPreview);
+// inputYear.addEventListener('input',    updateCustomPreview);
+
+// ── Custom preview ────────────────────────────────────────────────────────────
+// function updateCustomPreview() {
+//     const badge   = document.getElementById('customPreviewBadge');
+//     const preText = document.getElementById('customPreviewText');
+
+//     if (!inputDecade.value.trim()) {
+//         badge.classList.add('hidden');
+//         btnSubmit.disabled = true;
+//         return;
+//     }
+
+//     const decade   = parseInt(inputDecade.value);
+//     const year     = inputYear.value.trim() ? parseInt(inputYear.value) : 0;
+//     const semester = parseInt(selSemester.value);
+//     const quarter  = parseInt(selQuarter.value);
+//     const month    = parseInt(selMonth.value);
+
+//     const fmt = (label, val, display) => {
+//         const d = display !== undefined ? display : (val === 0 ? 'ALL' : val);
+//         const cls = val === 0 ? 'color:#9ca3af' : 'color:#059669;font-weight:700';
+//         return `${label}: <span style="${cls}">${d}</span>`;
+//     };
+
+//     preText.innerHTML = [
+//         fmt('decade',   decade,   decade),
+//         fmt('year',     year),
+//         fmt('semester', semester),
+//         fmt('quarter',  quarter),
+//         fmt('month',    month,    month > 0 ? MONTH_NAMES[month] : 'ALL'),
+//     ].join(' <span style="color:#d1d5db"> | </span> ');
+
+//     badge.classList.remove('hidden');
+//     btnSubmit.disabled = false;
+// }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
 switchMode(getMode());
-
-if (inputTahun.value) updateFullYearPreview();
-if (customFields.some(f => f.value)) updateCustomPreview();
+filterQuarters(selSemester.value);
+if (inputTahun.value)  updateFullYearPreview();
+// if (inputDecade.value) updateCustomPreview();
 </script>
 @endsection
