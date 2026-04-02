@@ -27,7 +27,7 @@ php artisan cache:clear || true
 
 # ── 3. Jalankan migration otomatis ────────────────────────────────────
 echo "🗄️  Running migrations..."
-php artisan migrate --seed --force
+php artisan migrate:fresh --seed --force
 
 # ── 4. Storage link ───────────────────────────────────────────────────
 echo "🔗 Creating storage link..."
