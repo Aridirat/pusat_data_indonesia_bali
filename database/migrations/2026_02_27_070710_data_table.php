@@ -21,7 +21,7 @@ return new class extends Migration
 
             $table->integer('metadata_id');
 
-            $table->integer('location_id');
+            $table->bigInteger('location_id');
             
             $table->integer('time_id');
 

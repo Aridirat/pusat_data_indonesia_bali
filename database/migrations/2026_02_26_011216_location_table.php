@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('location', function (Blueprint $table) {
-            $table->integer('location_id')->autoIncrement();
-            $table->string('kode_wilayah',10);
+            $table->bigInteger('location_id')->autoIncrement();
             $table->string('nama_wilayah', 255);
         });
     }

@@ -49,50 +49,12 @@
                     <th class="p-3 text-left">
                         No.
                     </th>
-
                     <th class="p-3 text-left">
-                        Provinsi
+                        Location Id
                     </th>
                     <th class="p-3 text-left">
-                            Kode Prov.
+                        Nama Wilayah
                     </th>
-
-                    <th class="p-3 text-left">
-                            Kabupaten
-                        </a>
-                    </th>
-                    <th class="p-3 text-left">
-                            Kode Kab.
-                        </a>
-                    </th>
-
-                    <th class="p-3 text-left">
-                            Kecamatan
-                        </a>
-                    </th>
-
-                    <th class="p-3 text-left">
-                            Kode Kec.
-                        </a>
-                    </th>
-
-                    <th class="p-3 text-left">
-                            Desa
-                        </a>
-                    </th>
-
-                    <th class="p-3 text-left">
-                            Kode Desa
-                        </a>
-                    </th>
-
-                    <th class="p-3 text-left">
-                        Banjar
-                    </th>
-                    <th class="p-3 text-left">
-                        RT
-                    </th>
-
                 </tr>
 
             </thead>
@@ -109,43 +71,11 @@
                     </td>
                     
                     <td class="p-3">
-                        {{ $row->provinsi }}
+                        {{ $row->location_id }}
                     </td>
 
                     <td class="p-3 bg-gray-50">
-                        {{ $row->kode_provinsi }}
-                    </td>
-
-                    <td class="p-3">
-                        {{ $row->kabupaten }}
-                    </td>
-
-                    <td class="p-3 bg-gray-50">
-                        {{ $row->kode_kabupaten }}
-                    </td>
-
-                    <td class="p-3">
-                        {{ $row->kecamatan }}
-                    </td>
-
-                    <td class="p-3 bg-gray-50">
-                        {{ $row->kode_kecamatan }}
-                    </td>
-
-                    <td class="p-3">
-                        {{ $row->desa }}
-                    </td>
-
-                    <td class="p-3 bg-gray-50">
-                        {{ $row->kode_desa }}
-                    </td>
-
-                    <td class="p-3">
-                        {{ $row->banjar }}
-                    </td>
-
-                    <td class="p-3 bg-gray-50">
-                        {{ $row->rt }}
+                        {{ $row->nama_wilayah }}
                     </td>
 
                 </tr>

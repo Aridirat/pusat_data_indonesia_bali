@@ -80,9 +80,6 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
                         Generate sampai level <span class="text-red-500">*</span>
                     </label>
-                    <p class="text-xs text-gray-400 mb-2">
-                        Level di bawah yang dipilih disimpan sebagai <strong>0 (ALL)</strong>.
-                    </p>
 
                     @php
                         $levels = [
@@ -101,12 +98,22 @@
                             <input type="radio" name="stop_level" value="{{ $val }}"
                                    class="sr-only peer"
                                    {{ $oldLevel === $val ? 'checked' : '' }}>
-                            <div class="peer-checked:border-sky-500 peer-checked:bg-sky-50 peer-checked:text-sky-700
+                            <div class="peer-checked:border-sky-500 peer-checked:text-sky-700 text-gray-500 peer-checked:bg-sky-50
                                         border border-gray-200 rounded-lg p-2 text-center
                                         transition-all hover:border-sky-300 h-full flex flex-col items-center justify-center gap-1">
-                                <i class="{{ $item['icon'] }} text-gray-400 text-base"></i>
-                                <span class="font-semibold text-gray-700 leading-tight text-[11px]">{{ $item['label'] }}</span>
-                                <span class="text-gray-400 text-[10px]">{{ $item['desc'] }}</span>
+
+                                <i class="{{ $item['icon'] }} text-base 
+                                        "></i>
+
+                                <span class="font-semibold leading-tight text-[11px]
+                                            ">
+                                    {{ $item['label'] }}
+                                </span>
+
+                                <span class="text-[10px]
+                                            ">
+                                    {{ $item['desc'] }}
+                                </span>
                             </div>
                         </label>
                         @endforeach
