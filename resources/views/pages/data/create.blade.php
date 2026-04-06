@@ -121,6 +121,15 @@
                             Waktu <span class="text-red-500">*</span>
                         </label>
                         <div class="flex gap-2">
+                            <select id="filterDekade"
+                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
+                                onchange="filterWaktu()">
+                                <option value="">Dekade</option>
+                                @foreach($timeList->pluck('decade')->unique()->sortDesc() as $decade)
+                                    <option value="{{ $decade }}">{{ $decade }}</option>
+                                @endforeach
+                            </select>
                             <select id="filterTahun"
                                 class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
                                        focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
@@ -141,20 +150,6 @@
                                     <option value="{{ $i + 1 }}">{{ $bulan }}</option>
                                 @endforeach
                             </select>
-                            <select name="time_id" id="selectHari" required
-                                class="border @error('time_id') border-red-400 @else border-gray-300 @enderror
-                                       rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
-                                       focus:ring-sky-400 bg-white flex-1">
-                                <option value="">Hari</option>
-                                @foreach($timeList as $t)
-                                    <option value="{{ $t->time_id }}"
-                                        data-year="{{ $t->year }}"
-                                        data-month="{{ $t->month }}"
-                                        {{ old('time_id') == $t->time_id ? 'selected' : '' }}>
-                                        {{ $t->day }}
-                                    </option>
-                                @endforeach
-                            </select>
                         </div>
                         @error('time_id')
                             <p class="mt-1 text-xs text-red-500">
@@ -171,7 +166,7 @@
                         </label>
                         <input type="number" name="number_value" step="0.01"
                             value="{{ old('number_value') }}"
-                            placeholder="Contoh: 1250.50"
+                            placeholder="Contoh: 110.50"
                             class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
                                    focus:outline-none focus:ring-2 focus:ring-sky-400">
                         @error('number_value')
