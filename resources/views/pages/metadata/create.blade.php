@@ -559,7 +559,7 @@
                                font-semibold flex items-center gap-2 transition-colors
                                disabled:bg-gray-300 disabled:cursor-not-allowed"
                         disabled>
-                        <i class="fas fa-eye"></i> Preview Data
+                        <i class="fas fa-eye"></i> Preview Metadata
                     </button>
                     <button type="button" id="btnImport" onclick="doImport()"
                         class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-md
