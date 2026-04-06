@@ -12,54 +12,58 @@
             <h1 class="text-xl font-bold text-gray-800">Daftar Metadata</h1>
             <p class="text-sm text-gray-400 mt-1">Metadata aktif yang tersedia dalam sistem</p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-
-            {{-- Badge Pending --}}
-            @if($pendingCount > 0)
-                <a href="{{ route('metadata.approval') }}"
-                   class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
-                          border transition-colors"
-                   style="background:#fffbeb; border-color:#fde68a; color:#b45309;"
-                   onmouseover="this.style.background='#fef3c7'"
-                   onmouseout="this.style.background='#fffbeb'">
-                    <i class="fas fa-clock"></i>
-                    {{ $pendingCount }} Pending Approval
-                </a>
-            @endif
-
-            {{-- Tombol Export Metadata --}}
-            <button onclick="openExportModal()"
-                    class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
-                           text-white transition-colors shadow-sm"
-                    style="background:#059669;"
-                    onmouseover="this.style.background='#047857'"
-                    onmouseout="this.style.background='#059669'">
-                <i class="fas fa-file-excel"></i>
-                Export Metadata
-            </button>
-
-            {{-- [BARU] Tombol Export Template Metadata --}}
-            <button onclick="openTemplateModal()"
-                    class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
-                           text-white transition-colors shadow-sm"
-                    style="background:#7c3aed;"
-                    onmouseover="this.style.background='#6d28d9'"
-                    onmouseout="this.style.background='#7c3aed'">
-                <i class="fas fa-table-columns"></i>
-                Export Template
-            </button>
-
-            {{-- Tombol Tambah --}}
-            <a href="{{ route('metadata.create') }}"
-               class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
-                      text-white transition-colors shadow-sm"
-               style="background:#0284c7;"
-               onmouseover="this.style.background='#0369a1'"
-               onmouseout="this.style.background='#0284c7'">
-                <i class="fas fa-plus"></i>
-                Tambah Metadata
-            </a>
+        <div class="text-right text-sm text-gray-500">
+            <p id="current-date"></p>
+            <p id="current-time" class="font-mono text-sky-600 font-semibold"></p>
         </div>
+    </div>
+    <div class="flex items-center justify-end gap-2 mt-4 flex-wrap">
+
+        {{-- Badge Pending --}}
+        @if($pendingCount > 0)
+            <a href="{{ route('metadata.approval') }}"
+               class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
+                      border transition-colors"
+               style="background:#fffbeb; border-color:#fde68a; color:#b45309;"
+               onmouseover="this.style.background='#fef3c7'"
+               onmouseout="this.style.background='#fffbeb'">
+                <i class="fas fa-clock"></i>
+                {{ $pendingCount }} Pending Approval
+            </a>
+        @endif
+
+        {{-- Tombol Export Metadata --}}
+        <button onclick="openExportModal()"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
+                       text-white transition-colors shadow-sm"
+                style="background:#059669;"
+                onmouseover="this.style.background='#047857'"
+                onmouseout="this.style.background='#059669'">
+            <i class="fas fa-file-excel"></i>
+            Export Metadata
+        </button>
+
+        {{-- [BARU] Tombol Export Template Metadata --}}
+        <button onclick="openTemplateModal()"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
+                       text-white transition-colors shadow-sm"
+                style="background:#7c3aed;"
+                onmouseover="this.style.background='#6d28d9'"
+                onmouseout="this.style.background='#7c3aed'">
+            <i class="fas fa-table-columns"></i>
+            Export Template
+        </button>
+
+        {{-- Tombol Tambah --}}
+        <a href="{{ route('metadata.create') }}"
+           class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold
+                  text-white transition-colors shadow-sm"
+           style="background:#0284c7;"
+           onmouseover="this.style.background='#0369a1'"
+           onmouseout="this.style.background='#0284c7'">
+            <i class="fas fa-plus"></i>
+            Tambah Metadata
+        </a>
     </div>
 
     {{-- Alert --}}
@@ -718,7 +722,7 @@ function updateTplPreview() {
     const cols = generatePeriodCols(rentang, tahun);
     if (cols.length === 0) { previewEl.style.display = 'none'; return; }
 
-    // Render chip kolom — tampilkan max 20, sisanya ringkasan
+    // Render chip kolom
     const preview = cols.slice(0, 20);
     colsEl.innerHTML = preview.map(c =>
         `<span style="background:#ede9fe;color:#5b21b6;border-radius:9999px;padding:1px 8px;">${c}</span>`

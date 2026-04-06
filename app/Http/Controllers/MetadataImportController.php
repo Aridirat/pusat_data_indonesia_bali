@@ -75,7 +75,7 @@ class MetadataImportController extends Controller
         'metodologi', 'penjelasan_metodologi',
         'tipe_data', 'satuan_data', 'tahun_mulai_data',
         'frekuensi_penerbitan',
-        'nama_contact_person', 'nomor_contact_person', 'email_contact_person',
+        'nama_contact_person', 'nomor_contact_person', 'email_contact_person', 'nama_rujukan', 'gambar_rujukan',
     ];
 
     private const ALIAS_WILAYAH = [
@@ -392,13 +392,13 @@ class MetadataImportController extends Controller
 
             'produsen_id'            => $produsenId,
             'nama_contact_person'    => $r['nama_contact_person'],
-            'nomor_contact_person'   => '-',
+            'nomor_contact_person'   => $r['nomor_contact_person'],
             'email_contact_person'   => $r['email_contact_person'],
 
             'tag'                    => $r['tag'],
-            'nama_rujukan'           => '-',
+            'nama_rujukan'           => $r['nama_rujukan'],
             'link_rujukan'           => (!empty($r['link_rujukan']) && $r['link_rujukan'] !== '') ? $r['link_rujukan'] : '-',
-            'gambar_rujukan'         => '-',
+            'gambar_rujukan'         => $r['gambar_rujukan'],
 
             'flag_desimal'           => 0,
             'tipe_group'             => is_numeric($r['tipe_group']) ? (int)$r['tipe_group'] : 2,
