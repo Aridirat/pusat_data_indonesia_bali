@@ -38,11 +38,17 @@ php artisan cache:clear || true
 echo " Running migrations..."
 php artisan migrate --force
 
-# ── 4. Storage link ───────────────────────────────────────────────────
+# ── 4. Import wilayah Bali ───────────────────────────────────────────────────
+if [ "$IMPORT_WILAYAH" = "true" ]; then
+echo " Importing wilayah Bali..."
+php artisan import:wilayah-bali
+fi
+
+# ── 5. Storage link ───────────────────────────────────────────────────
 echo " Creating storage link..."
 php artisan storage:link || true
 
-# ── 5. Cache ulang untuk production performance ───────────────────────
+# ── 6. Cache ulang untuk production performance ───────────────────────
 echo " Caching config & routes..."
 php artisan config:cache
 php artisan route:cache
@@ -50,5 +56,5 @@ php artisan view:cache
 
 echo " Setup selesai, starting server..."
 
-# ── 6. Jalankan Supervisor (Nginx + PHP-FPM) ──────────────────────────
+# ── 7. Jalankan Supervisor (Nginx + PHP-FPM) ──────────────────────────
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
