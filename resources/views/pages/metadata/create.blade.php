@@ -475,19 +475,25 @@
         <div id="tabExcel" class="hidden">
 
             {{-- PANDUAN --}}
-            <div class="mb-5 p-4 bg-sky-50 border border-sky-200 rounded-lg text-sm text-sky-700">
-                <p class="font-semibold mb-1 flex items-center gap-2">
-                    <i class="fas fa-info-circle text-sky-500"></i> Panduan Import Excel
+            <div class="mb-5 p-4 bg-sky-50 border border-sky-200 rounded-lg text-sm">
+                <p class="font-semibold mb-1 flex items-center text-sky-500 gap-2">
+                    <i class="fas fa-info-circle"></i> Panduan Import Excel
                 </p>
-                <ul class="list-disc list-inside space-y-1 text-xs text-sky-600 mt-1">
+                <ul class="list-disc list-inside space-y-1 text-xsmt-1 text-gray-700">
                     <li>Format file yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong></li>
                     <li>Baris pertama diasumsikan sebagai header dan akan diabaikan</li>
                     <li>Nama metadata yang mengandung nama wilayah akan dinormalisasi otomatis</li>
                     <li>Metadata dengan nama yang sama (dalam file atau database) hanya diinsert sekali</li>
-                    <li>Field kosong bertipe string akan diisi <code class="bg-sky-100 px-1 rounded">-</code> secara otomatis</li>
                 </ul>
-                <a href="#" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-sky-600
-                                   hover:text-sky-800 underline">
+            </div>
+            <div class="mb-5 p-4 bg-sky-50 border border-sky-200 rounded-lg ">
+                <p class="text-sm text-gray-700">
+                    Berikut adalah template excel yang dapat Anda gunakan untuk mengimport metadata:
+                </p>
+
+                <a href="https://docs.google.com/uc?export=download&id=1tTtCDmfc5wNd4NCy0WG_vidcHv-QRbjS"
+                class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-sky-500
+                        hover:text-sky-800 underline">
                     <i class="fas fa-download text-xs"></i> Download Template Excel
                 </a>
             </div>

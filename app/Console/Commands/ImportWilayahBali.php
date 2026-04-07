@@ -15,120 +15,101 @@ class ImportWilayahBali extends Command
     {
         $tahun = date('Y');
         $kodeProv = '51';
-        $namaProv = 'BALI';
-
-        $batchSize = 500;
-        $dataInsert = [];
+        $namaProv = 'Bali';
 
         // =========================
-        // INSERT PROVINSI
+        // PROVINSI
         // =========================
-        DB::table('location')->insert([
-            'kode_provinsi' => $kodeProv,
-            'kode_kabupaten' => '0',
-            'kode_kecamatan' => '0',
-            'kode_desa' => '0',
-            'provinsi' => $namaProv,
-            'kabupaten' => 'ALL',
-            'kecamatan' => 'ALL',
-            'desa' => 'ALL',
-            'banjar' => 'ALL',
-            'rt' => 'ALL'
-        ]);
+        $provId = $kodeProv . '00000000';
+        $provNama = "Provinsi {$namaProv}";
 
-        $this->info("Mengambil data kabupaten Bali...");
+        DB::table('location')->updateOrInsert(
+            ['location_id' => $provId],
+            ['nama_wilayah' => $provNama]
+        );
 
-        $responseKab = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_kab', [
+        $this->info("✔ {$provNama}");
+
+        // =========================
+        // KABUPATEN
+        // =========================
+        $this->info("Mengambil data kabupaten...");
+
+        $kabupaten = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_kab', [
             'thn' => $tahun,
             'lvl' => 12,
             'pro' => $kodeProv
-        ]);
-
-        $kabupaten = $responseKab->json()['output'] ?? [];
+        ])->json()['output'] ?? [];
 
         foreach ($kabupaten as $kodeKab => $namaKab) {
 
-            // =========================
-            // INSERT KABUPATEN
-            // =========================
-            DB::table('location')->insert([
-                'kode_provinsi' => $kodeProv,
-                'kode_kabupaten' => $kodeKab,
-                'kode_kecamatan' => '0',
-                'kode_desa' => '0',
-                'provinsi' => $namaProv,
-                'kabupaten' => $namaKab,
-                'kecamatan' => 'ALL',
-                'desa' => 'ALL',
-                'banjar' => 'ALL',
-                'rt' => 'ALL'
-            ]);
+            $kabId = $kodeProv . str_pad($kodeKab, 2, '0', STR_PAD_LEFT) . '000000';
+            $kabNama = "Kabupaten " . ucwords(strtolower($namaKab));
 
-            $responseKec = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_kec', [
+            DB::table('location')->updateOrInsert(
+                ['location_id' => $kabId],
+                ['nama_wilayah' => $kabNama]
+            );
+
+            $this->info("✔ {$kabNama}");
+
+            // =========================
+            // KECAMATAN
+            // =========================
+            $kecamatan = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_kec', [
                 'thn' => $tahun,
                 'lvl' => 13,
                 'pro' => $kodeProv,
                 'kab' => $kodeKab
-            ]);
-
-            $kecamatan = $responseKec->json()['output'] ?? [];
+            ])->json()['output'] ?? [];
 
             foreach ($kecamatan as $kodeKec => $namaKec) {
 
-                // =========================
-                // INSERT KECAMATAN
-                // =========================
-                DB::table('location')->insert([
-                    'kode_provinsi' => $kodeProv,
-                    'kode_kabupaten' => $kodeKab,
-                    'kode_kecamatan' => $kodeKec,
-                    'kode_desa' => '0',
-                    'provinsi' => $namaProv,
-                    'kabupaten' => $namaKab,
-                    'kecamatan' => $namaKec,
-                    'desa' => 'ALL',
-                    'banjar' => 'ALL',
-                    'rt' => 'ALL'
-                ]);
+                $kecId = $kodeProv
+                    . str_pad($kodeKab, 2, '0', STR_PAD_LEFT)
+                    . str_pad($kodeKec, 3, '0', STR_PAD_LEFT)
+                    . '000';
 
-                $responseDes = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_des', [
+                $kecNama = "Kecamatan " . ucwords(strtolower($namaKec));
+
+                DB::table('location')->updateOrInsert(
+                    ['location_id' => $kecId],
+                    ['nama_wilayah' => $kecNama]
+                );
+
+                $this->info("  ↳ {$kecNama}");
+
+                // =========================
+                // DESA
+                // =========================
+                $desa = Http::get('https://sipedas.pertanian.go.id/api/wilayah/list_des', [
                     'thn' => $tahun,
-                    'lvl' => 13,
-                    'lv2' => 14,
                     'pro' => $kodeProv,
                     'kab' => $kodeKab,
                     'kec' => $kodeKec
-                ]);
-
-                $desa = $responseDes->json() ?? [];
+                ])->json() ?? [];
 
                 foreach ($desa as $kodeDes => $namaDes) {
 
-                    $dataInsert[] = [
-                        'kode_provinsi' => $kodeProv,
-                        'kode_kabupaten' => $kodeKab,
-                        'kode_kecamatan' => $kodeKec,
-                        'kode_desa' => $kodeDes,
-                        'provinsi' => $namaProv,
-                        'kabupaten' => $namaKab,
-                        'kecamatan' => $namaKec,
-                        'desa' => $namaDes,
-                        'banjar' => 'ALL',
-                        'rt' => 'ALL'
-                    ];
+                    $desaId = $kodeProv
+                        . str_pad($kodeKab, 2, '0', STR_PAD_LEFT)
+                        . str_pad($kodeKec, 3, '0', STR_PAD_LEFT)
+                        . str_pad($kodeDes, 3, '0', STR_PAD_LEFT);
 
-                    if (count($dataInsert) >= $batchSize) {
-                        DB::table('location')->insert($dataInsert);
-                        $dataInsert = [];
+                    $desaNama = "Desa " . ucwords(strtolower($namaDes));
+
+                    DB::table('location')->updateOrInsert(
+                        ['location_id' => $desaId],
+                        ['nama_wilayah' => $desaNama]
+                    );
+
+                    if (app()->environment('local')) {
+                        $this->info("     - {$desaNama}");
                     }
                 }
             }
         }
 
-        if (!empty($dataInsert)) {
-            DB::table('location')->insert($dataInsert);
-        }
-
-        $this->info("Import wilayah Bali selesai.");
+        $this->info("✅ Import wilayah Bali selesai.");
     }
 }
