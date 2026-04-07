@@ -18,7 +18,7 @@ mkdir -p storage/app/public \
         bootstrap/cache
 
 chown -R www-data:www-data storage bootstrap/cache
-chmod -R 755 storage bootstrap/cache
+chmod -R 777 storage bootstrap/cache
 
 # ── 2. Clear config cache dulu (supaya env vars Railway terbaca) ──────
 php artisan config:clear
