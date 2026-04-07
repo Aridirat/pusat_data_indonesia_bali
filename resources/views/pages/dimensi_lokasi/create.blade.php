@@ -34,7 +34,7 @@
             {{-- KABUPATEN --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Kabupaten 
+                    Kabupaten/Kota 
                 </label>
                 <div class="relative">
                     <select id="kabupaten" name="kabupaten"

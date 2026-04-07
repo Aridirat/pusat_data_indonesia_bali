@@ -44,7 +44,14 @@ class ImportWilayahBali extends Command
         foreach ($kabupaten as $kodeKab => $namaKab) {
 
             $kabId = $kodeProv . str_pad($kodeKab, 2, '0', STR_PAD_LEFT) . '000000';
-            $kabNama = "Kabupaten " . ucwords(strtolower($namaKab));
+            
+            $namaKabFormatted = ucwords(strtolower($namaKab));
+
+            if (strtolower($namaKab) === 'denpasar') {
+                $kabNama = "Kota " . $namaKabFormatted;
+            } else {
+                $kabNama = "Kabupaten " . $namaKabFormatted;
+            }
 
             DB::table('location')->updateOrInsert(
                 ['location_id' => $kabId],

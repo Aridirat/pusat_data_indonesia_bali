@@ -30,6 +30,7 @@ class LocationController extends Controller
         return view('pages.dimensi_lokasi.create');
     }
 
+    
     public function store(Request $request)
     {
         // dd($request->all());
@@ -53,10 +54,21 @@ class LocationController extends Controller
         // FORMAT NAMA SESUAI LEVEL
         if ($request->desa) {
             $nama_wilayah = 'Desa ' . ucwords(strtolower($request->desa));
+
         } elseif ($request->kecamatan) {
             $nama_wilayah = 'Kecamatan ' . ucwords(strtolower($request->kecamatan));
+
         } elseif ($request->kabupaten) {
-            $nama_wilayah = 'Kabupaten ' . ucwords(strtolower($request->kabupaten));
+
+            $namaKabupaten = ucwords(strtolower($request->kabupaten));
+
+            // Khusus Denpasar → Kota
+            if (strtolower($request->kabupaten) === 'denpasar') {
+                $nama_wilayah = 'Kota ' . $namaKabupaten;
+            } else {
+                $nama_wilayah = 'Kabupaten ' . $namaKabupaten;
+            }
+
         } else {
             $nama_wilayah = 'Provinsi Bali';
         }
