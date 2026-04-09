@@ -65,14 +65,15 @@
                         </label>
                         <select name="metadata_id" id="metadataSelect" required
                             class="w-full border @error('metadata_id') border-red-400 @else border-gray-300 @enderror
-                                   rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
-                                   focus:ring-sky-400 bg-white"
+                                rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
+                                focus:ring-sky-400 bg-white"
                             onchange="updateMetadataInfo(this)">
                             <option value="">-- Pilih Metadata --</option>
                             @foreach($metadataList as $meta)
                                 <option value="{{ $meta->metadata_id }}"
                                     data-tipe="{{ $meta->tipe_data }}"
                                     data-satuan="{{ $meta->satuan_data }}"
+                                    data-frekuensi="{{ $meta->frekuensi_penerbitan }}"
                                     {{ old('metadata_id') == $meta->metadata_id ? 'selected' : '' }}>
                                     {{ $meta->nama }}
                                 </option>
@@ -120,37 +121,76 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                             Waktu <span class="text-red-500">*</span>
                         </label>
+
+                        {{-- Hidden field yang sebenarnya dikirim ke server --}}
+                        <input type="hidden" name="time_id" id="selectedTimeId" value="{{ old('time_id') }}">
+
                         <div class="flex gap-2">
-                            <select id="filterDekade"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
-                                onchange="filterWaktu()">
-                                <option value="">Dekade</option>
-                                @foreach($timeList->pluck('decade')->unique()->sortDesc() as $decade)
-                                    <option value="{{ $decade }}">{{ $decade }}</option>
-                                @endforeach
-                            </select>
-                            <select id="filterTahun"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
-                                onchange="filterWaktu()">
-                                <option value="">Tahun</option>
-                                @foreach($timeList->pluck('year')->unique()->sortDesc() as $yr)
-                                    <option value="{{ $yr }}">{{ $yr }}</option>
-                                @endforeach
-                            </select>
-                            <select id="filterBulan"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
-                                onchange="filterWaktu()">
-                                <option value="">Bulan</option>
-                                @foreach(['Januari','Februari','Maret','April','Mei','Juni',
-                                          'Juli','Agustus','September','Oktober','November','Desember']
-                                         as $i => $bulan)
-                                    <option value="{{ $i + 1 }}">{{ $bulan }}</option>
-                                @endforeach
-                            </select>
+                            {{-- DEKADE --}}
+                            <div class="w-1/3">
+                                <select id="filterDekade"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
+                                        focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white
+                                        disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                    onchange="filterWaktu()"
+                                    disabled>
+                                    <option value="">Dekade</option>
+                                    @foreach($timeList->pluck('decade')->unique()->sortDesc() as $decade)
+                                        <option value="{{ $decade }}">{{ $decade }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-xs text-gray-400" id="hintDekade"></p>
+                            </div>
+
+                            {{-- TAHUN --}}
+                            <div class="w-1/3">
+                                <select id="filterTahun"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
+                                        focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white
+                                        disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                    onchange="filterWaktu()"
+                                    disabled>
+                                    <option value="">Tahun</option>
+                                    @foreach($timeList->pluck('year')->unique()->sortDesc() as $yr)
+                                        <option value="{{ $yr }}">{{ $yr }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-xs text-gray-400" id="hintTahun"></p>
+                            </div>
+
+                            {{-- BULAN --}}
+                            <div class="w-1/3">
+                                <select id="filterBulan"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
+                                        focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white
+                                        disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                    onchange="filterWaktu()"
+                                    disabled>
+                                    <option value="">Bulan</option>
+                                    @foreach(['Januari','Februari','Maret','April','Mei','Juni',
+                                            'Juli','Agustus','September','Oktober','November','Desember']
+                                            as $i => $bulan)
+                                        <option value="{{ $i + 1 }}">{{ $bulan }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-xs text-gray-400" id="hintBulan"></p>
+                            </div>
                         </div>
+
+                        {{-- Info waktu terpilih --}}
+                        <div id="waktuInfo" class="hidden mt-2 px-3 py-2 bg-green-50 border border-green-200
+                                                rounded-md text-xs text-green-700 flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="waktuInfoText"></span>
+                        </div>
+
+                        {{-- Peringatan belum pilih metadata --}}
+                        <div id="waktuHint" class="mt-2 px-3 py-2 bg-amber-50 border border-amber-200
+                                                    rounded-md text-xs text-amber-700 flex items-center gap-2">
+                            <i class="fas fa-info-circle"></i>
+                            Pilih Metadata terlebih dahulu untuk mengaktifkan pilihan waktu.
+                        </div>
+
                         @error('time_id')
                             <p class="mt-1 text-xs text-red-500">
                                 <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
@@ -432,438 +472,561 @@
      JAVASCRIPT
 ══════════════════════════════════════════════════════════════ --}}
 <script>
-const CSRF        = '{{ csrf_token() }}';
-const PREVIEW_URL = '{{ route("data.preview_excel") }}';
-const IMPORT_URL  = '{{ route("data.import_excel") }}';
+    const CSRF        = '{{ csrf_token() }}';
+    const PREVIEW_URL = '{{ route("data.preview_excel") }}';
+    const IMPORT_URL  = '{{ route("data.import_excel") }}';
 
-/* ─────────────────────────────────────────────────────────────
-   STATE — scope global agar bisa diakses dari onclick HTML
-───────────────────────────────────────────────────────────── */
-let currentFile = null;
-let previewData = null;
+    /* ─────────────────────────────────────────────────────────────
+    TIME DATA — dari server (untuk lookup time_id)
+    ───────────────────────────────────────────────────────────── */
+    // Inject semua data waktu dari Blade ke JS
+    const TIME_LIST = @json($timeListJs);
 
-// State pagination collapse per section
-// Dideklarasikan di luar renderPreview() agar toggleSection,
-// renderRows, showMore bisa mengaksesnya dari onclick="..."
-const ROWS_PER_PAGE = 5;
-const sectionState  = {
-    err: { data: [], shown: 0 },
-    dup: { data: [], shown: 0 },
-};
+    /* ─────────────────────────────────────────────────────────────
+    ATURAN FREKUENSI → field mana yang aktif
+    ───────────────────────────────────────────────────────────── */
+    const FREKUENSI_RULES = {
+        '10_tahunan': { dekade: true,  tahun: false, bulan: false },
+        'tahunan':    { dekade: true,  tahun: true,  bulan: false },
+        'bulanan':    { dekade: true,  tahun: true,  bulan: true  },
+        // fallback untuk nilai frekuensi lain
+        'default':    { dekade: true,  tahun: true,  bulan: true  },
+    };
 
-/* ─────────────────────────────────────────────────────────────
-   TAB SWITCHER
-───────────────────────────────────────────────────────────── */
-function switchTab(tab) {
-    document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
-    document.getElementById('panel-excel').classList.toggle('hidden',  tab !== 'excel');
+    const FREKUENSI_LABELS = {
+        '10_tahunan': { dekade: 'Wajib diisi', tahun: 'Tidak berlaku', bulan: 'Tidak berlaku' },
+        'tahunan':    { dekade: 'Otomatis',    tahun: 'Wajib diisi',   bulan: 'Tidak berlaku' },
+        'bulanan':    { dekade: 'Otomatis',    tahun: 'Wajib diisi',   bulan: 'Wajib diisi'   },
+    };
 
-    const active   = 'border-sky-500 text-sky-600';
-    const inactive = 'border-transparent text-gray-400 hover:text-gray-600';
-    document.getElementById('tab-manual').className =
-        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'manual' ? active : inactive}`;
-    document.getElementById('tab-excel').className =
-        `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'excel' ? active : inactive}`;
-}
 
-/* ─────────────────────────────────────────────────────────────
-   METADATA INFO (tab manual)
-───────────────────────────────────────────────────────────── */
-function updateMetadataInfo(select) {
-    const opt  = select.options[select.selectedIndex];
-    const info = document.getElementById('metadataInfo');
-    if (opt.dataset.tipe || opt.dataset.satuan) {
-        document.getElementById('metadataTipe').textContent   = 'Tipe: ' + (opt.dataset.tipe || '-');
-        document.getElementById('metadataSatuan').textContent = opt.dataset.satuan || '-';
-        document.getElementById('satuanLabel').textContent    = opt.dataset.satuan ? `(${opt.dataset.satuan})` : '';
-        info.classList.remove('hidden');
-    } else {
-        info.classList.add('hidden');
-    }
-}
+    /* ─────────────────────────────────────────────────────────────
+    STATE — scope global agar bisa diakses dari onclick HTML
+    ───────────────────────────────────────────────────────────── */
+    let currentFile = null;
+    let previewData = null;
 
-/* ─────────────────────────────────────────────────────────────
-   FILTER WAKTU (tab manual)
-───────────────────────────────────────────────────────────── */
-function filterWaktu() {
-    const tahun = document.getElementById('filterTahun').value;
-    const bulan = document.getElementById('filterBulan').value;
-    document.querySelectorAll('#selectHari option[data-year]').forEach(opt => {
-        const ok = (!tahun || opt.dataset.year === tahun)
-                && (!bulan || opt.dataset.month === bulan);
-        opt.style.display = ok ? '' : 'none';
-    });
-    const sel = document.getElementById('selectHari');
-    if (sel.selectedOptions[0]?.style.display === 'none') sel.value = '';
-}
+    // State pagination collapse per section
+    // Dideklarasikan di luar renderPreview() agar toggleSection,
+    // renderRows, showMore bisa mengaksesnya dari onclick="..."
+    const ROWS_PER_PAGE = 5;
+    const sectionState  = {
+        err: { data: [], shown: 0 },
+        dup: { data: [], shown: 0 },
+    };
 
-/* ─────────────────────────────────────────────────────────────
-   FILE SELECTION & DRAG-DROP
-───────────────────────────────────────────────────────────── */
-function handleDrop(e) {
-    e.preventDefault();
-    const zone = document.getElementById('dropZone');
-    zone.style.borderColor = '';
-    zone.style.background  = '';
-    const file = e.dataTransfer.files[0];
-    if (file) onFileSelected(file);
-}
+    /* ─────────────────────────────────────────────────────────────
+    TAB SWITCHER
+    ───────────────────────────────────────────────────────────── */
+    function switchTab(tab) {
+        document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
+        document.getElementById('panel-excel').classList.toggle('hidden',  tab !== 'excel');
 
-function onFileSelected(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
-        showImportAlert('error', 'File harus berformat .xlsx atau .xls');
-        return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-        showImportAlert('error', 'Ukuran file maksimal 10MB');
-        return;
+        const active   = 'border-sky-500 text-sky-600';
+        const inactive = 'border-transparent text-gray-400 hover:text-gray-600';
+        document.getElementById('tab-manual').className =
+            `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'manual' ? active : inactive}`;
+        document.getElementById('tab-excel').className =
+            `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'excel' ? active : inactive}`;
     }
 
-    currentFile = file;
-    previewData = null;
 
-    document.getElementById('dropZone').classList.add('hidden');
-    const bar = document.getElementById('fileInfoBar');
-    bar.classList.remove('hidden');
-    document.getElementById('fileInfoName').textContent = file.name;
-    document.getElementById('fileInfoSize').textContent =
-        file.size > 1048576
-            ? (file.size / 1048576).toFixed(2) + ' MB'
-            : (file.size / 1024).toFixed(1) + ' KB';
 
-    doPreview();
-}
+    /* ─────────────────────────────────────────────────────────────
+    METADATA INFO (tab manual)
+    ───────────────────────────────────────────────────────────── */
+    function updateMetadataInfo(select) {
+        const opt       = select.options[select.selectedIndex];
+        const info      = document.getElementById('metadataInfo');
+        const frekuensi = (opt.dataset.frekuensi || '').toLowerCase().trim();
 
-function resetUpload() {
-    currentFile = null;
-    previewData = null;
-    document.getElementById('fileExcel').value = '';
-    document.getElementById('dropZone').classList.remove('hidden');
-    document.getElementById('fileInfoBar').classList.add('hidden');
-    document.getElementById('loadingBar').classList.add('hidden');
-    document.getElementById('previewSection').classList.add('hidden');
-    document.getElementById('importingBar').classList.add('hidden');
-    document.getElementById('importResult').classList.add('hidden');
+        // ── Update info box ──
+        if (opt.dataset.tipe || opt.dataset.satuan) {
+            document.getElementById('metadataTipe').textContent   = 'Tipe: ' + (opt.dataset.tipe || '-');
+            document.getElementById('metadataSatuan').textContent = opt.dataset.satuan || '-';
+            document.getElementById('satuanLabel').textContent    = opt.dataset.satuan ? `(${opt.dataset.satuan})` : '';
+            info.classList.remove('hidden');
+        } else {
+            info.classList.add('hidden');
+        }
 
-    // Reset state pagination
-    sectionState.err = { data: [], shown: 0 };
-    sectionState.dup = { data: [], shown: 0 };
-}
+        // ── Reset waktu dulu ──
+        resetWaktuFields();
 
-async function doPreview() {
-    document.getElementById('loadingBar').classList.remove('hidden');
-    document.getElementById('previewSection').classList.add('hidden');
-    document.getElementById('importResult').classList.add('hidden');
+        if (!frekuensi) return; // tidak ada metadata terpilih
 
-    const form = new FormData();
-    form.append('_token', CSRF);
-    form.append('file_excel', currentFile);
+        // ── Terapkan aturan frekuensi ──
+        const rules  = FREKUENSI_RULES[frekuensi] || FREKUENSI_RULES['default'];
+        const labels = FREKUENSI_LABELS[frekuensi] || {};
 
-    try {
-        const resp = await fetch(PREVIEW_URL, { method: 'POST', body: form });
-        const json = await resp.json();
+        setWaktuField('filterDekade', 'hintDekade', rules.dekade, labels.dekade);
+        setWaktuField('filterTahun',  'hintTahun',  rules.tahun,  labels.tahun);
+        setWaktuField('filterBulan',  'hintBulan',  rules.bulan,  labels.bulan);
 
-        document.getElementById('loadingBar').classList.add('hidden');
+        // Sembunyikan hint "pilih metadata dulu"
+        document.getElementById('waktuHint').classList.add('hidden');
+    }
 
-        if (!json.success) {
-            showImportAlert('error', json.message || 'Gagal membaca file.');
-            resetUpload();
+    /* ─────────────────────────────────────────────────────────────
+    FILTER WAKTU (tab manual)
+    ───────────────────────────────────────────────────────────── */
+    function setWaktuField(selectId, hintId, enabled, hintText) {
+        const sel  = document.getElementById(selectId);
+        const hint = document.getElementById(hintId);
+
+        sel.disabled = !enabled;
+        sel.value    = '';   // reset nilai
+
+        if (!enabled) {
+            sel.classList.add('opacity-50');
+        } else {
+            sel.classList.remove('opacity-50');
+        }
+
+        hint.textContent = hintText || '';
+    }
+
+    function resetWaktuFields() {
+        ['filterDekade', 'filterTahun', 'filterBulan'].forEach(id => {
+            const el = document.getElementById(id);
+            el.disabled = true;
+            el.value    = '';
+            el.classList.add('opacity-50');
+        });
+        ['hintDekade', 'hintTahun', 'hintBulan'].forEach(id => {
+            document.getElementById(id).textContent = '';
+        });
+        document.getElementById('selectedTimeId').value = '';
+        document.getElementById('waktuInfo').classList.add('hidden');
+        document.getElementById('waktuHint').classList.remove('hidden');
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+    FILTER WAKTU — cari time_id berdasarkan pilihan dropdown
+    ───────────────────────────────────────────────────────────── */
+    function filterWaktu() {
+        const dekade = document.getElementById('filterDekade').value;
+        const tahun  = document.getElementById('filterTahun').value;
+        const bulan  = document.getElementById('filterBulan').value;
+
+        // Dapatkan frekuensi metadata yang terpilih
+        const metaSel   = document.getElementById('metadataSelect');
+        const frekuensi = metaSel.options[metaSel.selectedIndex]?.dataset?.frekuensi || '';
+        const rules     = FREKUENSI_RULES[frekuensi] || FREKUENSI_RULES['default'];
+
+        // Cek apakah semua field yang required sudah diisi
+        const dekadeOk = !rules.dekade || dekade !== '';
+        const tahunOk  = !rules.tahun  || tahun  !== '';
+        const bulanOk  = !rules.bulan  || bulan  !== '';
+
+        if (!dekadeOk || !tahunOk || !bulanOk) {
+            document.getElementById('selectedTimeId').value = '';
+            document.getElementById('waktuInfo').classList.add('hidden');
             return;
         }
 
-        previewData = json;
-        renderPreview(json);
+        // Cari time_id yang cocok
+        const match = TIME_LIST.find(t => {
+            const dekadeMatch = !rules.dekade || String(t.decade) === dekade;
+            const tahunMatch  = !rules.tahun  || String(t.year)   === tahun;
+            const bulanMatch  = !rules.bulan  || String(t.month)  === bulan;
+            return dekadeMatch && tahunMatch && bulanMatch;
+        });
 
-    } catch (err) {
-        document.getElementById('loadingBar').classList.add('hidden');
-        showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
-        resetUpload();
-    }
-}
+        const infoEl   = document.getElementById('waktuInfo');
+        const infoText = document.getElementById('waktuInfoText');
 
-/* ─────────────────────────────────────────────────────────────
-   RENDER PREVIEW
-   Hanya bertanggung jawab mengisi UI dari data JSON.
-   Fungsi collapse (toggleSection, renderRows, showMore)
-   sengaja diletakkan di luar fungsi ini (scope global).
-───────────────────────────────────────────────────────────── */
-function renderPreview(json) {
-    document.getElementById('previewSection').classList.remove('hidden');
+        if (match) {
+            document.getElementById('selectedTimeId').value = match.time_id;
 
-    // ── Statistik ──
-    const periodLabel = {
-        tahunan : 'Tahunan', semester: 'Semester',
-        quarter : 'Quarter', bulanan : 'Bulanan', unknown: '?',
-    }[json.period_type] ?? json.period_type;
-
-    document.getElementById('statsGrid').innerHTML = `
-        <div class="rounded-lg p-3 text-center" style="background:#f0f9ff; border:1px solid #bae6fd;">
-            <p class="text-xl font-bold" style="color:#0369a1;">${json.total_rows}</p>
-            <p class="text-xs mt-0.5" style="color:#0369a1;">Baris Excel</p>
-        </div>
-        <div class="rounded-lg p-3 text-center" style="background:#f0fdf4; border:1px solid #bbf7d0;">
-            <p class="text-xl font-bold" style="color:#166534;">${json.valid}</p>
-            <p class="text-xs mt-0.5" style="color:#166534;">Record Valid</p>
-        </div>
-        <div class="rounded-lg p-3 text-center" style="background:#fffbeb; border:1px solid #fde68a;">
-            <p class="text-xl font-bold" style="color:#92400e;">${json.duplicate}</p>
-            <p class="text-xs mt-0.5" style="color:#92400e;">Duplikat</p>
-        </div>
-        <div class="rounded-lg p-3 text-center" style="background:#fef2f2; border:1px solid #fecaca;">
-            <p class="text-xl font-bold" style="color:#b91c1c;">${json.error}</p>
-            <p class="text-xs mt-0.5" style="color:#b91c1c;">Baris Error</p>
-        </div>`;
-
-    // ── Alert kolom periode tidak ada di tabel time ──
-    const timeErrors    = (json.errors || []).filter(e => e.message?.includes('time_id'));
-    const timeNotFoundEl = document.getElementById('timeNotFoundAlert');
-    if (timeErrors.length > 0) {
-        const periods = [...new Set(timeErrors.map(e => e.period))].filter(Boolean);
-        document.getElementById('timeNotFoundDetail').textContent =
-            `Periode tidak terdaftar: ${periods.join(', ')}. Tipe periode terdeteksi: ${periodLabel}.`;
-        timeNotFoundEl.classList.remove('hidden');
-    } else {
-        timeNotFoundEl.classList.add('hidden');
-    }
-
-    // ── Error & Duplikat — isi state lalu serahkan ke initSections ──
-    initSections(json);
-
-    // ── Data valid ──
-    const validSection = document.getElementById('validSection');
-    const validBody    = document.getElementById('validBody');
-    const validMore    = document.getElementById('validMore');
-    if (json.rows && json.rows.length > 0) {
-        validSection.classList.remove('hidden');
-        validBody.innerHTML = json.rows.slice(0, 20).map((r, i) => `
-            <tr class="${i % 2 === 1 ? 'bg-green-50' : ''}">
-                <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
-                <td class="px-3 py-2">
-                    <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style="background:#fef3c7; color:#b45309;">
-                        ${esc(String(r.period_label))}
-                    </span>
-                </td>
-                <td class="px-3 py-2 text-right font-mono text-gray-800 font-semibold">
-                    ${formatNum(r.number_value)}
-                </td>
-            </tr>`).join('');
-        if (json.rows.length > 20) {
-            validMore.textContent = `Menampilkan 20 dari ${json.rows.length} record valid`;
-            validMore.classList.remove('hidden');
+            // Susun label yang tampil
+            let label = [];
+            if (rules.dekade && dekade) label.push(`Dekade: ${dekade}`);
+            if (rules.tahun  && tahun)  label.push(`Tahun: ${tahun}`);
+            if (rules.bulan  && bulan) {
+                const namaBulan = ['','Januari','Februari','Maret','April','Mei','Juni',
+                                'Juli','Agustus','September','Oktober','November','Desember'];
+                label.push(`Bulan: ${namaBulan[parseInt(bulan)]}`);
+            }
+            infoText.textContent = label.join(' · ') + ` (time_id: ${match.time_id})`;
+            infoEl.classList.remove('hidden');
         } else {
-            validMore.classList.add('hidden');
+            document.getElementById('selectedTimeId').value = '';
+            infoText.textContent = 'Kombinasi waktu tidak ditemukan di database.';
+            infoEl.classList.remove('hidden');
+            infoEl.classList.replace('bg-green-50', 'bg-red-50');
+            infoEl.classList.replace('border-green-200', 'border-red-200');
+            infoEl.classList.replace('text-green-700', 'text-red-700');
         }
-    } else {
-        validSection.classList.add('hidden');
     }
 
-    // ── Tombol import ──
-    const btn = document.getElementById('btnImport');
-    if (json.valid > 0) {
-        btn.disabled = false;
-        document.getElementById('btnImportText').textContent =
-            `Import ${json.valid.toLocaleString('id-ID')} Record`;
-    } else {
-        btn.disabled = true;
-        document.getElementById('btnImportText').textContent = 'Tidak Ada Data Valid';
-    }
-}
-
-/* ─────────────────────────────────────────────────────────────
-   COLLAPSE SECTIONS — scope global (dipanggil dari onclick HTML)
-───────────────────────────────────────────────────────────── */
-
-// Inisialisasi data ke sectionState dan tampilkan / sembunyikan section
-function initSections(json) {
-    // Reset state setiap kali preview baru masuk
-    sectionState.err = { data: json.errors     || [], shown: 0 };
-    sectionState.dup = { data: json.duplicates || [], shown: 0 };
-
-    const errSection = document.getElementById('errorSection');
-    if (sectionState.err.data.length > 0) {
-        document.getElementById('errBadge').textContent = sectionState.err.data.length + ' baris';
-        errSection.classList.remove('hidden');
-        // Pastikan collapsed (tutup ulang setiap preview baru)
-        document.getElementById('errBody').classList.add('hidden');
-        document.getElementById('errChevron').style.transform = '';
-    } else {
-        errSection.classList.add('hidden');
+    /* ─────────────────────────────────────────────────────────────
+    FILE SELECTION & DRAG-DROP
+    ───────────────────────────────────────────────────────────── */
+    function handleDrop(e) {
+        e.preventDefault();
+        const zone = document.getElementById('dropZone');
+        zone.style.borderColor = '';
+        zone.style.background  = '';
+        const file = e.dataTransfer.files[0];
+        if (file) onFileSelected(file);
     }
 
-    const dupSection = document.getElementById('dupSection');
-    if (sectionState.dup.data.length > 0) {
-        document.getElementById('dupBadge').textContent = sectionState.dup.data.length + ' entri';
-        dupSection.classList.remove('hidden');
-        document.getElementById('dupBody').classList.add('hidden');
-        document.getElementById('dupChevron').style.transform = '';
-    } else {
-        dupSection.classList.add('hidden');
+    function onFileSelected(file) {
+        if (!file.name.match(/\.(xlsx|xls)$/i)) {
+            showImportAlert('error', 'File harus berformat .xlsx atau .xls');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            showImportAlert('error', 'Ukuran file maksimal 10MB');
+            return;
+        }
+
+        currentFile = file;
+        previewData = null;
+
+        document.getElementById('dropZone').classList.add('hidden');
+        const bar = document.getElementById('fileInfoBar');
+        bar.classList.remove('hidden');
+        document.getElementById('fileInfoName').textContent = file.name;
+        document.getElementById('fileInfoSize').textContent =
+            file.size > 1048576
+                ? (file.size / 1048576).toFixed(2) + ' MB'
+                : (file.size / 1024).toFixed(1) + ' KB';
+
+        doPreview();
     }
-}
 
-// Toggle buka / tutup panel
-function toggleSection(type) {
-    const bodyId   = type === 'err' ? 'errBody'    : 'dupBody';
-    const chevId   = type === 'err' ? 'errChevron' : 'dupChevron';
-    const body     = document.getElementById(bodyId);
-    const chevron  = document.getElementById(chevId);
-    const isOpen   = !body.classList.contains('hidden');
+    function resetUpload() {
+        currentFile = null;
+        previewData = null;
+        document.getElementById('fileExcel').value = '';
+        document.getElementById('dropZone').classList.remove('hidden');
+        document.getElementById('fileInfoBar').classList.add('hidden');
+        document.getElementById('loadingBar').classList.add('hidden');
+        document.getElementById('previewSection').classList.add('hidden');
+        document.getElementById('importingBar').classList.add('hidden');
+        document.getElementById('importResult').classList.add('hidden');
 
-    body.classList.toggle('hidden', isOpen);
-    chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+        // Reset state pagination
+        sectionState.err = { data: [], shown: 0 };
+        sectionState.dup = { data: [], shown: 0 };
+    }
 
-    // Render baris pertama kali saat dibuka
-    if (!isOpen && sectionState[type].shown === 0) {
-        sectionState[type].shown = ROWS_PER_PAGE;
+    async function doPreview() {
+        document.getElementById('loadingBar').classList.remove('hidden');
+        document.getElementById('previewSection').classList.add('hidden');
+        document.getElementById('importResult').classList.add('hidden');
+
+        const form = new FormData();
+        form.append('_token', CSRF);
+        form.append('file_excel', currentFile);
+
+        try {
+            const resp = await fetch(PREVIEW_URL, { method: 'POST', body: form });
+            const json = await resp.json();
+
+            document.getElementById('loadingBar').classList.add('hidden');
+
+            if (!json.success) {
+                showImportAlert('error', json.message || 'Gagal membaca file.');
+                resetUpload();
+                return;
+            }
+
+            previewData = json;
+            renderPreview(json);
+
+        } catch (err) {
+            document.getElementById('loadingBar').classList.add('hidden');
+            showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
+            resetUpload();
+        }
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+    RENDER PREVIEW
+    Hanya bertanggung jawab mengisi UI dari data JSON.
+    Fungsi collapse (toggleSection, renderRows, showMore)
+    sengaja diletakkan di luar fungsi ini (scope global).
+    ───────────────────────────────────────────────────────────── */
+    function renderPreview(json) {
+        document.getElementById('previewSection').classList.remove('hidden');
+
+        // ── Statistik ──
+        const periodLabel = {
+            tahunan : 'Tahunan', semester: 'Semester',
+            quarter : 'Quarter', bulanan : 'Bulanan', unknown: '?',
+        }[json.period_type] ?? json.period_type;
+
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="rounded-lg p-3 text-center" style="background:#f0f9ff; border:1px solid #bae6fd;">
+                <p class="text-xl font-bold" style="color:#0369a1;">${json.total_rows}</p>
+                <p class="text-xs mt-0.5" style="color:#0369a1;">Baris Excel</p>
+            </div>
+            <div class="rounded-lg p-3 text-center" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+                <p class="text-xl font-bold" style="color:#166534;">${json.valid}</p>
+                <p class="text-xs mt-0.5" style="color:#166534;">Record Valid</p>
+            </div>
+            <div class="rounded-lg p-3 text-center" style="background:#fffbeb; border:1px solid #fde68a;">
+                <p class="text-xl font-bold" style="color:#92400e;">${json.duplicate}</p>
+                <p class="text-xs mt-0.5" style="color:#92400e;">Duplikat</p>
+            </div>
+            <div class="rounded-lg p-3 text-center" style="background:#fef2f2; border:1px solid #fecaca;">
+                <p class="text-xl font-bold" style="color:#b91c1c;">${json.error}</p>
+                <p class="text-xs mt-0.5" style="color:#b91c1c;">Baris Error</p>
+            </div>`;
+
+        // ── Alert kolom periode tidak ada di tabel time ──
+        const timeErrors    = (json.errors || []).filter(e => e.message?.includes('time_id'));
+        const timeNotFoundEl = document.getElementById('timeNotFoundAlert');
+        if (timeErrors.length > 0) {
+            const periods = [...new Set(timeErrors.map(e => e.period))].filter(Boolean);
+            document.getElementById('timeNotFoundDetail').textContent =
+                `Periode tidak terdaftar: ${periods.join(', ')}. Tipe periode terdeteksi: ${periodLabel}.`;
+            timeNotFoundEl.classList.remove('hidden');
+        } else {
+            timeNotFoundEl.classList.add('hidden');
+        }
+
+        // ── Error & Duplikat — isi state lalu serahkan ke initSections ──
+        initSections(json);
+
+        // ── Data valid ──
+        const validSection = document.getElementById('validSection');
+        const validBody    = document.getElementById('validBody');
+        const validMore    = document.getElementById('validMore');
+        if (json.rows && json.rows.length > 0) {
+            validSection.classList.remove('hidden');
+            validBody.innerHTML = json.rows.slice(0, 20).map((r, i) => `
+                <tr class="${i % 2 === 1 ? 'bg-green-50' : ''}">
+                    <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
+                    <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                    <td class="px-3 py-2">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style="background:#fef3c7; color:#b45309;">
+                            ${esc(String(r.period_label))}
+                        </span>
+                    </td>
+                    <td class="px-3 py-2 text-right font-mono text-gray-800 font-semibold">
+                        ${formatNum(r.number_value)}
+                    </td>
+                </tr>`).join('');
+            if (json.rows.length > 20) {
+                validMore.textContent = `Menampilkan 20 dari ${json.rows.length} record valid`;
+                validMore.classList.remove('hidden');
+            } else {
+                validMore.classList.add('hidden');
+            }
+        } else {
+            validSection.classList.add('hidden');
+        }
+
+        // ── Tombol import ──
+        const btn = document.getElementById('btnImport');
+        if (json.valid > 0) {
+            btn.disabled = false;
+            document.getElementById('btnImportText').textContent =
+                `Import ${json.valid.toLocaleString('id-ID')} Record`;
+        } else {
+            btn.disabled = true;
+            document.getElementById('btnImportText').textContent = 'Tidak Ada Data Valid';
+        }
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+    COLLAPSE SECTIONS — scope global (dipanggil dari onclick HTML)
+    ───────────────────────────────────────────────────────────── */
+
+    // Inisialisasi data ke sectionState dan tampilkan / sembunyikan section
+    function initSections(json) {
+        // Reset state setiap kali preview baru masuk
+        sectionState.err = { data: json.errors     || [], shown: 0 };
+        sectionState.dup = { data: json.duplicates || [], shown: 0 };
+
+        const errSection = document.getElementById('errorSection');
+        if (sectionState.err.data.length > 0) {
+            document.getElementById('errBadge').textContent = sectionState.err.data.length + ' baris';
+            errSection.classList.remove('hidden');
+            // Pastikan collapsed (tutup ulang setiap preview baru)
+            document.getElementById('errBody').classList.add('hidden');
+            document.getElementById('errChevron').style.transform = '';
+        } else {
+            errSection.classList.add('hidden');
+        }
+
+        const dupSection = document.getElementById('dupSection');
+        if (sectionState.dup.data.length > 0) {
+            document.getElementById('dupBadge').textContent = sectionState.dup.data.length + ' entri';
+            dupSection.classList.remove('hidden');
+            document.getElementById('dupBody').classList.add('hidden');
+            document.getElementById('dupChevron').style.transform = '';
+        } else {
+            dupSection.classList.add('hidden');
+        }
+    }
+
+    // Toggle buka / tutup panel
+    function toggleSection(type) {
+        const bodyId   = type === 'err' ? 'errBody'    : 'dupBody';
+        const chevId   = type === 'err' ? 'errChevron' : 'dupChevron';
+        const body     = document.getElementById(bodyId);
+        const chevron  = document.getElementById(chevId);
+        const isOpen   = !body.classList.contains('hidden');
+
+        body.classList.toggle('hidden', isOpen);
+        chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+
+        // Render baris pertama kali saat dibuka
+        if (!isOpen && sectionState[type].shown === 0) {
+            sectionState[type].shown = ROWS_PER_PAGE;
+            renderRows(type);
+        }
+    }
+
+    // Render baris tabel sesuai jumlah yang sudah di-shown
+    function renderRows(type) {
+        const s         = sectionState[type];
+        const rows      = s.data.slice(0, s.shown);
+        const remaining = s.data.length - s.shown;
+
+        if (type === 'err') {
+            document.getElementById('errTableBody').innerHTML = rows.map((e, i) => `
+                <tr class="${i % 2 !== 0 ? 'bg-red-50' : ''}">
+                    <td class="px-3 py-2 font-mono text-red-500">Baris ${esc(String(e.row))}</td>
+                    <td class="px-3 py-2 text-red-700">${esc(e.message)}</td>
+                </tr>`).join('');
+
+            const btn = document.getElementById('errShowMore');
+            if (remaining > 0) {
+                btn.classList.remove('hidden');
+                document.getElementById('errShowMoreTxt').textContent =
+                    `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
+            } else {
+                btn.classList.add('hidden');
+            }
+        } else {
+            document.getElementById('dupTableBody').innerHTML = rows.map((r, i) => `
+                <tr class="${i % 2 !== 0 ? 'bg-amber-50' : ''}">
+                    <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
+                    <td class="px-3 py-2 text-gray-500">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                    <td class="px-3 py-2 text-gray-500 font-mono">${esc(String(r.period_label))}</td>
+                    <td class="px-3 py-2 text-right font-mono text-gray-700">${formatNum(r.number_value)}</td>
+                </tr>`).join('');
+
+            const btn = document.getElementById('dupShowMore');
+            if (remaining > 0) {
+                btn.classList.remove('hidden');
+                document.getElementById('dupShowMoreTxt').textContent =
+                    `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+    }
+
+    // Muat lebih banyak baris
+    function showMore(type) {
+        sectionState[type].shown = Math.min(
+            sectionState[type].shown + ROWS_PER_PAGE,
+            sectionState[type].data.length
+        );
         renderRows(type);
     }
-}
 
-// Render baris tabel sesuai jumlah yang sudah di-shown
-function renderRows(type) {
-    const s         = sectionState[type];
-    const rows      = s.data.slice(0, s.shown);
-    const remaining = s.data.length - s.shown;
+    /* ─────────────────────────────────────────────────────────────
+    IMPORT
+    ───────────────────────────────────────────────────────────── */
+    async function doImport() {
+        if (!currentFile || !previewData) return;
 
-    if (type === 'err') {
-        document.getElementById('errTableBody').innerHTML = rows.map((e, i) => `
-            <tr class="${i % 2 !== 0 ? 'bg-red-50' : ''}">
-                <td class="px-3 py-2 font-mono text-red-500">Baris ${esc(String(e.row))}</td>
-                <td class="px-3 py-2 text-red-700">${esc(e.message)}</td>
-            </tr>`).join('');
+        const skipDup = document.getElementById('cbSkipDup')?.checked ?? true;
+        const btn     = document.getElementById('btnImport');
 
-        const btn = document.getElementById('errShowMore');
-        if (remaining > 0) {
-            btn.classList.remove('hidden');
-            document.getElementById('errShowMoreTxt').textContent =
-                `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
-        } else {
-            btn.classList.add('hidden');
-        }
-    } else {
-        document.getElementById('dupTableBody').innerHTML = rows.map((r, i) => `
-            <tr class="${i % 2 !== 0 ? 'bg-amber-50' : ''}">
-                <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                <td class="px-3 py-2 text-gray-500">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
-                <td class="px-3 py-2 text-gray-500 font-mono">${esc(String(r.period_label))}</td>
-                <td class="px-3 py-2 text-right font-mono text-gray-700">${formatNum(r.number_value)}</td>
-            </tr>`).join('');
+        const msg = previewData.valid > 0
+            ? `Import ${previewData.valid} record data?\n` +
+            (skipDup && previewData.duplicate > 0
+                ? `${previewData.duplicate} duplikat akan dilewati.`
+                : '')
+            : 'Tidak ada data valid untuk diimport.';
 
-        const btn = document.getElementById('dupShowMore');
-        if (remaining > 0) {
-            btn.classList.remove('hidden');
-            document.getElementById('dupShowMoreTxt').textContent =
-                `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
-        } else {
-            btn.classList.add('hidden');
-        }
-    }
-}
+        if (!confirm(msg)) return;
 
-// Muat lebih banyak baris
-function showMore(type) {
-    sectionState[type].shown = Math.min(
-        sectionState[type].shown + ROWS_PER_PAGE,
-        sectionState[type].data.length
-    );
-    renderRows(type);
-}
+        btn.disabled = true;
+        document.getElementById('importingBar').classList.remove('hidden');
+        document.getElementById('previewSection').classList.add('hidden');
 
-/* ─────────────────────────────────────────────────────────────
-   IMPORT
-───────────────────────────────────────────────────────────── */
-async function doImport() {
-    if (!currentFile || !previewData) return;
+        const form = new FormData();
+        form.append('_token',          CSRF);
+        form.append('file_excel',      currentFile);
+        form.append('skip_duplicates', skipDup ? '1' : '0');
 
-    const skipDup = document.getElementById('cbSkipDup')?.checked ?? true;
-    const btn     = document.getElementById('btnImport');
+        try {
+            const resp = await fetch(IMPORT_URL, {
+                method:  'POST',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body:    form,
+            });
+            const json = await resp.json();
 
-    const msg = previewData.valid > 0
-        ? `Import ${previewData.valid} record data?\n` +
-          (skipDup && previewData.duplicate > 0
-              ? `${previewData.duplicate} duplikat akan dilewati.`
-              : '')
-        : 'Tidak ada data valid untuk diimport.';
+            document.getElementById('importingBar').classList.add('hidden');
 
-    if (!confirm(msg)) return;
+            if (json.success) {
+                showImportAlert('success', json.message,
+                    json.redirect
+                        ? `<a href="${json.redirect}" class="underline font-semibold ml-2">Ke Halaman Data →</a>`
+                        : '');
+                resetUpload();
+            } else {
+                showImportAlert('error', json.message || 'Import gagal.');
+                if (previewData) renderPreview(previewData);
+            }
 
-    btn.disabled = true;
-    document.getElementById('importingBar').classList.remove('hidden');
-    document.getElementById('previewSection').classList.add('hidden');
-
-    const form = new FormData();
-    form.append('_token',          CSRF);
-    form.append('file_excel',      currentFile);
-    form.append('skip_duplicates', skipDup ? '1' : '0');
-
-    try {
-        const resp = await fetch(IMPORT_URL, {
-            method:  'POST',
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body:    form,
-        });
-        const json = await resp.json();
-
-        document.getElementById('importingBar').classList.add('hidden');
-
-        if (json.success) {
-            showImportAlert('success', json.message,
-                json.redirect
-                    ? `<a href="${json.redirect}" class="underline font-semibold ml-2">Ke Halaman Data →</a>`
-                    : '');
-            resetUpload();
-        } else {
-            showImportAlert('error', json.message || 'Import gagal.');
+        } catch (err) {
+            document.getElementById('importingBar').classList.add('hidden');
+            showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
             if (previewData) renderPreview(previewData);
         }
-
-    } catch (err) {
-        document.getElementById('importingBar').classList.add('hidden');
-        showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
-        if (previewData) renderPreview(previewData);
     }
-}
 
-/* ─────────────────────────────────────────────────────────────
-   HELPERS
-───────────────────────────────────────────────────────────── */
-function showImportAlert(type, msg, extra = '') {
-    const isErr = type === 'error';
-    const el    = document.getElementById('importResult');
-    el.innerHTML = `
-        <div class="flex items-start gap-3 px-4 py-3 rounded-lg text-sm"
-             style="background:${isErr ? '#fef2f2' : '#f0fdf4'};
-                    border:1px solid ${isErr ? '#fecaca' : '#bbf7d0'};
-                    color:${isErr ? '#b91c1c' : '#166534'};">
-            <i class="fas ${isErr ? 'fa-exclamation-circle text-red-400' : 'fa-check-circle text-green-500'} mt-0.5 shrink-0"></i>
-            <span>${esc(msg)}${extra}</span>
-        </div>`;
-    el.classList.remove('hidden');
-}
+    /* ─────────────────────────────────────────────────────────────
+    HELPERS
+    ───────────────────────────────────────────────────────────── */
+    function showImportAlert(type, msg, extra = '') {
+        const isErr = type === 'error';
+        const el    = document.getElementById('importResult');
+        el.innerHTML = `
+            <div class="flex items-start gap-3 px-4 py-3 rounded-lg text-sm"
+                style="background:${isErr ? '#fef2f2' : '#f0fdf4'};
+                        border:1px solid ${isErr ? '#fecaca' : '#bbf7d0'};
+                        color:${isErr ? '#b91c1c' : '#166534'};">
+                <i class="fas ${isErr ? 'fa-exclamation-circle text-red-400' : 'fa-check-circle text-green-500'} mt-0.5 shrink-0"></i>
+                <span>${esc(msg)}${extra}</span>
+            </div>`;
+        el.classList.remove('hidden');
+    }
 
-function esc(str) {
-    if (str == null) return '-';
-    return String(str)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
+    function esc(str) {
+        if (str == null) return '-';
+        return String(str)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
 
-function formatNum(val) {
-    if (val == null || val === '') return '-';
-    const n = parseFloat(val);
-    if (isNaN(n)) return esc(String(val));
-    return n % 1 === 0
-        ? n.toLocaleString('id-ID')
-        : n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+    function formatNum(val) {
+        if (val == null || val === '') return '-';
+        const n = parseFloat(val);
+        if (isNaN(n)) return esc(String(val));
+        return n % 1 === 0
+            ? n.toLocaleString('id-ID')
+            : n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
-/* ─────────────────────────────────────────────────────────────
-   INIT — redirect ke tab manual jika ada error validasi
-───────────────────────────────────────────────────────────── */
-@if($errors->any() || session('duplicate_warning'))
-    switchTab('manual');
-@endif
+    /* ─────────────────────────────────────────────────────────────
+    INIT — redirect ke tab manual jika ada error validasi
+    ───────────────────────────────────────────────────────────── */
+    @if($errors->any() || session('duplicate_warning'))
+        switchTab('manual');
+    @endif
 </script>
 @endsection

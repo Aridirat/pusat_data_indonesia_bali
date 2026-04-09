@@ -280,7 +280,7 @@
                         Gambar Rujukan
                     </p>
 
-                    @if(!empty($metadata->gambar_rujukan))
+                    @if((($metadata->gambar_rujukan) != "-") && ($metadata->gambar_rujukan != null))
                         {{-- Thumbnail --}}
                         <img src="{{ asset('storage/' . $metadata->gambar_rujukan) }}"
                             alt="Gambar Rujukan"
@@ -303,7 +303,7 @@
                         {{-- Placeholder --}}
                         <div class="w-28 h-20 flex items-center justify-center
                                     bg-gray-100 border border-gray-300 rounded-md">
-                            <i class="fas fa-image text-gray-400 text-lg"></i>
+                            -
                         </div>
                     @endif
                 </div>

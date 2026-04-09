@@ -120,10 +120,23 @@ class DataController extends Controller
     // ═══════════════════════════════════════════════════════════
     public function create()
     {
-        $metadataList = Metadata::select('metadata_id', 'nama', 'tipe_data', 'satuan_data')->orderBy('nama')->get();
+        $metadataList = Metadata::select('metadata_id', 'nama', 'tipe_data', 'satuan_data', 'frekuensi_penerbitan')
+                                ->orderBy('nama')->get();
         $locationList = Location::select('location_id', 'nama_wilayah')->orderBy('nama_wilayah')->get();
-        $timeList     = Waktu::select('time_id', 'year', 'month')->orderBy('year', 'desc')->orderBy('month')->get();
-        return view('pages.data.create', compact('metadataList', 'locationList', 'timeList'));
+        $timeList     = Waktu::select('time_id', 'decade', 'year', 'month')
+                            ->orderBy('decade', 'desc')->orderBy('year', 'desc')->orderBy('month')
+                            ->get();
+
+        $timeListJs = $timeList->map(function ($t) {
+            return [
+                'time_id' => $t->time_id,
+                'decade'  => $t->decade,
+                'year'    => $t->year,
+                'month'   => $t->month,
+            ];
+        })->values()->toArray();
+
+        return view('pages.data.create', compact('metadataList', 'locationList', 'timeList', 'timeListJs'));
     }
 
     public function store(Request $request)

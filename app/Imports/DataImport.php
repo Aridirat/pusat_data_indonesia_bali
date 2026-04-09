@@ -225,41 +225,24 @@ class DataImport
 
         $locationId = null;
 
-        if (!empty($kodeWilayah)) {
-
-            $kodeWilayah = trim($kodeWilayah);
-
-            $prov = substr($kodeWilayah,0,2);
-            $kab  = strlen($kodeWilayah) >= 4 ? substr($kodeWilayah,2,2) : null;
-            $kec  = strlen($kodeWilayah) >= 7 ? substr($kodeWilayah,4,3) : null;
-            $des  = strlen($kodeWilayah) == 10 ? substr($kodeWilayah,7,3) : null;
-
-            $query = DB::table('location')
-                ->where('kode_provinsi',$prov);
-
-            if ($kab) {
-                $query->where('kode_kabupaten',$kab);
-            }
-
-            if ($kec) {
-                $query->where('kode_kecamatan',$kec);
-            }
-
-            if ($des) {
-                $query->where('kode_desa',$des);
-            }
-
-            $location = $query->first();
-
-            if ($location) {
-                $locationId = $location->location_id;
-            }
-        }
-
         if (!$locationId) {
             $errors[] = [
-                'message' => "Baris $rowNum: kode wilayah $locationId tidak diketahui."
+                'message' => "Baris $rowNum: location_id kosong atau tidak valid.",
+                'row'     => $rowNum,
             ];
+        } else {
+            // Opsional: verifikasi location_id ada di DB (pakai cache supaya tidak N+1)
+            $exists = DB::table('location')
+                ->where('location_id', $locationId)
+                ->exists();
+
+            if (!$exists) {
+                $errors[] = [
+                    'message' => "Baris $rowNum: location_id '$locationId' tidak ditemukan di tabel location.",
+                    'row'     => $rowNum,
+                ];
+                $locationId = null;
+            }
         }
 
         if (!$metadataId || !$locationId) {
