@@ -219,11 +219,9 @@ class DataImport
         $errors  = [];
 
         $metadataId = isset($row[self::COL_META_ID]) ? (int)$row[self::COL_META_ID] : null;
-        $kodeWilayah = isset($row[self::COL_LOC_ID]) ? (string)$row[self::COL_LOC_ID] : null;
+        $locationId = isset($row[self::COL_LOC_ID]) ? (int)$row[self::COL_LOC_ID] : null;
         $metaNama   = $row[self::COL_META_NM] ?? '-';
         $locNama    = $row[self::COL_LOC_NM]  ?? '-';
-
-        $locationId = null;
 
         if (!$locationId) {
             $errors[] = [
@@ -281,7 +279,7 @@ class DataImport
                 'metadata_id'   => $metadataId,
                 'nama_metadata' => $metaNama,
                 'location_id'   => $locationId,
-                'nama_lokasi'   => $locNama,
+                'nama_wilayah'   => $locNama,
                 'time_id'       => $timeId,
                 'period_label'  => $periodLabel,
                 'number_value'  => (float)$rawValue,
@@ -307,9 +305,9 @@ class DataImport
         $timeId = DB::table('time')
             ->where('decade',  $params['decade'])
             ->where('year',    $params['year'])
+            ->where('semester', $params['semester'])
             ->where('quarter', $params['quarter'])
             ->where('month',   $params['month'])
-            ->where('day',     $params['day'])
             ->value('time_id');
 
         $this->timeCache[$cacheKey] = $timeId;
@@ -320,53 +318,59 @@ class DataImport
     {
         $label = trim($label);
 
+        // Tahunan: "2021"
         if (is_numeric($label) && strlen($label) === 4) {
-            $year   = (int)$label;
+            $year = (int)$label;
             return [
-                'decade'  => (int)(floor($year / 10) * 10),
-                'year'    => $year,
-                'quarter' => 0,
-                'month'   => 0,
-                'day'     => 0,
+                'decade'   => (int)(floor($year / 10) * 10),
+                'year'     => $year,
+                'semester' => 0,
+                'quarter'  => 0,
+                'month'    => 0,
             ];
         }
 
+        // Semester: "2021_S1" atau "2021_S2"
         if (preg_match('/^(\d{4})_S([12])$/i', $label, $m)) {
             $year     = (int)$m[1];
             $semester = (int)$m[2];
-            $quarter  = $semester === 1 ? 1 : 3;
             return [
-                'decade'  => (int)(floor($year / 10) * 10),
-                'year'    => $year,
-                'quarter' => $quarter,
-                'month'   => 0,
-                'day'     => 0,
+                'decade'   => (int)(floor($year / 10) * 10),
+                'year'     => $year,
+                'semester' => $semester,
+                'quarter'  => 0,
+                'month'    => 0,
             ];
         }
 
+        // Quarter: "2021_Q1" s/d "2021_Q4"
         if (preg_match('/^(\d{4})_Q([1-4])$/i', $label, $m)) {
             $year    = (int)$m[1];
             $quarter = (int)$m[2];
+            // quarter 1-2 → semester 1, quarter 3-4 → semester 2
+            $semester = $quarter <= 2 ? 1 : 2;
             return [
-                'decade'  => (int)(floor($year / 10) * 10),
-                'year'    => $year,
-                'quarter' => $quarter,
-                'month'   => 0,
-                'day'     => 0,
+                'decade'   => (int)(floor($year / 10) * 10),
+                'year'     => $year,
+                'semester' => $semester,
+                'quarter'  => $quarter,
+                'month'    => 0,
             ];
         }
 
+        // Bulanan: "Jan_2021"
         if (preg_match('/^([A-Za-z]{3})_(\d{4})$/', $label, $m)) {
             $bulan = strtolower($m[1]);
             $year  = (int)$m[2];
             $month = self::BULAN_MAP[$bulan] ?? null;
             if ($month) {
+                $semester = $month <= 6 ? 1 : 2;
                 return [
-                    'decade'  => (int)(floor($year / 10) * 10),
-                    'year'    => $year,
-                    'quarter' => 0,
-                    'month'   => $month,
-                    'day'     => 0,
+                    'decade'   => (int)(floor($year / 10) * 10),
+                    'year'     => $year,
+                    'semester' => $semester,
+                    'quarter'  => 0,
+                    'month'    => $month,
                 ];
             }
         }
@@ -394,7 +398,7 @@ class DataImport
         foreach ($periodCols as $label) {
             $p = $this->parseTimeLabel((string)$label);
             if ($p) {
-                $key          = strtolower(trim((string)$label));
+                $key             = strtolower(trim((string)$label));
                 $paramsMap[$key] = $p;
             }
         }
@@ -406,24 +410,26 @@ class DataImport
         foreach ($paramsMap as $params) {
             $method = $first ? 'where' : 'orWhere';
             $query->$method(function ($q) use ($params) {
-                $q->where('decade',  $params['decade'])
-                  ->where('year',    $params['year'])
-                  ->where('quarter', $params['quarter'])
-                  ->where('month',   $params['month'])
-                  ->where('day',     $params['day']);
+                $q->where('decade',   $params['decade'])
+                ->where('year',     $params['year'])
+                ->where('semester', $params['semester'])  // ← tambah
+                ->where('quarter',  $params['quarter'])
+                ->where('month',    $params['month']);
+                // ->where('day', ...) ← HAPUS
             });
             $first = false;
         }
 
-        $timeRows = $query->get(['time_id', 'decade', 'year', 'quarter', 'month', 'day']);
+        // Tambah 'semester' di select, hapus 'day'
+        $timeRows = $query->get(['time_id', 'decade', 'year', 'semester', 'quarter', 'month']);
 
         foreach ($paramsMap as $cacheKey => $params) {
             foreach ($timeRows as $tr) {
-                if ($tr->decade  == $params['decade']  &&
-                    $tr->year    == $params['year']    &&
-                    $tr->quarter == $params['quarter'] &&
-                    $tr->month   == $params['month']   &&
-                    $tr->day     == $params['day']) {
+                if ($tr->decade   == $params['decade']   &&
+                    $tr->year     == $params['year']     &&
+                    $tr->semester == $params['semester'] &&  // ← tambah
+                    $tr->quarter  == $params['quarter']  &&
+                    $tr->month    == $params['month']) {
                     $this->timeCache[$cacheKey] = $tr->time_id;
                     break;
                 }

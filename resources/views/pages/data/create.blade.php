@@ -242,7 +242,7 @@
                     dengan struktur kolom:
                 </p>
                 <div class="flex flex-wrap gap-1.5 mb-3">
-                    @foreach(['metadata_id','nama_metadata','kode_wilayah','nama_lokasi'] as $col)
+                    @foreach(['metadata_id','nama_metadata','location_id','nama_wilayah'] as $col)
                         <code class="px-2 py-0.5 rounded text-xs font-mono font-bold"
                               style="background:#e0f2fe; color:#0369a1;">{{ $col }}</code>
                     @endforeach
@@ -706,13 +706,13 @@
         document.getElementById('loadingBar').classList.add('hidden');
         document.getElementById('previewSection').classList.add('hidden');
         document.getElementById('importingBar').classList.add('hidden');
-        document.getElementById('importResult').classList.add('hidden');
-
-        // Reset state pagination
+        // importResult TIDAK di-hide di sini supaya pesan error tetap terlihat
+        // Hanya di-clear saat mulai preview baru (sudah ada di baris atas doPreview)
         sectionState.err = { data: [], shown: 0 };
         sectionState.dup = { data: [], shown: 0 };
     }
 
+    // ─── SESUDAH (benar) ───
     async function doPreview() {
         document.getElementById('loadingBar').classList.remove('hidden');
         document.getElementById('previewSection').classList.add('hidden');
@@ -724,13 +724,32 @@
 
         try {
             const resp = await fetch(PREVIEW_URL, { method: 'POST', body: form });
-            const json = await resp.json();
-
+            
             document.getElementById('loadingBar').classList.add('hidden');
 
+            // Cek HTTP status dulu sebelum parse JSON
+            if (!resp.ok) {
+                // 422 dari validasi Laravel — coba parse JSON errornya
+                let errMsg = 'File ditolak server (status ' + resp.status + ').';
+                try {
+                    const errJson = await resp.json();
+                    // Laravel validation error format: { errors: { file_excel: ['...'] } }
+                    if (errJson.errors?.file_excel) {
+                        errMsg = errJson.errors.file_excel[0];
+                    } else if (errJson.message) {
+                        errMsg = errJson.message;
+                    }
+                } catch (_) { /* response bukan JSON, pakai pesan default */ }
+                
+                // Tampilkan error tapi JANGAN reset — biarkan file info bar tetap ada
+                showImportAlertOnly(errMsg);
+                return;
+            }
+
+            const json = await resp.json();
+
             if (!json.success) {
-                showImportAlert('error', json.message || 'Gagal membaca file.');
-                resetUpload();
+                showImportAlertOnly(json.message || 'Gagal membaca file.');
                 return;
             }
 
@@ -739,9 +758,23 @@
 
         } catch (err) {
             document.getElementById('loadingBar').classList.add('hidden');
-            showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
-            resetUpload();
+            // Jaringan error — ini memang perlu reset karena file mungkin tidak terkirim
+            showImportAlertOnly('Terjadi kesalahan jaringan: ' + err.message);
         }
+    }
+
+    // Helper baru: tampilkan alert TANPA reset upload
+    // (berbeda dengan showImportAlert yang lama tidak ada reset,
+    //  tapi dipanggil bersamaan dengan resetUpload() dari luar)
+    function showImportAlertOnly(msg) {
+        const el = document.getElementById('importResult');
+        el.innerHTML = `
+            <div class="flex items-start gap-3 px-4 py-3 rounded-lg text-sm"
+                style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c;">
+                <i class="fas fa-exclamation-circle text-red-400 mt-0.5 shrink-0"></i>
+                <span>${esc(msg)}</span>
+            </div>`;
+        el.classList.remove('hidden');
     }
 
     /* ─────────────────────────────────────────────────────────────
@@ -801,7 +834,7 @@
             validBody.innerHTML = json.rows.slice(0, 20).map((r, i) => `
                 <tr class="${i % 2 === 1 ? 'bg-green-50' : ''}">
                     <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                    <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                    <td class="px-3 py-2 text-gray-600">${esc(r.nama_wilayah ?? String(r.location_id))}</td>
                     <td class="px-3 py-2">
                         <span class="px-2 py-0.5 rounded-full text-xs font-medium"
                             style="background:#fef3c7; color:#b45309;">
@@ -909,7 +942,7 @@
             document.getElementById('dupTableBody').innerHTML = rows.map((r, i) => `
                 <tr class="${i % 2 !== 0 ? 'bg-amber-50' : ''}">
                     <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                    <td class="px-3 py-2 text-gray-500">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                    <td class="px-3 py-2 text-gray-500">${esc(r.nama_wilayah ?? String(r.location_id))}</td>
                     <td class="px-3 py-2 text-gray-500 font-mono">${esc(String(r.period_label))}</td>
                     <td class="px-3 py-2 text-right font-mono text-gray-700">${formatNum(r.number_value)}</td>
                 </tr>`).join('');

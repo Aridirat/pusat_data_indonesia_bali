@@ -15,11 +15,7 @@ class Data extends Model
         'metadata_id',
         'location_id',
         'time_id',
-        'text_value',
         'number_value',
-        'kategori_value',
-        'other',
-        'analisis_fenomena',
         'status',
         'date_inputed',
     ];

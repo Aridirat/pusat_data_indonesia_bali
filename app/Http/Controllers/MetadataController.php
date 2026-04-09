@@ -816,7 +816,7 @@ class MetadataController extends Controller
 
     public function approval(Request $request)
     {
-        $statusFilter = (int) $request->get('status', self::STATUS_PENDING);
+        $statusFilter = (int) $request->input('status', self::STATUS_PENDING);
         $query = Metadata::with(['user','produsen'])->where('status', $statusFilter);
 
         if ($request->filled('search'))             { $query->where('nama','like','%'.$request->search.'%'); }

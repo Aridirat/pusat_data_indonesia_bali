@@ -188,7 +188,7 @@ class DataController extends Controller
     public function previewExcel(Request $request)
     {
         $request->validate([
-            'file_excel' => 'required|file|mimes:xlsx,xls|max:10240',
+            'file_excel' => 'required|file|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream,application/zip|max:10240'
         ], [
             'file_excel.required' => 'File Excel wajib diupload.',
             'file_excel.mimes'    => 'File harus berformat .xlsx atau .xls.',
@@ -216,7 +216,7 @@ class DataController extends Controller
     public function importExcel(Request $request)
     {
         $request->validate([
-            'file_excel'      => 'required|file|mimes:xlsx,xls|max:10240',
+            'file_excel' => 'required|file|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream,application/zip|max:10240',
             'skip_duplicates' => 'nullable|boolean',
         ]);
 
