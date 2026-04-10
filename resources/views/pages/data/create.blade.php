@@ -10,8 +10,16 @@
 
     <div class="mt-2 bg-white rounded-xl shadow p-6">
 
-        <h1 class="text-xl font-bold text-gray-800 mb-1">Input Data</h1>
-        <p class="text-sm text-gray-400 mb-6">Data akan menunggu verifikasi admin sebelum ditampilkan</p>
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 mb-1">Input Data</h1>
+                <p class="text-sm text-gray-400 mb-6">Data akan menunggu verifikasi admin sebelum ditampilkan</p>
+            </div>
+            <div class="text-right text-sm text-gray-500">
+                <p id="current-date"></p>
+                <p id="current-time" class="font-mono text-sky-600 font-semibold"></p>
+            </div>
+        </div>
 
         {{-- DUPLICATE WARNING --}}
         @if(session('duplicate_warning'))
@@ -122,7 +130,6 @@
                             Waktu <span class="text-red-500">*</span>
                         </label>
 
-                        {{-- Hidden field yang sebenarnya dikirim ke server --}}
                         <input type="hidden" name="time_id" id="selectedTimeId" value="{{ old('time_id') }}">
 
                         <div class="flex gap-2">
@@ -177,14 +184,12 @@
                             </div>
                         </div>
 
-                        {{-- Info waktu terpilih --}}
                         <div id="waktuInfo" class="hidden mt-2 px-3 py-2 bg-green-50 border border-green-200
                                                 rounded-md text-xs text-green-700 flex items-center gap-2">
                             <i class="fas fa-check-circle"></i>
                             <span id="waktuInfoText"></span>
                         </div>
 
-                        {{-- Peringatan belum pilih metadata --}}
                         <div id="waktuHint" class="mt-2 px-3 py-2 bg-amber-50 border border-amber-200
                                                     rounded-md text-xs text-amber-700 flex items-center gap-2">
                             <i class="fas fa-info-circle"></i>
@@ -238,7 +243,7 @@
                 </p>
                 <p class="text-xs text-gray-600 mb-3">
                     Gunakan file template yang di-generate dari halaman
-                    <strong>Daftar Metadata → Export Template</strong>
+                    <strong> Metadata → Export Template</strong>
                     dengan struktur kolom:
                 </p>
                 <div class="flex flex-wrap gap-1.5 mb-3">
@@ -312,7 +317,94 @@
             <div id="previewSection" class="hidden mt-6 space-y-4">
 
                 {{-- Statistik ringkasan --}}
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="statsGrid"></div>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3" id="statsGrid"></div>
+
+                {{-- ════════════════════════════════════════════════
+                     WARNING: Metadata tidak ditemukan / tidak aktif
+                ════════════════════════════════════════════════ --}}
+                <div id="invalidMetaSection" class="hidden rounded-xl overflow-hidden"
+                     style="border: 1px solid #c084fc;">
+                    {{-- Header --}}
+                    <div class="flex items-center gap-2.5 px-4 py-3 cursor-pointer select-none"
+                         style="background: #faf5ff;"
+                         onclick="toggleSection('meta')">
+                        {{-- Ikon warning --}}
+                        <div class="flex items-center justify-center w-7 h-7 rounded-full shrink-0"
+                             style="background:#ede9fe;">
+                            <svg class="w-4 h-4" style="color:#7c3aed;" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                      d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                                      clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold" style="color:#6d28d9;">
+                                Metadata Tidak Valid — Data Tidak Akan Diimport
+                            </p>
+                            <p class="text-xs mt-0.5" style="color:#7c3aed;" id="invalidMetaSubtitle"></p>
+                        </div>
+
+                        <span id="metaBadge"
+                              class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+                              style="background:#ede9fe; color:#6d28d9; border:1px solid #c084fc;"></span>
+
+                        <svg id="metaChevron"
+                             class="w-4 h-4 shrink-0 transition-transform duration-200"
+                             style="color:#a78bfa;"
+                             viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 6l4 4 4-4"/>
+                        </svg>
+                    </div>
+
+                    {{-- Body (collapsible) --}}
+                    <div id="metaBody" class="hidden" style="border-top:1px solid #e9d5ff;">
+                        {{-- Tip --}}
+                        <div class="px-4 py-2.5 text-xs flex items-start gap-2"
+                             style="background:#fdf4ff; color:#86198f;">
+                            <i class="fas fa-lightbulb mt-0.5 shrink-0" style="color:#c026d3;"></i>
+                            <span>
+                                Data dari metadata berikut <strong>dilewati sepenuhnya</strong>.
+                                Pastikan metadata sudah terdaftar di sistem dan berstatus
+                                <strong>Active</strong> sebelum mengimpor.
+                            </span>
+                        </div>
+
+                        {{-- Tabel --}}
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead style="background:#f3e8ff;">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold w-24"
+                                            style="color:#7c3aed;">ID</th>
+                                        <th class="px-3 py-2 text-left font-semibold"
+                                            style="color:#7c3aed;">Nama Metadata (dari Excel)</th>
+                                        <th class="px-3 py-2 text-left font-semibold"
+                                            style="color:#7c3aed;">Keterangan</th>
+                                        <th class="px-3 py-2 text-left font-semibold"
+                                            style="color:#7c3aed;">Baris</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="metaTableBody"
+                                       class="divide-y" style="divide-color:#f3e8ff;"></tbody>
+                            </table>
+                        </div>
+
+                        {{-- Show more --}}
+                        <button id="metaShowMore"
+                                class="hidden w-full flex items-center justify-center gap-1.5 py-2 text-xs
+                                       transition-colors"
+                                style="color:#7c3aed; border-top:1px solid #e9d5ff;"
+                                onmouseover="this.style.background='#faf5ff'"
+                                onmouseout="this.style.background=''"
+                                onclick="showMore('meta')">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"
+                                 stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4"/></svg>
+                            <span id="metaShowMoreTxt"></span>
+                        </button>
+                    </div>
+                </div>
+                {{-- END: Warning metadata --}}
 
                 {{-- Alert: periode tidak ditemukan di tabel time --}}
                 <div id="timeNotFoundAlert" class="hidden rounded-lg p-4 text-sm"
@@ -435,12 +527,10 @@
                         <i class="fas fa-arrow-left"></i> Ganti File
                     </button>
                     <button id="btnImport" onclick="doImport()" disabled
-                            class="flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-semibold
-                                   text-white shadow transition-colors
-                                   disabled:bg-gray-300 disabled:cursor-not-allowed"
-                            style="background:#0284c7;"
-                            onmouseover="if(!this.disabled) this.style.background='#0369a1'"
-                            onmouseout="if(!this.disabled) this.style.background='#0284c7'">
+                        class="flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-semibold
+                            text-white shadow transition-colors
+                            bg-sky-600 hover:bg-sky-700
+                            disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
                         <i class="fas fa-file-import"></i>
                         <span id="btnImportText">Import Data</span>
                     </button>
@@ -476,20 +566,12 @@
     const PREVIEW_URL = '{{ route("data.preview_excel") }}';
     const IMPORT_URL  = '{{ route("data.import_excel") }}';
 
-    /* ─────────────────────────────────────────────────────────────
-    TIME DATA — dari server (untuk lookup time_id)
-    ───────────────────────────────────────────────────────────── */
-    // Inject semua data waktu dari Blade ke JS
     const TIME_LIST = @json($timeListJs);
 
-    /* ─────────────────────────────────────────────────────────────
-    ATURAN FREKUENSI → field mana yang aktif
-    ───────────────────────────────────────────────────────────── */
     const FREKUENSI_RULES = {
         '10_tahunan': { dekade: true,  tahun: false, bulan: false },
         'tahunan':    { dekade: true,  tahun: true,  bulan: false },
         'bulanan':    { dekade: true,  tahun: true,  bulan: true  },
-        // fallback untuk nilai frekuensi lain
         'default':    { dekade: true,  tahun: true,  bulan: true  },
     };
 
@@ -499,25 +581,20 @@
         'bulanan':    { dekade: 'Otomatis',    tahun: 'Wajib diisi',   bulan: 'Wajib diisi'   },
     };
 
-
-    /* ─────────────────────────────────────────────────────────────
-    STATE — scope global agar bisa diakses dari onclick HTML
-    ───────────────────────────────────────────────────────────── */
+    // ── State ─────────────────────────────────────────────────
     let currentFile = null;
     let previewData = null;
 
-    // State pagination collapse per section
-    // Dideklarasikan di luar renderPreview() agar toggleSection,
-    // renderRows, showMore bisa mengaksesnya dari onclick="..."
     const ROWS_PER_PAGE = 5;
     const sectionState  = {
-        err: { data: [], shown: 0 },
-        dup: { data: [], shown: 0 },
+        err:  { data: [], shown: 0 },
+        dup:  { data: [], shown: 0 },
+        meta: { data: [], shown: 0 },   // ← baru: invalid metadata
     };
 
-    /* ─────────────────────────────────────────────────────────────
+    /* ─────────────────────────────────────────────────────────
     TAB SWITCHER
-    ───────────────────────────────────────────────────────────── */
+    ───────────────────────────────────────────────────────── */
     function switchTab(tab) {
         document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
         document.getElementById('panel-excel').classList.toggle('hidden',  tab !== 'excel');
@@ -530,17 +607,14 @@
             `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'excel' ? active : inactive}`;
     }
 
-
-
-    /* ─────────────────────────────────────────────────────────────
+    /* ─────────────────────────────────────────────────────────
     METADATA INFO (tab manual)
-    ───────────────────────────────────────────────────────────── */
+    ───────────────────────────────────────────────────────── */
     function updateMetadataInfo(select) {
         const opt       = select.options[select.selectedIndex];
         const info      = document.getElementById('metadataInfo');
         const frekuensi = (opt.dataset.frekuensi || '').toLowerCase().trim();
 
-        // ── Update info box ──
         if (opt.dataset.tipe || opt.dataset.satuan) {
             document.getElementById('metadataTipe').textContent   = 'Tipe: ' + (opt.dataset.tipe || '-');
             document.getElementById('metadataSatuan').textContent = opt.dataset.satuan || '-';
@@ -550,12 +624,10 @@
             info.classList.add('hidden');
         }
 
-        // ── Reset waktu dulu ──
         resetWaktuFields();
 
-        if (!frekuensi) return; // tidak ada metadata terpilih
+        if (!frekuensi) return;
 
-        // ── Terapkan aturan frekuensi ──
         const rules  = FREKUENSI_RULES[frekuensi] || FREKUENSI_RULES['default'];
         const labels = FREKUENSI_LABELS[frekuensi] || {};
 
@@ -563,26 +635,18 @@
         setWaktuField('filterTahun',  'hintTahun',  rules.tahun,  labels.tahun);
         setWaktuField('filterBulan',  'hintBulan',  rules.bulan,  labels.bulan);
 
-        // Sembunyikan hint "pilih metadata dulu"
         document.getElementById('waktuHint').classList.add('hidden');
     }
 
-    /* ─────────────────────────────────────────────────────────────
-    FILTER WAKTU (tab manual)
-    ───────────────────────────────────────────────────────────── */
+    /* ─────────────────────────────────────────────────────────
+    FILTER WAKTU
+    ───────────────────────────────────────────────────────── */
     function setWaktuField(selectId, hintId, enabled, hintText) {
         const sel  = document.getElementById(selectId);
         const hint = document.getElementById(hintId);
-
         sel.disabled = !enabled;
-        sel.value    = '';   // reset nilai
-
-        if (!enabled) {
-            sel.classList.add('opacity-50');
-        } else {
-            sel.classList.remove('opacity-50');
-        }
-
+        sel.value    = '';
+        enabled ? sel.classList.remove('opacity-50') : sel.classList.add('opacity-50');
         hint.textContent = hintText || '';
     }
 
@@ -601,20 +665,15 @@
         document.getElementById('waktuHint').classList.remove('hidden');
     }
 
-    /* ─────────────────────────────────────────────────────────────
-    FILTER WAKTU — cari time_id berdasarkan pilihan dropdown
-    ───────────────────────────────────────────────────────────── */
     function filterWaktu() {
         const dekade = document.getElementById('filterDekade').value;
         const tahun  = document.getElementById('filterTahun').value;
         const bulan  = document.getElementById('filterBulan').value;
 
-        // Dapatkan frekuensi metadata yang terpilih
         const metaSel   = document.getElementById('metadataSelect');
         const frekuensi = metaSel.options[metaSel.selectedIndex]?.dataset?.frekuensi || '';
         const rules     = FREKUENSI_RULES[frekuensi] || FREKUENSI_RULES['default'];
 
-        // Cek apakah semua field yang required sudah diisi
         const dekadeOk = !rules.dekade || dekade !== '';
         const tahunOk  = !rules.tahun  || tahun  !== '';
         const bulanOk  = !rules.bulan  || bulan  !== '';
@@ -625,7 +684,6 @@
             return;
         }
 
-        // Cari time_id yang cocok
         const match = TIME_LIST.find(t => {
             const dekadeMatch = !rules.dekade || String(t.decade) === dekade;
             const tahunMatch  = !rules.tahun  || String(t.year)   === tahun;
@@ -638,8 +696,6 @@
 
         if (match) {
             document.getElementById('selectedTimeId').value = match.time_id;
-
-            // Susun label yang tampil
             let label = [];
             if (rules.dekade && dekade) label.push(`Dekade: ${dekade}`);
             if (rules.tahun  && tahun)  label.push(`Tahun: ${tahun}`);
@@ -660,9 +716,9 @@
         }
     }
 
-    /* ─────────────────────────────────────────────────────────────
+    /* ─────────────────────────────────────────────────────────
     FILE SELECTION & DRAG-DROP
-    ───────────────────────────────────────────────────────────── */
+    ───────────────────────────────────────────────────────── */
     function handleDrop(e) {
         e.preventDefault();
         const zone = document.getElementById('dropZone');
@@ -706,13 +762,11 @@
         document.getElementById('loadingBar').classList.add('hidden');
         document.getElementById('previewSection').classList.add('hidden');
         document.getElementById('importingBar').classList.add('hidden');
-        // importResult TIDAK di-hide di sini supaya pesan error tetap terlihat
-        // Hanya di-clear saat mulai preview baru (sudah ada di baris atas doPreview)
-        sectionState.err = { data: [], shown: 0 };
-        sectionState.dup = { data: [], shown: 0 };
+        sectionState.err  = { data: [], shown: 0 };
+        sectionState.dup  = { data: [], shown: 0 };
+        sectionState.meta = { data: [], shown: 0 };
     }
 
-    // ─── SESUDAH (benar) ───
     async function doPreview() {
         document.getElementById('loadingBar').classList.remove('hidden');
         document.getElementById('previewSection').classList.add('hidden');
@@ -724,24 +778,19 @@
 
         try {
             const resp = await fetch(PREVIEW_URL, { method: 'POST', body: form });
-            
+
             document.getElementById('loadingBar').classList.add('hidden');
 
-            // Cek HTTP status dulu sebelum parse JSON
             if (!resp.ok) {
-                // 422 dari validasi Laravel — coba parse JSON errornya
                 let errMsg = 'File ditolak server (status ' + resp.status + ').';
                 try {
                     const errJson = await resp.json();
-                    // Laravel validation error format: { errors: { file_excel: ['...'] } }
                     if (errJson.errors?.file_excel) {
                         errMsg = errJson.errors.file_excel[0];
                     } else if (errJson.message) {
                         errMsg = errJson.message;
                     }
-                } catch (_) { /* response bukan JSON, pakai pesan default */ }
-                
-                // Tampilkan error tapi JANGAN reset — biarkan file info bar tetap ada
+                } catch (_) {}
                 showImportAlertOnly(errMsg);
                 return;
             }
@@ -758,14 +807,10 @@
 
         } catch (err) {
             document.getElementById('loadingBar').classList.add('hidden');
-            // Jaringan error — ini memang perlu reset karena file mungkin tidak terkirim
             showImportAlertOnly('Terjadi kesalahan jaringan: ' + err.message);
         }
     }
 
-    // Helper baru: tampilkan alert TANPA reset upload
-    // (berbeda dengan showImportAlert yang lama tidak ada reset,
-    //  tapi dipanggil bersamaan dengan resetUpload() dari luar)
     function showImportAlertOnly(msg) {
         const el = document.getElementById('importResult');
         el.innerHTML = `
@@ -777,21 +822,19 @@
         el.classList.remove('hidden');
     }
 
-    /* ─────────────────────────────────────────────────────────────
+    /* ─────────────────────────────────────────────────────────
     RENDER PREVIEW
-    Hanya bertanggung jawab mengisi UI dari data JSON.
-    Fungsi collapse (toggleSection, renderRows, showMore)
-    sengaja diletakkan di luar fungsi ini (scope global).
-    ───────────────────────────────────────────────────────────── */
+    ───────────────────────────────────────────────────────── */
     function renderPreview(json) {
         document.getElementById('previewSection').classList.remove('hidden');
 
-        // ── Statistik ──
         const periodLabel = {
             tahunan : 'Tahunan', semester: 'Semester',
             quarter : 'Quarter', bulanan : 'Bulanan', unknown: '?',
         }[json.period_type] ?? json.period_type;
 
+        // ── Statistik (5 kotak, tambah invalid_meta) ──
+        const invalidMetaCount = (json.invalid_metadata || []).length;
         document.getElementById('statsGrid').innerHTML = `
             <div class="rounded-lg p-3 text-center" style="background:#f0f9ff; border:1px solid #bae6fd;">
                 <p class="text-xl font-bold" style="color:#0369a1;">${json.total_rows}</p>
@@ -808,10 +851,14 @@
             <div class="rounded-lg p-3 text-center" style="background:#fef2f2; border:1px solid #fecaca;">
                 <p class="text-xl font-bold" style="color:#b91c1c;">${json.error}</p>
                 <p class="text-xs mt-0.5" style="color:#b91c1c;">Baris Error</p>
+            </div>
+            <div class="rounded-lg p-3 text-center" style="background:#faf5ff; border:1px solid #e9d5ff;">
+                <p class="text-xl font-bold" style="color:#6d28d9;">${invalidMetaCount}</p>
+                <p class="text-xs mt-0.5" style="color:#6d28d9;">Metadata Tidak Valid</p>
             </div>`;
 
         // ── Alert kolom periode tidak ada di tabel time ──
-        const timeErrors    = (json.errors || []).filter(e => e.message?.includes('time_id'));
+        const timeErrors     = (json.errors || []).filter(e => e.message?.includes('time_id'));
         const timeNotFoundEl = document.getElementById('timeNotFoundAlert');
         if (timeErrors.length > 0) {
             const periods = [...new Set(timeErrors.map(e => e.period))].filter(Boolean);
@@ -822,7 +869,7 @@
             timeNotFoundEl.classList.add('hidden');
         }
 
-        // ── Error & Duplikat — isi state lalu serahkan ke initSections ──
+        // ── Isi sectionState lalu init semua sections ──
         initSections(json);
 
         // ── Data valid ──
@@ -855,39 +902,48 @@
             validSection.classList.add('hidden');
         }
 
-        // ── Tombol import ──
         const btn = document.getElementById('btnImport');
+        const text = document.getElementById('btnImportText');
+
         if (json.valid > 0) {
             btn.disabled = false;
-            document.getElementById('btnImportText').textContent =
-                `Import ${json.valid.toLocaleString('id-ID')} Record`;
+
+            // Aktif → warna biru
+            btn.classList.remove('bg-gray-50', 'text-gray-400');
+            btn.classList.add('bg-sky-600', 'hover:bg-sky-700', 'text-white');
+
+            text.textContent = `Import ${json.valid.toLocaleString('id-ID')} Record`;
         } else {
             btn.disabled = true;
-            document.getElementById('btnImportText').textContent = 'Tidak Ada Data Valid';
+
+            // Tidak valid → warna abu terang
+            btn.classList.remove('bg-sky-600', 'hover:bg-sky-700', 'text-white');
+            btn.classList.add('bg-gray-50', 'text-gray-400');
+
+            text.textContent = 'Tidak Ada Data Valid';
         }
     }
 
-    /* ─────────────────────────────────────────────────────────────
-    COLLAPSE SECTIONS — scope global (dipanggil dari onclick HTML)
-    ───────────────────────────────────────────────────────────── */
-
-    // Inisialisasi data ke sectionState dan tampilkan / sembunyikan section
+    /* ─────────────────────────────────────────────────────────
+    COLLAPSE SECTIONS
+    ───────────────────────────────────────────────────────── */
     function initSections(json) {
-        // Reset state setiap kali preview baru masuk
-        sectionState.err = { data: json.errors     || [], shown: 0 };
-        sectionState.dup = { data: json.duplicates || [], shown: 0 };
+        sectionState.err  = { data: json.errors            || [], shown: 0 };
+        sectionState.dup  = { data: json.duplicates        || [], shown: 0 };
+        sectionState.meta = { data: json.invalid_metadata  || [], shown: 0 };
 
+        // ── Error section ──
         const errSection = document.getElementById('errorSection');
         if (sectionState.err.data.length > 0) {
             document.getElementById('errBadge').textContent = sectionState.err.data.length + ' baris';
             errSection.classList.remove('hidden');
-            // Pastikan collapsed (tutup ulang setiap preview baru)
             document.getElementById('errBody').classList.add('hidden');
             document.getElementById('errChevron').style.transform = '';
         } else {
             errSection.classList.add('hidden');
         }
 
+        // ── Duplicate section ──
         const dupSection = document.getElementById('dupSection');
         if (sectionState.dup.data.length > 0) {
             document.getElementById('dupBadge').textContent = sectionState.dup.data.length + ' entri';
@@ -897,27 +953,50 @@
         } else {
             dupSection.classList.add('hidden');
         }
+
+        // ── Invalid metadata section ──
+        const metaSection = document.getElementById('invalidMetaSection');
+        const metaData    = sectionState.meta.data;
+        if (metaData.length > 0) {
+            document.getElementById('metaBadge').textContent = metaData.length + ' metadata';
+
+            // Hitung berapa yang not_found vs not_active untuk subtitle
+            const notFound  = metaData.filter(m => m.reason === 'not_found').length;
+            const notActive = metaData.filter(m => m.reason === 'not_active').length;
+            const parts     = [];
+            if (notFound  > 0) parts.push(`${notFound} tidak ditemukan di sistem`);
+            if (notActive > 0) parts.push(`${notActive} belum berstatus Active`);
+            document.getElementById('invalidMetaSubtitle').textContent =
+                parts.join(' · ') + ' — semua data dari metadata ini dilewati';
+
+            metaSection.classList.remove('hidden');
+            document.getElementById('metaBody').classList.add('hidden');
+            document.getElementById('metaChevron').style.transform = '';
+        } else {
+            metaSection.classList.add('hidden');
+        }
     }
 
-    // Toggle buka / tutup panel
     function toggleSection(type) {
-        const bodyId   = type === 'err' ? 'errBody'    : 'dupBody';
-        const chevId   = type === 'err' ? 'errChevron' : 'dupChevron';
-        const body     = document.getElementById(bodyId);
-        const chevron  = document.getElementById(chevId);
-        const isOpen   = !body.classList.contains('hidden');
+        const ids = {
+            err:  { body: 'errBody',  chevron: 'errChevron'  },
+            dup:  { body: 'dupBody',  chevron: 'dupChevron'  },
+            meta: { body: 'metaBody', chevron: 'metaChevron' },
+        };
+        const { body: bodyId, chevron: chevId } = ids[type];
+        const body    = document.getElementById(bodyId);
+        const chevron = document.getElementById(chevId);
+        const isOpen  = !body.classList.contains('hidden');
 
         body.classList.toggle('hidden', isOpen);
         chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
 
-        // Render baris pertama kali saat dibuka
         if (!isOpen && sectionState[type].shown === 0) {
             sectionState[type].shown = ROWS_PER_PAGE;
             renderRows(type);
         }
     }
 
-    // Render baris tabel sesuai jumlah yang sudah di-shown
     function renderRows(type) {
         const s         = sectionState[type];
         const rows      = s.data.slice(0, s.shown);
@@ -938,7 +1017,8 @@
             } else {
                 btn.classList.add('hidden');
             }
-        } else {
+
+        } else if (type === 'dup') {
             document.getElementById('dupTableBody').innerHTML = rows.map((r, i) => `
                 <tr class="${i % 2 !== 0 ? 'bg-amber-50' : ''}">
                     <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
@@ -955,10 +1035,46 @@
             } else {
                 btn.classList.add('hidden');
             }
+
+        } else if (type === 'meta') {
+            // ── Render tabel metadata tidak valid ──
+            document.getElementById('metaTableBody').innerHTML = rows.map((m, i) => {
+                const reasonBadge = m.reason === 'not_found'
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                               style="background:#fce7f3; color:#9d174d;">
+                           <i class="fas fa-times-circle text-xs"></i> Metadata belum terdaftar di sistem
+                       </span>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                               style="background:#fef3c7; color:#92400e;">
+                           <i class="fas fa-clock text-xs"></i> Status metadata ${esc(m.status_label ?? `tidak aktif`)}
+                       </span>`;
+
+                return `
+                <tr class="${i % 2 !== 0 ? '' : ''}" style="background: ${i % 2 !== 0 ? '#fdf4ff' : '#ffffff'};">
+                    <td class="px-3 py-2.5 font-mono font-semibold" style="color:#7c3aed;">
+                        #${esc(String(m.metadata_id))}
+                    </td>
+                    <td class="px-3 py-2.5 text-gray-700 font-medium">
+                        ${esc(m.nama_metadata ?? '-')}
+                    </td>
+                    <td class="px-3 py-2.5">${reasonBadge}</td>
+                    <td class="px-3 py-2.5 font-mono text-gray-400">
+                        Baris ${esc(String(m.row))}
+                    </td>
+                </tr>`;
+            }).join('');
+
+            const btn = document.getElementById('metaShowMore');
+            if (remaining > 0) {
+                btn.classList.remove('hidden');
+                document.getElementById('metaShowMoreTxt').textContent =
+                    `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
+            } else {
+                btn.classList.add('hidden');
+            }
         }
     }
 
-    // Muat lebih banyak baris
     function showMore(type) {
         sectionState[type].shown = Math.min(
             sectionState[type].shown + ROWS_PER_PAGE,
@@ -967,23 +1083,25 @@
         renderRows(type);
     }
 
-    /* ─────────────────────────────────────────────────────────────
+    /* ─────────────────────────────────────────────────────────
     IMPORT
-    ───────────────────────────────────────────────────────────── */
+    ───────────────────────────────────────────────────────── */
     async function doImport() {
         if (!currentFile || !previewData) return;
 
         const skipDup = document.getElementById('cbSkipDup')?.checked ?? true;
         const btn     = document.getElementById('btnImport');
 
-        const msg = previewData.valid > 0
-            ? `Import ${previewData.valid} record data?\n` +
-            (skipDup && previewData.duplicate > 0
-                ? `${previewData.duplicate} duplikat akan dilewati.`
-                : '')
-            : 'Tidak ada data valid untuk diimport.';
+        const invalidCount = (previewData.invalid_metadata || []).length;
+        let confirmMsg = `Import ${previewData.valid} record data?`;
+        if (skipDup && previewData.duplicate > 0) {
+            confirmMsg += `\n• ${previewData.duplicate} duplikat akan dilewati.`;
+        }
+        if (invalidCount > 0) {
+            confirmMsg += `\n• ${invalidCount} metadata tidak valid — datanya tidak akan diimport.`;
+        }
 
-        if (!confirm(msg)) return;
+        if (!confirm(confirmMsg)) return;
 
         btn.disabled = true;
         document.getElementById('importingBar').classList.remove('hidden');
@@ -1022,9 +1140,9 @@
         }
     }
 
-    /* ─────────────────────────────────────────────────────────────
+    /* ─────────────────────────────────────────────────────────
     HELPERS
-    ───────────────────────────────────────────────────────────── */
+    ───────────────────────────────────────────────────────── */
     function showImportAlert(type, msg, extra = '') {
         const isErr = type === 'error';
         const el    = document.getElementById('importResult');
@@ -1055,9 +1173,6 @@
             : n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    /* ─────────────────────────────────────────────────────────────
-    INIT — redirect ke tab manual jika ada error validasi
-    ───────────────────────────────────────────────────────────── */
     @if($errors->any() || session('duplicate_warning'))
         switchTab('manual');
     @endif

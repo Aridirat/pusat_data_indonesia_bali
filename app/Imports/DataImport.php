@@ -3,24 +3,22 @@
 namespace App\Imports;
 
 use App\Models\Data;
-// use App\Models\Waktu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-// use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class DataImport
 {
     // ── Konfigurasi ──────────────────────────────────────────
-    private const HEADER_ROW   = 3;    
-    private const DATA_ROW     = 4;    
-    private const BATCH_SIZE   = 200;  
-    private const COL_META_ID  = 0;    
-    private const COL_META_NM  = 1;    
-    private const COL_LOC_ID   = 2;    
-    private const COL_LOC_NM   = 3;    
-    private const COL_PERIOD   = 4;    
+    private const HEADER_ROW   = 3;
+    private const DATA_ROW     = 4;
+    private const BATCH_SIZE   = 200;
+    private const COL_META_ID  = 0;
+    private const COL_META_NM  = 1;
+    private const COL_LOC_ID   = 2;
+    private const COL_LOC_NM   = 3;
+    private const COL_PERIOD   = 4;
 
     private const BULAN_MAP = [
         'jan'=>1,'feb'=>2,'mar'=>3,'apr'=>4,'mei'=>5,'jun'=>6,
@@ -31,16 +29,19 @@ class DataImport
     // ── State ─────────────────────────────────────────────────
     private int   $userId;
     private bool  $skipDuplicates;
-    private array $errors      = [];
-    private array $duplicates  = [];
-    private int   $imported    = 0;
-    private int   $skipped     = 0;
+    private array $errors            = [];
+    private array $duplicates        = [];
+    private array $invalidMetadata   = []; // metadata tidak ditemukan / tidak aktif
+    private int   $imported          = 0;
+    private int   $skipped           = 0;
 
-    
-    private array $timeCache   = [];
+    private array $timeCache         = [];
+    private array $existingSet       = [];
 
-    
-    private array $existingSet = [];
+    /**
+     * Cache validasi metadata: metadata_id => ['valid' => bool, 'reason' => string|null, 'nama' => string|null]
+     */
+    private array $metadataCache     = [];
 
     public function __construct(int $userId = 0, bool $skipDuplicates = true)
     {
@@ -49,16 +50,20 @@ class DataImport
     }
 
     // ══════════════════════════════════════════════════════════
-    // ENTRY POINT 
+    // ENTRY POINT
     // ══════════════════════════════════════════════════════════
 
     public function preview(string $filePath): array
     {
         [$periodCols, $dataRows] = $this->readExcel($filePath);
 
-        $previewRows = [];
-        $errors      = [];
-        $duplicates  = [];
+        $previewRows      = [];
+        $errors           = [];
+        $duplicates       = [];
+        $invalidMetadata  = [];
+
+        // Pre-load validasi metadata dari semua baris sekaligus
+        $this->preloadMetadataCache($dataRows);
 
         $this->buildExistingSet($periodCols);
 
@@ -77,19 +82,36 @@ class DataImport
             foreach ($result['errors'] as $err) {
                 $errors[] = array_merge($err, ['row' => $rowNum]);
             }
+
+            foreach ($result['invalid_metadata'] as $inv) {
+                $invalidMetadata[] = array_merge($inv, ['row' => $rowNum]);
+            }
+        }
+
+        // Deduplikasi invalid_metadata berdasarkan metadata_id
+        $seenMetaIds      = [];
+        $uniqueInvalid    = [];
+        foreach ($invalidMetadata as $inv) {
+            $mid = $inv['metadata_id'] ?? null;
+            if ($mid !== null && !isset($seenMetaIds[$mid])) {
+                $seenMetaIds[$mid] = true;
+                $uniqueInvalid[]   = $inv;
+            }
         }
 
         return [
-            'success'    => true,
-            'rows'       => $previewRows,
-            'errors'     => $errors,
-            'duplicates' => $duplicates,
-            'total_rows' => count($dataRows),
-            'valid'      => count($previewRows),
-            'duplicate'  => count($duplicates),
-            'error'      => count($errors),
-            'period_type'=> $this->detectPeriodType($periodCols[0] ?? ''),
-            'period_cols'=> $periodCols,
+            'success'          => true,
+            'rows'             => $previewRows,
+            'errors'           => $errors,
+            'duplicates'       => $duplicates,
+            'invalid_metadata' => $uniqueInvalid,
+            'total_rows'       => count($dataRows),
+            'valid'            => count($previewRows),
+            'duplicate'        => count($duplicates),
+            'error'            => count($errors),
+            'invalid_meta_count' => count($uniqueInvalid),
+            'period_type'      => $this->detectPeriodType($periodCols[0] ?? ''),
+            'period_cols'      => $periodCols,
         ];
     }
 
@@ -97,13 +119,15 @@ class DataImport
     {
         [$periodCols, $dataRows] = $this->readExcel($filePath);
 
-        $this->preloadTimeCache($periodCols);
+        // Pre-load validasi metadata
+        $this->preloadMetadataCache($dataRows);
 
+        $this->preloadTimeCache($periodCols);
         $this->buildExistingSet($periodCols);
 
         $buffer    = [];
         $now       = Carbon::now()->format('Y-m-d H:i:s');
-        $insertSet = []; 
+        $insertSet = [];
 
         DB::beginTransaction();
         try {
@@ -142,6 +166,11 @@ class DataImport
                 foreach ($result['errors'] as $err) {
                     $this->errors[] = array_merge($err, ['row' => $rowNum]);
                 }
+
+                // Catat invalid_metadata ke state (untuk summary)
+                foreach ($result['invalid_metadata'] as $inv) {
+                    $this->invalidMetadata[] = array_merge($inv, ['row' => $rowNum]);
+                }
             }
 
             if (!empty($buffer)) {
@@ -156,11 +185,12 @@ class DataImport
         }
 
         return [
-            'success'  => true,
-            'imported' => $this->imported,
-            'skipped'  => $this->skipped,
-            'errors'   => count($this->errors),
-            'message'  => $this->buildSummaryMessage(),
+            'success'      => true,
+            'imported'     => $this->imported,
+            'skipped'      => $this->skipped,
+            'errors'       => count($this->errors),
+            'skipped_meta' => count(array_unique(array_column($this->invalidMetadata, 'metadata_id'))),
+            'message'      => $this->buildSummaryMessage(),
         ];
     }
 
@@ -215,21 +245,42 @@ class DataImport
 
     private function parseRow(array $row, array $periodCols, int $rowNum, bool $dryRun): array
     {
-        $records = [];
-        $errors  = [];
+        $records         = [];
+        $errors          = [];
+        $invalidMetadata = [];
 
         $metadataId = isset($row[self::COL_META_ID]) ? (int)$row[self::COL_META_ID] : null;
         $locationId = isset($row[self::COL_LOC_ID]) ? (int)$row[self::COL_LOC_ID] : null;
         $metaNama   = $row[self::COL_META_NM] ?? '-';
         $locNama    = $row[self::COL_LOC_NM]  ?? '-';
 
+        // ── Validasi metadata (wajib ada + status = 2/active) ──
+        if (!$metadataId) {
+            $errors[] = [
+                'message' => "Baris $rowNum: metadata_id kosong atau tidak valid.",
+                'row'     => $rowNum,
+            ];
+            $metadataId = null;
+        } else {
+            $metaValidation = $this->resolveMetadata($metadataId);
+            if (!$metaValidation['valid']) {
+                $invalidMetadata[] = [
+                    'metadata_id'   => $metadataId,
+                    'nama_metadata' => $metaNama,
+                    'reason'        => $metaValidation['reason'],
+                    'row'           => $rowNum,
+                ];
+                $metadataId = null; // skip baris ini
+            }
+        }
+
+        // ── Validasi location ──
         if (!$locationId) {
             $errors[] = [
                 'message' => "Baris $rowNum: location_id kosong atau tidak valid.",
                 'row'     => $rowNum,
             ];
         } else {
-            // Opsional: verifikasi location_id ada di DB (pakai cache supaya tidak N+1)
             $exists = DB::table('location')
                 ->where('location_id', $locationId)
                 ->exists();
@@ -244,7 +295,11 @@ class DataImport
         }
 
         if (!$metadataId || !$locationId) {
-            return compact('records', 'errors');
+            return [
+                'records'          => $records,
+                'errors'           => $errors,
+                'invalid_metadata' => $invalidMetadata,
+            ];
         }
 
         foreach ($periodCols as $pi => $periodLabel) {
@@ -279,15 +334,128 @@ class DataImport
                 'metadata_id'   => $metadataId,
                 'nama_metadata' => $metaNama,
                 'location_id'   => $locationId,
-                'nama_wilayah'   => $locNama,
+                'nama_wilayah'  => $locNama,
                 'time_id'       => $timeId,
                 'period_label'  => $periodLabel,
                 'number_value'  => (float)$rawValue,
             ];
         }
 
-        return compact('records', 'errors');
+        return [
+            'records'          => $records,
+            'errors'           => $errors,
+            'invalid_metadata' => $invalidMetadata,
+        ];
     }
+
+    // ══════════════════════════════════════════════════════════
+    // METADATA VALIDATION
+    // ══════════════════════════════════════════════════════════
+
+    /**
+     * Pre-load semua metadata_id yang muncul di Excel sekaligus (1 query).
+     */
+    private function preloadMetadataCache(array $dataRows): void
+    {
+        $ids = [];
+        foreach ($dataRows as $row) {
+            $mid = isset($row[self::COL_META_ID]) ? (int)$row[self::COL_META_ID] : null;
+            if ($mid) $ids[] = $mid;
+        }
+        $ids = array_unique($ids);
+        if (empty($ids)) return;
+
+        // Ambil semua metadata yang ADA di DB (apapun statusnya)
+        $rows = DB::table('metadata')
+            ->whereIn('metadata_id', $ids)
+            ->get(['metadata_id', 'nama', 'status']);
+
+        $found = [];
+        foreach ($rows as $r) {
+            $found[$r->metadata_id] = $r;
+        }
+
+        foreach ($ids as $id) {
+            if (!isset($found[$id])) {
+                // Tidak ada di database sama sekali
+                $this->metadataCache[$id] = [
+                    'valid'  => false,
+                    'reason' => 'not_found',
+                    'nama'   => null,
+                ];
+            } elseif ((int)$found[$id]->status !== 2) {
+                // Ada tapi bukan status active (2)
+                $statusLabel = $this->metadataStatusLabel((int)$found[$id]->status);
+                $this->metadataCache[$id] = [
+                    'valid'  => false,
+                    'reason' => 'not_active',
+                    'status' => (int)$found[$id]->status,
+                    'status_label' => $statusLabel,
+                    'nama'   => $found[$id]->nama,
+                ];
+            } else {
+                $this->metadataCache[$id] = [
+                    'valid'  => true,
+                    'reason' => null,
+                    'nama'   => $found[$id]->nama,
+                ];
+            }
+        }
+    }
+
+    /**
+     * Resolve validasi metadata dari cache (tidak melakukan query tambahan).
+     */
+    private function resolveMetadata(int $metadataId): array
+    {
+        if (isset($this->metadataCache[$metadataId])) {
+            return $this->metadataCache[$metadataId];
+        }
+
+        // Fallback: query single jika belum di-preload
+        $row = DB::table('metadata')
+            ->where('metadata_id', $metadataId)
+            ->first(['metadata_id', 'nama', 'status']);
+
+        if (!$row) {
+            return $this->metadataCache[$metadataId] = [
+                'valid'  => false,
+                'reason' => 'not_found',
+                'nama'   => null,
+            ];
+        }
+
+        if ((int)$row->status !== 2) {
+            return $this->metadataCache[$metadataId] = [
+                'valid'        => false,
+                'reason'       => 'not_active',
+                'status'       => (int)$row->status,
+                'status_label' => $this->metadataStatusLabel((int)$row->status),
+                'nama'         => $row->nama,
+            ];
+        }
+
+        return $this->metadataCache[$metadataId] = [
+            'valid'  => true,
+            'reason' => null,
+            'nama'   => $row->nama,
+        ];
+    }
+
+    private function metadataStatusLabel(int $status): string
+    {
+        return match($status) {
+            0       => 'Draft',
+            1       => 'Menunggu Review',
+            2       => 'Active',
+            3       => 'Nonaktif',
+            default => "Status $status",
+        };
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // TIME RESOLUTION
+    // ══════════════════════════════════════════════════════════
 
     private function resolveTimeId(string $label): ?int
     {
@@ -303,11 +471,11 @@ class DataImport
         }
 
         $timeId = DB::table('time')
-            ->where('decade',  $params['decade'])
-            ->where('year',    $params['year'])
+            ->where('decade',   $params['decade'])
+            ->where('year',     $params['year'])
             ->where('semester', $params['semester'])
-            ->where('quarter', $params['quarter'])
-            ->where('month',   $params['month'])
+            ->where('quarter',  $params['quarter'])
+            ->where('month',    $params['month'])
             ->value('time_id');
 
         $this->timeCache[$cacheKey] = $timeId;
@@ -345,9 +513,8 @@ class DataImport
 
         // Quarter: "2021_Q1" s/d "2021_Q4"
         if (preg_match('/^(\d{4})_Q([1-4])$/i', $label, $m)) {
-            $year    = (int)$m[1];
-            $quarter = (int)$m[2];
-            // quarter 1-2 → semester 1, quarter 3-4 → semester 2
+            $year     = (int)$m[1];
+            $quarter  = (int)$m[2];
             $semester = $quarter <= 2 ? 1 : 2;
             return [
                 'decade'   => (int)(floor($year / 10) * 10),
@@ -411,23 +578,21 @@ class DataImport
             $method = $first ? 'where' : 'orWhere';
             $query->$method(function ($q) use ($params) {
                 $q->where('decade',   $params['decade'])
-                ->where('year',     $params['year'])
-                ->where('semester', $params['semester'])  // ← tambah
-                ->where('quarter',  $params['quarter'])
-                ->where('month',    $params['month']);
-                // ->where('day', ...) ← HAPUS
+                  ->where('year',     $params['year'])
+                  ->where('semester', $params['semester'])
+                  ->where('quarter',  $params['quarter'])
+                  ->where('month',    $params['month']);
             });
             $first = false;
         }
 
-        // Tambah 'semester' di select, hapus 'day'
         $timeRows = $query->get(['time_id', 'decade', 'year', 'semester', 'quarter', 'month']);
 
         foreach ($paramsMap as $cacheKey => $params) {
             foreach ($timeRows as $tr) {
                 if ($tr->decade   == $params['decade']   &&
                     $tr->year     == $params['year']     &&
-                    $tr->semester == $params['semester'] &&  // ← tambah
+                    $tr->semester == $params['semester'] &&
                     $tr->quarter  == $params['quarter']  &&
                     $tr->month    == $params['month']) {
                     $this->timeCache[$cacheKey] = $tr->time_id;
@@ -448,7 +613,7 @@ class DataImport
 
         if (empty($timeIds)) return;
 
-        $existing = DB::table('data') 
+        $existing = DB::table('data')
             ->whereIn('time_id', $timeIds)
             ->select('metadata_id', 'location_id', 'time_id')
             ->get();
@@ -463,16 +628,23 @@ class DataImport
     // GETTERS
     // ══════════════════════════════════════════════════════════
 
-    public function getImportedCount(): int  { return $this->imported;   }
-    public function getSkippedCount(): int   { return $this->skipped;    }
-    public function getErrors(): array       { return $this->errors;     }
-    public function getDuplicates(): array   { return $this->duplicates; }
+    public function getImportedCount(): int  { return $this->imported;       }
+    public function getSkippedCount(): int   { return $this->skipped;        }
+    public function getErrors(): array       { return $this->errors;         }
+    public function getDuplicates(): array   { return $this->duplicates;     }
+    public function getInvalidMetadata(): array { return $this->invalidMetadata; }
 
     private function buildSummaryMessage(): string
     {
         $msg = "Berhasil mengimpor {$this->imported} data.";
-        if ($this->skipped > 0)          $msg .= " {$this->skipped} duplikat dilewati.";
-        if (count($this->errors) > 0)    $msg .= " " . count($this->errors) . " baris gagal.";
+        if ($this->skipped > 0)                    $msg .= " {$this->skipped} duplikat dilewati.";
+        if (count($this->errors) > 0)              $msg .= " " . count($this->errors) . " baris gagal.";
+
+        $invalidMeta = array_unique(array_column($this->invalidMetadata, 'metadata_id'));
+        if (!empty($invalidMeta)) {
+            $msg .= " " . count($invalidMeta) . " metadata tidak aktif/tidak ditemukan dilewati.";
+        }
+
         return $msg;
     }
 }

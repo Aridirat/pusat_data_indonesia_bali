@@ -126,8 +126,7 @@
                         </td>
                         <td class="px-4 py-3 text-xs">
                             @if($row->location)
-                                <p class="font-medium text-gray-700">{{ $row->location->kabupaten }}</p>
-                                <p class="text-gray-400">{{ $row->location->kecamatan }}, {{ $row->location->desa }}</p>
+                                <p class="font-medium text-gray-400">{{ $row->location->nama_wilayah }}</p>
                             @else
                                 <span class="text-gray-400">-</span>
                             @endif

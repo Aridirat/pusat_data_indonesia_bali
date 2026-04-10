@@ -205,12 +205,7 @@
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
                         @php
                             $locFields = [
-                                'Provinsi'          => $datum->location->provinsi,
-                                'Kabupaten/Kota'    => $datum->location->kabupaten,
-                                'Kecamatan'         => $datum->location->kecamatan,
-                                'Desa/Kelurahan'    => $datum->location->desa,
-                                'Banjar'            => $datum->location->banjar,
-                                'RT'                => $datum->location->rt,
+                                'Nama Lokasi'          => $datum->location->nama_wilayah,
                             ];
                         @endphp
                         @foreach($locFields as $label => $value)
@@ -226,10 +221,7 @@
                     {{-- Kode wilayah --}}
                     <div class="mt-4 pt-4 border-t flex flex-wrap gap-3">
                         @foreach([
-                            'Kode Provinsi'   => $datum->location->kode_provinsi,
-                            'Kode Kabupaten'  => $datum->location->kode_kabupaten,
-                            'Kode Kecamatan'  => $datum->location->kode_kecamatan,
-                            'Kode Desa'       => $datum->location->kode_desa,
+                            'Kode Lokasi'   => $datum->location->location_id,
                         ] as $label => $kode)
                             @if($kode)
                                 <div class="bg-gray-50 border rounded-md px-3 py-1.5 text-xs">
