@@ -1,6 +1,79 @@
 @extends('layouts.main')
 
 @section('content')
+
+<style>
+    /* --- Base Tom Select Overrides --- */
+    .ts-wrapper { font-size: 0.75rem; }
+    .ts-wrapper.form-control, 
+    .ts-wrapper.form-select { padding: 0; border: none; background: transparent; }
+
+    .ts-control {
+        border: 1px solid #d1d5db !important;
+        border-radius: 0.375rem !important;
+        padding: 0.5rem 0.5rem !important;
+        min-height: 2rem !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        transition: border-color .15s, box-shadow .15s;
+        cursor: pointer;
+    }
+
+    .ts-control input {
+        font-size: 0.75rem !important;
+        color: #374151 !important;
+        line-height: 1.4 !important;
+    }
+
+    .ts-control input::placeholder { color: #9ca3af !important; }
+
+    .ts-wrapper.focus .ts-control {
+        border-color: #38bdf8 !important;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, .25) !important;
+    }
+
+    /* --- State: Disabled --- */
+    .ts-wrapper.disabled .ts-control {
+        background: #f9fafb !important;
+        border-color: #e5e7eb !important;
+        cursor: not-allowed !important;
+        opacity: 1 !important;
+    }
+    .ts-wrapper.disabled .ts-control input { color: #9ca3af !important; cursor: not-allowed !important; }
+    .ts-wrapper.disabled .ts-control .item { color: #9ca3af !important; }
+
+    /* --- Dropdown Style --- */
+    .ts-dropdown {
+        border: 1px solid #e5e7eb !important;
+        border-radius: .5rem !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .08) !important;
+        margin-top: 3px !important;
+        overflow: hidden;
+        z-index: 9999 !important;
+    }
+
+    .ts-dropdown .ts-dropdown-content { max-height: 220px; }
+    
+    .ts-dropdown [data-selectable] {
+        font-size: .75rem;
+        padding: .45rem .875rem;
+        color: #374151;
+        transition: background .1s;
+    }
+
+    .ts-dropdown .option:hover,
+    .ts-dropdown [data-selectable].highlight { background: #f0f9ff !important; color: #0369a1 !important; }
+    
+    .ts-dropdown .option.selected,
+    .ts-dropdown .option.active { background: #f5f5f5 !important; color: #282828 !important; font-weight: 600; }
+
+    /* --- Utils --- */
+    .ts-dropdown .highlight { background: #fef9c3; border-radius: 2px; font-weight: 600; }
+    .ts-wrapper.single .ts-control::after { border-color: #9ca3af transparent transparent !important; }
+    .ts-wrapper.auto-field .ts-control { background: #f0f9ff !important; border-color: #bae6fd !important; }
+</style>
+
+
 <div class="py-6">
 
     <a href="{{ route('data.index') }}"
@@ -10,8 +83,16 @@
 
     <div class="mt-2 bg-white rounded-xl shadow p-6">
 
-        <h1 class="text-xl font-bold text-gray-800 mb-1">Input Data</h1>
-        <p class="text-sm text-gray-400 mb-6">Data akan menunggu verifikasi admin sebelum ditampilkan</p>
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 mb-1">Input Data</h1>
+                <p class="text-sm text-gray-400 mb-6">Data akan menunggu verifikasi admin sebelum ditampilkan</p>
+            </div>
+            <div class="text-right text-sm text-gray-500">
+                <p id="current-date"></p>
+                <p id="current-time" class="font-mono text-sky-600 font-semibold"></p>
+            </div>
+        </div>
 
         {{-- DUPLICATE WARNING --}}
         @if(session('duplicate_warning'))
@@ -55,127 +136,199 @@
         <div id="panel-manual">
             <form action="{{ route('data.store') }}" method="POST" class="space-y-5">
                 @csrf
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                    {{-- Metadata --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                            Metadata <span class="text-red-500">*</span>
-                        </label>
-                        <select name="metadata_id" id="metadataSelect" required
-                            class="w-full border @error('metadata_id') border-red-400 @else border-gray-300 @enderror
-                                   rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
-                                   focus:ring-sky-400 bg-white"
-                            onchange="updateMetadataInfo(this)">
-                            <option value="">-- Pilih Metadata --</option>
-                            @foreach($metadataList as $meta)
-                                <option value="{{ $meta->metadata_id }}"
-                                    data-tipe="{{ $meta->tipe_data }}"
-                                    data-satuan="{{ $meta->satuan_data }}"
-                                    {{ old('metadata_id') == $meta->metadata_id ? 'selected' : '' }}>
-                                    {{ $meta->nama }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('metadata_id')
-                            <p class="mt-1 text-xs text-red-500">
-                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                            </p>
-                        @enderror
-                        <div id="metadataInfo"
-                             class="hidden mt-2 px-3 py-2 bg-sky-50 border border-sky-100
-                                    rounded-md text-xs text-sky-700">
-                            <span id="metadataTipe"></span> •
-                            Satuan: <span id="metadataSatuan"></span>
+ 
+                {{-- METADATA --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Metadata <span class="text-red-500">*</span>
+                    </label>
+                    <select name="metadata_id" id="metadataSelect" required>
+                        <option value="">Cari atau pilih metadata…</option>
+                        @foreach($metadataList as $meta)
+                            <option value="{{ $meta->metadata_id }}"
+                                data-tipe="{{ $meta->tipe_data }}"
+                                data-satuan="{{ $meta->satuan_data }}"
+                                data-frekuensi="{{ $meta->frekuensi_penerbitan }}"
+                                data-flag-desimal="{{ $meta->flag_desimal }}"
+                                {{ old('metadata_id') == $meta->metadata_id ? 'selected' : '' }}>
+                                {{ $meta->nama }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('metadata_id')
+                        <p class="mt-1 text-xs text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                    @enderror
+                    <div id="metadataInfo" class="hidden mt-2 px-3 py-2 bg-sky-50 border border-sky-100 rounded-md text-xs text-sky-700">
+                        <span id="metadataTipe"></span> •
+                        Satuan: <span id="metadataSatuan"></span> •
+                        Frekuensi: <span id="metadataFrekuensi"></span>
+                    </div>
+                </div>
+ 
+                {{-- LOKASI --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Lokasi <span class="text-red-500">*</span>
+                        <span class="text-gray-400 font-normal text-xs ml-1">— Pilih hingga level yang diperlukan</span>
+                    </label>
+                    <div class="flex flex-col md:flex-row md:gap-3 gap-3">
+ 
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Provinsi <span class="text-red-500">*</span></label>
+                            <select name="provinsi_id" id="selProvinsi"  required>
+                                <option value="">Cari provinsi…</option>
+                                @foreach($provinsiList as $loc)
+                                    <option value="{{ $loc->location_id }}"
+                                        {{ old('provinsi_id') == $loc->location_id ? 'selected' : '' }}>
+                                        {{ $loc->nama_wilayah }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
+ 
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Kabupaten / Kota</label>
+                            <select name="kabupaten_id" id="selKabupaten">
+                                <option value="">— Pilih Provinsi dulu —</option>
+                            </select>
+                        </div>
+ 
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Kecamatan</label>
+                            <select name="kecamatan_id" id="selKecamatan">
+                                <option value="">— Pilih Kab/Kota dulu —</option>
+                            </select>
+                        </div>
+ 
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Desa / Kelurahan</label>
+                            <select name="desa_id" id="selDesa">
+                                <option value="">— Pilih Kecamatan dulu —</option>
+                            </select>
+                        </div>
+ 
                     </div>
-
-                    {{-- Lokasi --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                            Lokasi <span class="text-red-500">*</span>
-                        </label>
-                        <select name="location_id" required
-                            class="w-full border @error('location_id') border-red-400 @else border-gray-300 @enderror
-                                   rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2
-                                   focus:ring-sky-400 bg-white">
-                            <option value="">-- Pilih Lokasi --</option>
-                            @foreach($locationList as $loc)
-                                <option value="{{ $loc->location_id }}"
-                                    {{ old('location_id') == $loc->location_id ? 'selected' : '' }}>
-                                    {{ $loc->nama_wilayah }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('location_id')
-                            <p class="mt-1 text-xs text-red-500">
-                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                            </p>
-                        @enderror
+                    <div id="lokasiInfo" class="hidden mt-2 px-3 py-2 bg-sky-50 border border-sky-100 rounded-md text-xs text-sky-700 flex items-center gap-2">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="lokasiInfoText"></span>
                     </div>
-
-                    {{-- Waktu --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                            Waktu <span class="text-red-500">*</span>
-                        </label>
-                        <div class="flex gap-2">
-                            <select id="filterDekade"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
-                                onchange="filterWaktu()">
-                                <option value="">Dekade</option>
+                    @error('location_id')
+                        <p class="mt-1 text-xs text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                    @enderror
+                </div>
+ 
+                {{-- WAKTU --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Waktu <span class="text-red-500">*</span>
+                    </label>
+                    <input type="hidden" name="time_id" id="selectedTimeId" value="{{ old('time_id') }}">
+ 
+                    <div class="flex gap-2 flex-wrap md:flex-nowrap">
+ 
+                        <div class="w-full md:w-1/5">
+                            <label class="block text-xs text-gray-500 mb-1">Dekade</label>
+                            <select id="filterDekade">
+                                <option value="">—</option>
                                 @foreach($timeList->pluck('decade')->unique()->sortDesc() as $decade)
                                     <option value="{{ $decade }}">{{ $decade }}</option>
                                 @endforeach
                             </select>
-                            <select id="filterTahun"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
-                                onchange="filterWaktu()">
-                                <option value="">Tahun</option>
-                                @foreach($timeList->pluck('year')->unique()->sortDesc() as $yr)
+                            <p class="mt-1 text-xs italic text-gray-400" id="hintDekade"></p>
+                        </div>
+ 
+                        <div class="w-full md:w-1/5">
+                            <label class="block text-xs text-gray-500 mb-1">Tahun</label>
+                            <select id="filterTahun">
+                                <option value="0">—</option>
+                                @foreach($timeList->pluck('year')->filter()->unique()->sortDesc() as $yr)
                                     <option value="{{ $yr }}">{{ $yr }}</option>
                                 @endforeach
                             </select>
-                            <select id="filterBulan"
-                                class="border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white w-1/3"
-                                onchange="filterWaktu()">
-                                <option value="">Bulan</option>
+                            <p class="mt-1 text-xs italic text-gray-400" id="hintTahun"></p>
+                        </div>
+ 
+                        <div class="w-full md:w-1/5">
+                            <label class="block text-xs text-gray-500 mb-1">Semester</label>
+                            <select id="filterSemester">
+                                <option value="0">—</option>
+                                <option value="1">Semester 1</option>
+                                <option value="2">Semester 2</option>
+                            </select>
+                            <p class="mt-1 text-xs italic text-gray-400" id="hintSemester"></p>
+                        </div>
+ 
+                        <div class="w-full md:w-1/5">
+                            <label class="block text-xs text-gray-500 mb-1">Kuartal</label>
+                            <select id="filterKuartal">
+                                <option value="0">—</option>
+                                <option value="1">Q1 (Jan–Mar)</option>
+                                <option value="2">Q2 (Apr–Jun)</option>
+                                <option value="3">Q3 (Jul–Sep)</option>
+                                <option value="4">Q4 (Okt–Des)</option>
+                            </select>
+                            <p class="mt-1 text-xs italic text-gray-400" id="hintKuartal"></p>
+                        </div>
+ 
+                        <div class="w-full md:w-1/5">
+                            <label class="block text-xs text-gray-500 mb-1">Bulan</label>
+                            <select id="filterBulan">
+                                <option value="0">—</option>
                                 @foreach(['Januari','Februari','Maret','April','Mei','Juni',
-                                          'Juli','Agustus','September','Oktober','November','Desember']
-                                         as $i => $bulan)
+                                        'Juli','Agustus','September','Oktober','November','Desember'] as $i => $bulan)
                                     <option value="{{ $i + 1 }}">{{ $bulan }}</option>
                                 @endforeach
                             </select>
+                            <p class="mt-1 text-xs italic text-gray-400" id="hintBulan"></p>
                         </div>
-                        @error('time_id')
-                            <p class="mt-1 text-xs text-red-500">
-                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                            </p>
-                        @enderror
+ 
                     </div>
-
-                    {{-- Nilai Angka --}}
+ 
+                    <div id="waktuInfo" class="hidden mt-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md text-xs text-green-700 flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span id="waktuInfoText"></span>
+                    </div>
+                    <div id="waktuHint" class="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-700 flex items-center gap-2">
+                        <i class="fas fa-info-circle"></i>
+                        Pilih Metadata terlebih dahulu untuk mengaktifkan pilihan waktu.
+                    </div>
+ 
+                    @error('time_id')
+                        <p class="mt-1 text-xs text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                    @enderror
+                </div>
+ 
+                {{-- NILAI ANGKA --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                             Nilai Angka
                             <span id="satuanLabel" class="text-gray-400 font-normal text-xs ml-1"></span>
                         </label>
-                        <input type="number" name="number_value" step="0.01"
-                            value="{{ old('number_value') }}"
-                            placeholder="Contoh: 110.50"
-                            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                                   focus:outline-none focus:ring-2 focus:ring-sky-400">
+                        <input type="hidden" name="number_value" id="hiddenNumberValue" value="{{ old('number_value') }}">
+                        <div class="relative">
+                            <input type="text" id="displayNumberValue"
+                                placeholder="Masukkan nilai angka"
+                                inputmode="decimal"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-sky-400 transition-colors"
+                                oninput="onNumberInput(this)"
+                                onblur="onNumberBlur(this)"
+                                onfocus="onNumberFocus(this)">
+                            <span id="desimalBadge"
+                                  class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-xs
+                                         px-2 py-0.5 rounded-full bg-sky-100 text-sky-600 font-medium
+                                         pointer-events-none select-none">desimal</span>
+                        </div>
+                        <div id="flagDesimalInfo" class="hidden mt-1.5">
+                            <p id="flagDesimalText" class="text-xs"></p>
+                        </div>
                         @error('number_value')
                             <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
-
                 </div>
-
+ 
                 <div class="flex justify-end pt-2">
                     <button type="submit"
                         class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-md shadow
@@ -198,11 +351,11 @@
                 </p>
                 <p class="text-xs text-gray-600 mb-3">
                     Gunakan file template yang di-generate dari halaman
-                    <strong>Daftar Metadata → Export Template</strong>
+                    <strong> Metadata → Export Template</strong>
                     dengan struktur kolom:
                 </p>
                 <div class="flex flex-wrap gap-1.5 mb-3">
-                    @foreach(['metadata_id','nama_metadata','kode_wilayah','nama_lokasi'] as $col)
+                    @foreach(['metadata_id','nama_metadata','location_id','nama_wilayah'] as $col)
                         <code class="px-2 py-0.5 rounded text-xs font-mono font-bold"
                               style="background:#e0f2fe; color:#0369a1;">{{ $col }}</code>
                     @endforeach
@@ -271,10 +424,71 @@
             {{-- PREVIEW RESULT --}}
             <div id="previewSection" class="hidden mt-6 space-y-4">
 
-                {{-- Statistik ringkasan --}}
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="statsGrid"></div>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3" id="statsGrid"></div>
 
-                {{-- Alert: periode tidak ditemukan di tabel time --}}
+                <div id="invalidMetaSection" class="hidden rounded-xl overflow-hidden"
+                     style="border: 1px solid #c084fc;">
+                    <div class="flex items-center gap-2.5 px-4 py-3 cursor-pointer select-none"
+                         style="background: #faf5ff;"
+                         onclick="toggleSection('meta')">
+                        <div class="flex items-center justify-center w-7 h-7 rounded-full shrink-0"
+                             style="background:#ede9fe;">
+                            <svg class="w-4 h-4" style="color:#7c3aed;" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                      d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                                      clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold" style="color:#6d28d9;">
+                                Metadata Tidak Valid — Data Tidak Akan Diimport
+                            </p>
+                            <p class="text-xs mt-0.5" style="color:#7c3aed;" id="invalidMetaSubtitle"></p>
+                        </div>
+                        <span id="metaBadge"
+                              class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+                              style="background:#ede9fe; color:#6d28d9; border:1px solid #c084fc;"></span>
+                        <svg id="metaChevron"
+                             class="w-4 h-4 shrink-0 transition-transform duration-200"
+                             style="color:#a78bfa;"
+                             viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 6l4 4 4-4"/>
+                        </svg>
+                    </div>
+                    <div id="metaBody" class="hidden" style="border-top:1px solid #e9d5ff;">
+                        <div class="px-4 py-2.5 text-xs flex items-start gap-2"
+                             style="background:#fdf4ff; color:#86198f;">
+                            <i class="fas fa-lightbulb mt-0.5 shrink-0" style="color:#c026d3;"></i>
+                            <span>
+                                Data dari metadata berikut <strong>dilewati sepenuhnya</strong>.
+                                Pastikan metadata sudah terdaftar di sistem dan berstatus
+                                <strong>Active</strong> sebelum mengimpor.
+                            </span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead style="background:#f3e8ff;">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold w-24" style="color:#7c3aed;">ID</th>
+                                        <th class="px-3 py-2 text-left font-semibold" style="color:#7c3aed;">Nama Metadata</th>
+                                        <th class="px-3 py-2 text-left font-semibold" style="color:#7c3aed;">Keterangan</th>
+                                        <th class="px-3 py-2 text-left font-semibold" style="color:#7c3aed;">Baris</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="metaTableBody" class="divide-y" style="divide-color:#f3e8ff;"></tbody>
+                            </table>
+                        </div>
+                        <button id="metaShowMore"
+                                class="hidden w-full flex items-center justify-center gap-1.5 py-2 text-xs transition-colors"
+                                style="color:#7c3aed; border-top:1px solid #e9d5ff;"
+                                onclick="showMore('meta')">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"
+                                 stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4"/></svg>
+                            <span id="metaShowMoreTxt"></span>
+                        </button>
+                    </div>
+                </div>
+
                 <div id="timeNotFoundAlert" class="hidden rounded-lg p-4 text-sm"
                      style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c;">
                     <p class="font-semibold flex items-center gap-2 mb-1">
@@ -287,7 +501,6 @@
                     </p>
                 </div>
 
-                {{-- Error baris --}}
                 <div id="errorSection" class="hidden rounded-xl overflow-hidden border border-red-200">
                     <div class="flex items-center gap-2.5 px-4 py-2.5 bg-red-50 cursor-pointer select-none"
                          onclick="toggleSection('err')">
@@ -322,7 +535,6 @@
                     </div>
                 </div>
 
-                {{-- Duplikat --}}
                 <div id="dupSection" class="hidden rounded-xl overflow-hidden border border-amber-200">
                     <div class="flex items-center gap-2.5 px-4 py-2.5 bg-amber-50 cursor-pointer select-none"
                          onclick="toggleSection('dup')">
@@ -365,7 +577,6 @@
                     </div>
                 </div>
 
-                {{-- Data valid (preview max 20 record) --}}
                 <div id="validSection" class="hidden">
                     <div class="flex items-center gap-2 mb-2">
                         <span class="w-2 h-2 rounded-full bg-green-400"></span>
@@ -387,7 +598,6 @@
                     <p id="validMore" class="hidden text-xs text-gray-400 text-right mt-1"></p>
                 </div>
 
-                {{-- Tombol Import --}}
                 <div class="flex items-center justify-between pt-2 border-t border-gray-100">
                     <button onclick="resetUpload()"
                             class="text-sm text-gray-500 hover:text-gray-700 transition-colors
@@ -395,20 +605,16 @@
                         <i class="fas fa-arrow-left"></i> Ganti File
                     </button>
                     <button id="btnImport" onclick="doImport()" disabled
-                            class="flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-semibold
-                                   text-white shadow transition-colors
-                                   disabled:bg-gray-300 disabled:cursor-not-allowed"
-                            style="background:#0284c7;"
-                            onmouseover="if(!this.disabled) this.style.background='#0369a1'"
-                            onmouseout="if(!this.disabled) this.style.background='#0284c7'">
+                        class="flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-semibold
+                            text-white shadow transition-colors
+                            bg-sky-600 hover:bg-sky-700
+                            disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
                         <i class="fas fa-file-import"></i>
                         <span id="btnImportText">Import Data</span>
                     </button>
                 </div>
+            </div>
 
-            </div>{{-- end previewSection --}}
-
-            {{-- Import sedang berjalan --}}
             <div id="importingBar" class="hidden mt-5">
                 <div class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
                      style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;">
@@ -420,7 +626,6 @@
                 </div>
             </div>
 
-            {{-- Hasil import --}}
             <div id="importResult" class="hidden mt-4"></div>
 
         </div>{{-- end panel-excel --}}
@@ -436,28 +641,522 @@ const CSRF        = '{{ csrf_token() }}';
 const PREVIEW_URL = '{{ route("data.preview_excel") }}';
 const IMPORT_URL  = '{{ route("data.import_excel") }}';
 
-/* ─────────────────────────────────────────────────────────────
-   STATE — scope global agar bisa diakses dari onclick HTML
-───────────────────────────────────────────────────────────── */
-let currentFile = null;
-let previewData = null;
+const TIME_LIST     = @json($timeListJs);
+const LOCATION_LIST = @json($locationListJs);
 
-// State pagination collapse per section
-// Dideklarasikan di luar renderPreview() agar toggleSection,
-// renderRows, showMore bisa mengaksesnya dari onclick="..."
-const ROWS_PER_PAGE = 5;
-const sectionState  = {
-    err: { data: [], shown: 0 },
-    dup: { data: [], shown: 0 },
+const PREFIX = {
+    provinsi: 2,
+    kabupaten: 4,
+    kecamatan: 6,
+    desa: 7,
 };
 
-/* ─────────────────────────────────────────────────────────────
-   TAB SWITCHER
-───────────────────────────────────────────────────────────── */
+// ══════════════════════════════════════════════════════════════
+// STATE METADATA
+// ══════════════════════════════════════════════════════════════
+let currentFrekuensi = '';
+let currentFlagDesimal = 0;
+
+/** Registry semua Tom Select instance, key = element id */
+const TS = {};
+ 
+// ══════════════════════════════════════════════════════════════
+// TOM SELECT — HELPERS
+// ══════════════════════════════════════════════════════════════
+ 
+/** Buat instance Tom Select baru */
+function makeTS(id, extraOpts = {}, onChange = null) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+ 
+    const ts = new TomSelect(`#${id}`, Object.assign({
+        allowEmptyOption : true,
+        searchField      : ['text'],
+        maxOptions       : 500,
+        highlight        : true,
+        selectOnTab      : true,
+        openOnFocus      : true,
+        render: {
+            no_results: () => `<div class="no-results">Tidak ditemukan hasil yang cocok</div>`,
+        },
+    }, extraOpts));
+ 
+    if (onChange) ts.on('change', onChange);
+    TS[id] = ts;
+    return ts;
+}
+ 
+/** Ambil nilai string dari Tom Select */
+function tsVal(id) { return TS[id]?.getValue() ?? ''; }
+ 
+/** Ambil nilai integer dari Tom Select */
+function tsInt(id) { return parseInt(TS[id]?.getValue()) || 0; }
+ 
+/** Set value (silent — tidak trigger event) */
+function tsSet(id, val) {
+    const ts = TS[id];
+    if (!ts) return;
+    const wasDis = ts.isDisabled;
+    if (wasDis) ts.enable();
+    ts.setValue(String(val), true);
+    if (wasDis) ts.disable();
+}
+ 
+/** Enable + hapus auto-class */
+function tsEnable(id) {
+    const ts = TS[id];
+    if (!ts) return;
+    ts.enable();
+    ts.wrapper.classList.remove('auto-field');
+}
+ 
+/** Disable + clear + ganti placeholder */
+function tsDisable(id, placeholder) {
+    const ts = TS[id];
+    if (!ts) return;
+    ts.enable(); // enable dulu agar setValue jalan
+    ts.setValue('', true);
+    ts.disable();
+    ts.wrapper.classList.remove('auto-field');
+    if (placeholder) {
+        ts.settings.placeholder = placeholder;
+        ts.inputState();
+    }
+}
+ 
+/** Disable dengan warna sky (field otomatis) */
+function tsAuto(id) {
+    const ts = TS[id];
+    if (!ts) return;
+    ts.disable();
+    ts.wrapper.classList.add('auto-field');
+}
+ 
+/** Clear opsi lama, isi opsi baru, enable */
+function tsRebuild(id, items, emptyLabel) {
+    const ts = TS[id];
+    if (!ts) return;
+    ts.enable();
+    ts.clearOptions();
+    ts.addOption({ value: '', text: emptyLabel });
+    items.forEach(loc =>
+        ts.addOption({ value: String(loc.location_id), text: loc.nama_wilayah })
+    );
+    ts.setValue('', true);
+    ts.settings.placeholder = emptyLabel;
+    ts.inputState();
+    ts.wrapper.classList.remove('auto-field');
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT — setelah DOM ready
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+ 
+    // ── METADATA ──────────────────────────────────────────────
+    makeTS('metadataSelect', { placeholder: 'Cari atau pilih metadata…' }, () => {
+        onMetadataChange(document.getElementById('metadataSelect'));
+    });
+ 
+    // ── LOKASI ────────────────────────────────────────────────
+    makeTS('selProvinsi',   { placeholder: 'Cari provinsi…' },         v => onProvinsiChange(v));
+    makeTS('selKabupaten',  { placeholder: '— Pilih Provinsi dulu —' }, v => onKabupatenChange(v));
+    makeTS('selKecamatan',  { placeholder: '— Pilih Kab/Kota dulu —' }, v => onKecamatanChange(v));
+    makeTS('selDesa',       { placeholder: '— Pilih Kecamatan dulu —' });
+ 
+    tsDisable('selKabupaten', '— Pilih Provinsi dulu —');
+    tsDisable('selKecamatan', '— Pilih Kab/Kota dulu —');
+    tsDisable('selDesa',      '— Pilih Kecamatan dulu —');
+ 
+    // Lokasiinfo update tiap perubahan
+    ['selProvinsi','selKabupaten','selKecamatan','selDesa'].forEach(id =>
+        TS[id]?.on('change', updateLokasiInfo)
+    );
+ 
+    // ── WAKTU ─────────────────────────────────────────────────
+    makeTS('filterDekade',   { placeholder: '—' }, () => onWaktuChange());
+    makeTS('filterTahun',    { placeholder: '—' }, () => onWaktuChange());
+    makeTS('filterSemester', { placeholder: '—' }, () => onWaktuChange());
+    makeTS('filterKuartal',  { placeholder: '—' }, () => onWaktuChange());
+    makeTS('filterBulan',    { placeholder: '—' }, () => onWaktuChange());
+    ['filterDekade','filterTahun','filterSemester','filterKuartal','filterBulan']
+        .forEach(id => tsDisable(id));
+ 
+    // ── Restore old() values ──────────────────────────────────
+    const metaSel = document.getElementById('metadataSelect');
+    if (metaSel?.value) {
+        TS['metadataSelect']?.setValue(metaSel.value, true);
+        onMetadataChange(metaSel);
+    }
+ 
+    @if(old('provinsi_id'))
+        TS['selProvinsi']?.setValue('{{ old("provinsi_id") }}', true);
+        onProvinsiChange('{{ old("provinsi_id") }}');
+    @endif
+    @if(old('kabupaten_id'))
+        setTimeout(() => {
+            TS['selKabupaten']?.setValue('{{ old("kabupaten_id") }}', true);
+            onKabupatenChange('{{ old("kabupaten_id") }}');
+        }, 60);
+    @endif
+    @if(old('kecamatan_id'))
+        setTimeout(() => {
+            TS['selKecamatan']?.setValue('{{ old("kecamatan_id") }}', true);
+            onKecamatanChange('{{ old("kecamatan_id") }}');
+        }, 120);
+    @endif
+    @if(old('desa_id'))
+        setTimeout(() => TS['selDesa']?.setValue('{{ old("desa_id") }}', true), 180);
+    @endif
+ 
+    // Restore nilai angka
+    const oldNum = document.getElementById('hiddenNumberValue').value;
+    if (oldNum) {
+        const num = parseFloat(oldNum);
+        if (!isNaN(num))
+            document.getElementById('displayNumberValue').value =
+                formatRibuan(num, currentFlagDesimal === 1);
+    }
+ 
+    @if($errors->any() || session('duplicate_warning'))
+        switchTab('manual');
+    @endif
+});
+
+// ══════════════════════════════════════════════════════════════
+// 1. CASCADING LOKASI
+// ══════════════════════════════════════════════════════════════
+// location_id diasumsikan menggunakan kode BPS (prefix-based hierarchy)
+// Fallback: tampilkan semua jika prefix tidak cocok
+const PREFIX_LEN = { provinsi: 2, kabupaten: 4, kecamatan: 6 };
+ 
+function filterByPrefix(level, parentId, parentLevel) {
+    const prefix = String(parentId).substring(0, PREFIX_LEN[parentLevel]);
+    const all    = LOCATION_LIST.filter(l => l.level === level);
+    const filt   = all.filter(l => String(l.location_id).startsWith(prefix));
+    return filt.length > 0 ? filt : all; // fallback
+}
+ 
+function onProvinsiChange(value) {
+    tsDisable('selKabupaten', '— Pilih Provinsi dulu —');
+    tsDisable('selKecamatan', '— Pilih Kab/Kota dulu —');
+    tsDisable('selDesa',      '— Pilih Kecamatan dulu —');
+    if (!value) return;
+ 
+    const items = filterByPrefix('kabupaten', value, 'provinsi');
+    tsRebuild('selKabupaten', items, 'Cari kabupaten/kota…');
+}
+ 
+function onKabupatenChange(value) {
+    tsDisable('selKecamatan', '— Pilih Kab/Kota dulu —');
+    tsDisable('selDesa',      '— Pilih Kecamatan dulu —');
+    if (!value) return;
+ 
+    const items = filterByPrefix('kecamatan', value, 'kabupaten');
+    tsRebuild('selKecamatan', items, 'Cari kecamatan…');
+}
+ 
+function onKecamatanChange(value) {
+    tsDisable('selDesa', '— Pilih Kecamatan dulu —');
+    if (!value) return;
+ 
+    const items = filterByPrefix('desa', value, 'kecamatan');
+    tsRebuild('selDesa', items, 'Cari desa/kelurahan…');
+}
+ 
+function updateLokasiInfo() {
+    const labels = ['selProvinsi','selKabupaten','selKecamatan','selDesa']
+        .map(id => {
+            const v = tsVal(id);
+            if (!v) return null;
+            return TS[id]?.options[v]?.text ?? null;
+        })
+        .filter(Boolean);
+ 
+    const infoEl = document.getElementById('lokasiInfo');
+    if (labels.length > 0) {
+        document.getElementById('lokasiInfoText').textContent = labels.join(' → ');
+        infoEl.classList.remove('hidden');
+    } else {
+        infoEl.classList.add('hidden');
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 2. WAKTU (Frekuensi-aware)
+// ══════════════════════════════════════════════════════════════
+const FREKUENSI_CONFIG = {
+    'dekade'  : { dekade:{editable:true,hint:'Wajib diisi'},   tahun:{hidden:true,hint:'Tidak berlaku'},   semester:{hidden:true,hint:'Tidak berlaku'}, quarter:{hidden:true,hint:'Tidak berlaku'}, bulan:{hidden:true,hint:'Tidak berlaku'} },
+    'tahunan' : { dekade:{auto:true,hint:'Otomatis dari tahun'},tahun:{editable:true,hint:'Wajib diisi'},   semester:{hidden:true,hint:'Tidak berlaku'}, quarter:{hidden:true,hint:'Tidak berlaku'}, bulan:{hidden:true,hint:'Tidak berlaku'} },
+    'semester': { dekade:{auto:true,hint:'Otomatis dari tahun'},tahun:{editable:true,hint:'Wajib diisi'},   semester:{editable:true,hint:'Wajib diisi'}, quarter:{hidden:true,hint:'Tidak berlaku'}, bulan:{hidden:true,hint:'Tidak berlaku'} },
+    'quarter' : { dekade:{auto:true,hint:'Otomatis dari tahun'},tahun:{editable:true,hint:'Wajib diisi'},   semester:{auto:true,hint:'Otomatis dari kuartal'}, quarter:{editable:true,hint:'Wajib diisi'}, bulan:{hidden:true,hint:'Tidak berlaku'} },
+    'bulanan' : { dekade:{auto:true,hint:'Otomatis dari tahun'},tahun:{editable:true,hint:'Wajib diisi'},   semester:{auto:true,hint:'Otomatis dari bulan'}, quarter:{auto:true,hint:'Otomatis dari bulan'}, bulan:{editable:true,hint:'Wajib diisi'} },
+};
+ 
+const FIELD_MAP = { dekade:'filterDekade', tahun:'filterTahun', semester:'filterSemester', quarter:'filterKuartal', bulan:'filterBulan' };
+const HINT_MAP  = { dekade:'hintDekade',   tahun:'hintTahun',   semester:'hintSemester',   quarter:'hintKuartal',   bulan:'hintBulan'  };
+ 
+function applyWaktuConfig(frekuensi) {
+    const cfg = FREKUENSI_CONFIG[frekuensi];
+    // Reset semua
+    Object.keys(FIELD_MAP).forEach(k => {
+        tsDisable(FIELD_MAP[k]);
+        tsSet(FIELD_MAP[k], '0');
+        document.getElementById(HINT_MAP[k]).textContent = '';
+    });
+    if (!cfg) return;
+    Object.keys(cfg).forEach(k => {
+        const c = cfg[k];
+        const id = FIELD_MAP[k];
+        document.getElementById(HINT_MAP[k]).textContent = c.hint || '';
+        if (c.editable)    { tsEnable(id); tsSet(id, '0'); }
+        else if (c.auto)   { tsAuto(id); }
+        // hidden: tetap disabled
+    });
+    document.getElementById('waktuHint').classList.add('hidden');
+}
+ 
+function resetWaktuFields() {
+    Object.keys(FIELD_MAP).forEach(k => {
+        tsDisable(FIELD_MAP[k]);
+        tsSet(FIELD_MAP[k], '0');
+        document.getElementById(HINT_MAP[k]).textContent = '';
+    });
+    document.getElementById('selectedTimeId').value = '';
+    document.getElementById('waktuInfo').classList.add('hidden');
+    document.getElementById('waktuHint').classList.remove('hidden');
+}
+ 
+// Kalkulasi otomatis
+const tahunToDekade    = y => Math.floor(y / 10) * 10;
+const bulanToSemester  = b => b <= 6 ? 1 : 2;
+const bulanToKuartal   = b => Math.ceil(b / 3);
+const kuartalToSemester= q => q <= 2 ? 1 : 2;
+ 
+function onWaktuChange() {
+    if (!currentFrekuensi) return;
+    const tahun = tsInt('filterTahun');
+    const q     = tsInt('filterKuartal');
+    const bulan = tsInt('filterBulan');
+ 
+    if (currentFrekuensi === 'tahunan'  && tahun) tsSet('filterDekade',   tahunToDekade(tahun));
+    if (currentFrekuensi === 'semester' && tahun) tsSet('filterDekade',   tahunToDekade(tahun));
+    if (currentFrekuensi === 'quarter') {
+        if (tahun) tsSet('filterDekade',   tahunToDekade(tahun));
+        if (q)     tsSet('filterSemester', kuartalToSemester(q));
+    }
+    if (currentFrekuensi === 'bulanan') {
+        if (tahun) tsSet('filterDekade',   tahunToDekade(tahun));
+        if (bulan) { tsSet('filterSemester', bulanToSemester(bulan)); tsSet('filterKuartal', bulanToKuartal(bulan)); }
+    }
+    resolveTimeId();
+}
+ 
+function resolveTimeId() {
+    const dekade   = tsInt('filterDekade');
+    const tahun    = tsInt('filterTahun');
+    const semester = tsInt('filterSemester');
+    const quarter  = tsInt('filterKuartal');
+    const bulan    = tsInt('filterBulan');
+    let sel = null;
+ 
+    switch (currentFrekuensi) {
+        case 'dekade'  : if (dekade)              sel=TIME_LIST.find(t=>t.decade==dekade&&t.year==0&&t.month==0); break;
+        case 'tahunan' : if (tahun)               sel=TIME_LIST.find(t=>t.year==tahun&&t.month==0&&t.quarter==0&&t.semester==0); break;
+        case 'semester': if (tahun&&semester)     sel=TIME_LIST.find(t=>t.year==tahun&&t.semester==semester&&t.month==0&&t.quarter==0); break;
+        case 'quarter' : if (tahun&&quarter)      sel=TIME_LIST.find(t=>t.year==tahun&&t.quarter==quarter&&t.month==0); break;
+        case 'bulanan' : if (tahun&&bulan)        sel=TIME_LIST.find(t=>t.year==tahun&&t.month==bulan); break;
+    }
+ 
+    const input  = document.getElementById('selectedTimeId');
+    const infoEl = document.getElementById('waktuInfo');
+    const infoTxt= document.getElementById('waktuInfoText');
+    if (sel) { input.value=sel.time_id; infoEl.classList.remove('hidden'); infoTxt.textContent='Waktu dipilih: '+fmtTimeLabel(sel); }
+    else     { input.value='';          infoEl.classList.add('hidden'); }
+}
+ 
+function fmtTimeLabel(t) {
+    if (t.month    !=0) return `${t.year} — Bulan ${t.month}`;
+    if (t.quarter  !=0) return `${t.year} — Kuartal ${t.quarter} (Semester ${t.semester})`;
+    if (t.semester !=0) return `${t.year} — Semester ${t.semester}`;
+    if (t.year     !=0) return `Tahun ${t.year} (Dekade ${t.decade})`;
+    return `Dekade ${t.decade}`;
+}
+// ══════════════════════════════════════════════════════════════
+// 3. NILAI ANGKA (flag_desimal + format ribuan)
+// ══════════════════════════════════════════════════════════════
+
+function parseFormattedNumber(str) {
+    if (!str) return null;
+    // Hapus titik ribuan (id-ID), ganti koma desimal → titik
+    const clean = str.replace(/\./g, '').replace(',', '.');
+    const val = parseFloat(clean);
+    return isNaN(val) ? null : val;
+}
+
+function formatRibuan(val, allowDecimal) {
+    if (val === null || val === undefined || val === '') return '';
+    const num = parseFloat(String(val).replace(/\./g, '').replace(',', '.'));
+    if (isNaN(num)) return '';
+    if (allowDecimal && num % 1 !== 0) {
+        return num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return Math.round(num).toLocaleString('id-ID');
+}
+
+let isTypingNumber = false;
+
+function onNumberInput(input) {
+    isTypingNumber = true;
+    const raw = input.value;
+
+    // Hanya izinkan angka, titik (ribuan), koma (desimal jika boleh)
+    let clean = raw;
+    if (currentFlagDesimal === 0) {
+        // Hanya angka dan titik (untuk ribuan sementara user mengetik)
+        clean = raw.replace(/[^0-9.]/g, '');
+    } else {
+        // Boleh koma untuk desimal
+        clean = raw.replace(/[^0-9.,]/g, '');
+    }
+    if (input.value !== clean) input.value = clean;
+
+    // Simpan ke hidden field (nilai mentah sementara)
+    const numVal = parseFormattedNumber(clean) ?? clean.replace(/\./g, '').replace(',', '.');
+    document.getElementById('hiddenNumberValue').value = numVal;
+}
+
+function onNumberBlur(input) {
+    isTypingNumber = false;
+    const raw  = input.value;
+    if (!raw) {
+        document.getElementById('hiddenNumberValue').value = '';
+        return;
+    }
+
+    // Parse
+    let val = parseFormattedNumber(raw);
+    if (val === null) {
+        // Coba parse langsung
+        val = parseFloat(raw.replace(',', '.'));
+    }
+
+    if (isNaN(val) || val === null) {
+        document.getElementById('hiddenNumberValue').value = '';
+        input.value = '';
+        return;
+    }
+
+    // Validasi: jika flag_desimal = 0, bulatkan
+    if (currentFlagDesimal === 0) {
+        val = Math.round(val);
+    }
+
+    // Simpan value asli ke hidden
+    document.getElementById('hiddenNumberValue').value = val;
+
+    // Format display
+    input.value = formatRibuan(val, currentFlagDesimal === 1);
+}
+
+function onNumberFocus(input) {
+    isTypingNumber = true;
+    // Saat fokus, tampilkan nilai mentah (tanpa format ribuan) untuk kemudahan edit
+    const hiddenVal = document.getElementById('hiddenNumberValue').value;
+    if (hiddenVal) {
+        // Tampilkan angka bersih dengan koma desimal jika ada
+        const num = parseFloat(hiddenVal);
+        if (!isNaN(num)) {
+            if (currentFlagDesimal === 1 && num % 1 !== 0) {
+                input.value = String(num).replace('.', ',');
+            } else {
+                input.value = String(Math.round(num));
+            }
+        }
+    }
+}
+
+function applyFlagDesimal(flag) {
+    currentFlagDesimal = parseInt(flag) || 0;
+    const input      = document.getElementById('displayNumberValue');
+    const badge      = document.getElementById('desimalBadge');
+    const infoEl     = document.getElementById('flagDesimalInfo');
+    const infoTxt    = document.getElementById('flagDesimalText');
+
+    if (currentFlagDesimal === 1) {
+        input.setAttribute('inputmode', 'decimal');
+        badge.classList.remove('hidden');
+        infoEl.classList.remove('hidden');
+        infoTxt.className = 'text-xs text-sky-600';
+        infoTxt.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Metadata ini mendukung nilai desimal (contoh: 1.234,56)';
+    } else {
+        input.setAttribute('inputmode', 'numeric');
+        badge.classList.add('hidden');
+        infoEl.classList.remove('hidden');
+        infoTxt.className = 'text-xs text-gray-400';
+        infoTxt.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Metadata ini hanya menerima bilangan bulat — nilai desimal akan dibulatkan';
+    }
+
+    // Reset dan reformat nilai yang sudah ada
+    const existingVal = document.getElementById('hiddenNumberValue').value;
+    if (existingVal) {
+        const num = parseFloat(existingVal);
+        if (!isNaN(num)) {
+            const rounded = currentFlagDesimal === 0 ? Math.round(num) : num;
+            document.getElementById('hiddenNumberValue').value = rounded;
+            if (!isTypingNumber) {
+                document.getElementById('displayNumberValue').value =
+                    formatRibuan(rounded, currentFlagDesimal === 1);
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// METADATA CHANGE
+// ══════════════════════════════════════════════════════════════
+function onMetadataChange(select) {
+    const opt = select.options[select.selectedIndex];
+    const infoEl = document.getElementById('metadataInfo');
+ 
+    if (opt && (opt.dataset.tipe || opt.dataset.satuan || opt.dataset.frekuensi)) {
+        document.getElementById('metadataTipe').textContent      = 'Tipe: '+(opt.dataset.tipe||'-');
+        document.getElementById('metadataSatuan').textContent    = opt.dataset.satuan||'-';
+        document.getElementById('metadataFrekuensi').textContent = opt.dataset.frekuensi||'-';
+        document.getElementById('satuanLabel').textContent       = opt.dataset.satuan?`(${opt.dataset.satuan})`:'';
+        infoEl.classList.remove('hidden');
+    } else {
+        infoEl.classList.add('hidden');
+        document.getElementById('satuanLabel').textContent = '';
+    }
+ 
+    currentFrekuensi = opt ? (opt.dataset.frekuensi||'').toLowerCase().trim() : '';
+    resetWaktuFields();
+    if (currentFrekuensi) applyWaktuConfig(currentFrekuensi);
+    applyFlagDesimal(opt ? (opt.dataset.flagDesimal ?? '0') : '0');
+}
+
+function resetWaktuFields() {
+    Object.keys(FIELD_MAP).forEach(key => {
+        const sel  = document.getElementById(FIELD_MAP[key]);
+        const hint = document.getElementById(HINT_MAP[key]);
+        sel.disabled = true;
+        sel.value    = '0';
+        sel.classList.add('bg-gray-50', 'text-gray-400');
+        sel.classList.remove('bg-white', 'text-gray-800', 'bg-sky-50', 'text-sky-700');
+        hint.textContent = '';
+    });
+    document.getElementById('selectedTimeId').value = '';
+    document.getElementById('waktuInfo').classList.add('hidden');
+    document.getElementById('waktuHint').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB SWITCHER
+// ══════════════════════════════════════════════════════════════
 function switchTab(tab) {
     document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
     document.getElementById('panel-excel').classList.toggle('hidden',  tab !== 'excel');
-
     const active   = 'border-sky-500 text-sky-600';
     const inactive = 'border-transparent text-gray-400 hover:text-gray-600';
     document.getElementById('tab-manual').className =
@@ -466,40 +1165,18 @@ function switchTab(tab) {
         `tab-btn px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'excel' ? active : inactive}`;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   METADATA INFO (tab manual)
-───────────────────────────────────────────────────────────── */
-function updateMetadataInfo(select) {
-    const opt  = select.options[select.selectedIndex];
-    const info = document.getElementById('metadataInfo');
-    if (opt.dataset.tipe || opt.dataset.satuan) {
-        document.getElementById('metadataTipe').textContent   = 'Tipe: ' + (opt.dataset.tipe || '-');
-        document.getElementById('metadataSatuan').textContent = opt.dataset.satuan || '-';
-        document.getElementById('satuanLabel').textContent    = opt.dataset.satuan ? `(${opt.dataset.satuan})` : '';
-        info.classList.remove('hidden');
-    } else {
-        info.classList.add('hidden');
-    }
-}
+// ══════════════════════════════════════════════════════════════
+// EXCEL UPLOAD (tidak diubah dari versi asli)
+// ══════════════════════════════════════════════════════════════
+let currentFile = null;
+let previewData = null;
+const ROWS_PER_PAGE = 5;
+const sectionState  = {
+    err:  { data: [], shown: 0 },
+    dup:  { data: [], shown: 0 },
+    meta: { data: [], shown: 0 },
+};
 
-/* ─────────────────────────────────────────────────────────────
-   FILTER WAKTU (tab manual)
-───────────────────────────────────────────────────────────── */
-function filterWaktu() {
-    const tahun = document.getElementById('filterTahun').value;
-    const bulan = document.getElementById('filterBulan').value;
-    document.querySelectorAll('#selectHari option[data-year]').forEach(opt => {
-        const ok = (!tahun || opt.dataset.year === tahun)
-                && (!bulan || opt.dataset.month === bulan);
-        opt.style.display = ok ? '' : 'none';
-    });
-    const sel = document.getElementById('selectHari');
-    if (sel.selectedOptions[0]?.style.display === 'none') sel.value = '';
-}
-
-/* ─────────────────────────────────────────────────────────────
-   FILE SELECTION & DRAG-DROP
-───────────────────────────────────────────────────────────── */
 function handleDrop(e) {
     e.preventDefault();
     const zone = document.getElementById('dropZone');
@@ -518,10 +1195,8 @@ function onFileSelected(file) {
         showImportAlert('error', 'Ukuran file maksimal 10MB');
         return;
     }
-
     currentFile = file;
     previewData = null;
-
     document.getElementById('dropZone').classList.add('hidden');
     const bar = document.getElementById('fileInfoBar');
     bar.classList.remove('hidden');
@@ -530,7 +1205,6 @@ function onFileSelected(file) {
         file.size > 1048576
             ? (file.size / 1048576).toFixed(2) + ' MB'
             : (file.size / 1024).toFixed(1) + ' KB';
-
     doPreview();
 }
 
@@ -543,59 +1217,61 @@ function resetUpload() {
     document.getElementById('loadingBar').classList.add('hidden');
     document.getElementById('previewSection').classList.add('hidden');
     document.getElementById('importingBar').classList.add('hidden');
-    document.getElementById('importResult').classList.add('hidden');
-
-    // Reset state pagination
-    sectionState.err = { data: [], shown: 0 };
-    sectionState.dup = { data: [], shown: 0 };
+    sectionState.err  = { data: [], shown: 0 };
+    sectionState.dup  = { data: [], shown: 0 };
+    sectionState.meta = { data: [], shown: 0 };
 }
 
 async function doPreview() {
     document.getElementById('loadingBar').classList.remove('hidden');
     document.getElementById('previewSection').classList.add('hidden');
     document.getElementById('importResult').classList.add('hidden');
-
     const form = new FormData();
     form.append('_token', CSRF);
     form.append('file_excel', currentFile);
-
     try {
         const resp = await fetch(PREVIEW_URL, { method: 'POST', body: form });
-        const json = await resp.json();
-
         document.getElementById('loadingBar').classList.add('hidden');
-
-        if (!json.success) {
-            showImportAlert('error', json.message || 'Gagal membaca file.');
-            resetUpload();
+        if (!resp.ok) {
+            let errMsg = 'File ditolak server (status ' + resp.status + ').';
+            try {
+                const errJson = await resp.json();
+                if (errJson.errors?.file_excel) errMsg = errJson.errors.file_excel[0];
+                else if (errJson.message) errMsg = errJson.message;
+            } catch (_) {}
+            showImportAlertOnly(errMsg);
             return;
         }
-
+        const json = await resp.json();
+        if (!json.success) {
+            showImportAlertOnly(json.message || 'Gagal membaca file.');
+            return;
+        }
         previewData = json;
         renderPreview(json);
-
     } catch (err) {
         document.getElementById('loadingBar').classList.add('hidden');
-        showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
-        resetUpload();
+        showImportAlertOnly('Terjadi kesalahan jaringan: ' + err.message);
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   RENDER PREVIEW
-   Hanya bertanggung jawab mengisi UI dari data JSON.
-   Fungsi collapse (toggleSection, renderRows, showMore)
-   sengaja diletakkan di luar fungsi ini (scope global).
-───────────────────────────────────────────────────────────── */
+function showImportAlertOnly(msg) {
+    const el = document.getElementById('importResult');
+    el.innerHTML = `
+        <div class="flex items-start gap-3 px-4 py-3 rounded-lg text-sm"
+            style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c;">
+            <i class="fas fa-exclamation-circle text-red-400 mt-0.5 shrink-0"></i>
+            <span>${esc(msg)}</span>
+        </div>`;
+    el.classList.remove('hidden');
+}
+
 function renderPreview(json) {
     document.getElementById('previewSection').classList.remove('hidden');
-
-    // ── Statistik ──
     const periodLabel = {
-        tahunan : 'Tahunan', semester: 'Semester',
-        quarter : 'Quarter', bulanan : 'Bulanan', unknown: '?',
+        tahunan:'Tahunan', semester:'Semester', quarter:'Quarter', bulanan:'Bulanan', unknown:'?',
     }[json.period_type] ?? json.period_type;
-
+    const invalidMetaCount = (json.invalid_metadata || []).length;
     document.getElementById('statsGrid').innerHTML = `
         <div class="rounded-lg p-3 text-center" style="background:#f0f9ff; border:1px solid #bae6fd;">
             <p class="text-xl font-bold" style="color:#0369a1;">${json.total_rows}</p>
@@ -612,10 +1288,13 @@ function renderPreview(json) {
         <div class="rounded-lg p-3 text-center" style="background:#fef2f2; border:1px solid #fecaca;">
             <p class="text-xl font-bold" style="color:#b91c1c;">${json.error}</p>
             <p class="text-xs mt-0.5" style="color:#b91c1c;">Baris Error</p>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#faf5ff; border:1px solid #e9d5ff;">
+            <p class="text-xl font-bold" style="color:#6d28d9;">${invalidMetaCount}</p>
+            <p class="text-xs mt-0.5" style="color:#6d28d9;">Metadata Tidak Valid</p>
         </div>`;
 
-    // ── Alert kolom periode tidak ada di tabel time ──
-    const timeErrors    = (json.errors || []).filter(e => e.message?.includes('time_id'));
+    const timeErrors     = (json.errors || []).filter(e => e.message?.includes('time_id'));
     const timeNotFoundEl = document.getElementById('timeNotFoundAlert');
     if (timeErrors.length > 0) {
         const periods = [...new Set(timeErrors.map(e => e.period))].filter(Boolean);
@@ -626,10 +1305,8 @@ function renderPreview(json) {
         timeNotFoundEl.classList.add('hidden');
     }
 
-    // ── Error & Duplikat — isi state lalu serahkan ke initSections ──
     initSections(json);
 
-    // ── Data valid ──
     const validSection = document.getElementById('validSection');
     const validBody    = document.getElementById('validBody');
     const validMore    = document.getElementById('validMore');
@@ -638,10 +1315,10 @@ function renderPreview(json) {
         validBody.innerHTML = json.rows.slice(0, 20).map((r, i) => `
             <tr class="${i % 2 === 1 ? 'bg-green-50' : ''}">
                 <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                <td class="px-3 py-2 text-gray-600">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                <td class="px-3 py-2 text-gray-600">${esc(r.nama_wilayah ?? String(r.location_id))}</td>
                 <td class="px-3 py-2">
                     <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style="background:#fef3c7; color:#b45309;">
+                        style="background:#fef3c7; color:#b45309;">
                         ${esc(String(r.period_label))}
                     </span>
                 </td>
@@ -659,38 +1336,33 @@ function renderPreview(json) {
         validSection.classList.add('hidden');
     }
 
-    // ── Tombol import ──
-    const btn = document.getElementById('btnImport');
+    const btn  = document.getElementById('btnImport');
+    const text = document.getElementById('btnImportText');
     if (json.valid > 0) {
         btn.disabled = false;
-        document.getElementById('btnImportText').textContent =
-            `Import ${json.valid.toLocaleString('id-ID')} Record`;
+        btn.classList.remove('bg-gray-50', 'text-gray-400');
+        btn.classList.add('bg-sky-600', 'hover:bg-sky-700', 'text-white');
+        text.textContent = `Import ${json.valid.toLocaleString('id-ID')} Record`;
     } else {
         btn.disabled = true;
-        document.getElementById('btnImportText').textContent = 'Tidak Ada Data Valid';
+        btn.classList.remove('bg-sky-600', 'hover:bg-sky-700', 'text-white');
+        btn.classList.add('bg-gray-50', 'text-gray-400');
+        text.textContent = 'Tidak Ada Data Valid';
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   COLLAPSE SECTIONS — scope global (dipanggil dari onclick HTML)
-───────────────────────────────────────────────────────────── */
-
-// Inisialisasi data ke sectionState dan tampilkan / sembunyikan section
 function initSections(json) {
-    // Reset state setiap kali preview baru masuk
-    sectionState.err = { data: json.errors     || [], shown: 0 };
-    sectionState.dup = { data: json.duplicates || [], shown: 0 };
+    sectionState.err  = { data: json.errors           || [], shown: 0 };
+    sectionState.dup  = { data: json.duplicates        || [], shown: 0 };
+    sectionState.meta = { data: json.invalid_metadata  || [], shown: 0 };
 
     const errSection = document.getElementById('errorSection');
     if (sectionState.err.data.length > 0) {
         document.getElementById('errBadge').textContent = sectionState.err.data.length + ' baris';
         errSection.classList.remove('hidden');
-        // Pastikan collapsed (tutup ulang setiap preview baru)
         document.getElementById('errBody').classList.add('hidden');
         document.getElementById('errChevron').style.transform = '';
-    } else {
-        errSection.classList.add('hidden');
-    }
+    } else errSection.classList.add('hidden');
 
     const dupSection = document.getElementById('dupSection');
     if (sectionState.dup.data.length > 0) {
@@ -698,30 +1370,43 @@ function initSections(json) {
         dupSection.classList.remove('hidden');
         document.getElementById('dupBody').classList.add('hidden');
         document.getElementById('dupChevron').style.transform = '';
-    } else {
-        dupSection.classList.add('hidden');
-    }
+    } else dupSection.classList.add('hidden');
+
+    const metaSection = document.getElementById('invalidMetaSection');
+    const metaData    = sectionState.meta.data;
+    if (metaData.length > 0) {
+        document.getElementById('metaBadge').textContent = metaData.length + ' metadata';
+        const notFound  = metaData.filter(m => m.reason === 'not_found').length;
+        const notActive = metaData.filter(m => m.reason === 'not_active').length;
+        const parts = [];
+        if (notFound  > 0) parts.push(`${notFound} tidak ditemukan di sistem`);
+        if (notActive > 0) parts.push(`${notActive} belum berstatus Active`);
+        document.getElementById('invalidMetaSubtitle').textContent =
+            parts.join(' · ') + ' — semua data dari metadata ini dilewati';
+        metaSection.classList.remove('hidden');
+        document.getElementById('metaBody').classList.add('hidden');
+        document.getElementById('metaChevron').style.transform = '';
+    } else metaSection.classList.add('hidden');
 }
 
-// Toggle buka / tutup panel
 function toggleSection(type) {
-    const bodyId   = type === 'err' ? 'errBody'    : 'dupBody';
-    const chevId   = type === 'err' ? 'errChevron' : 'dupChevron';
-    const body     = document.getElementById(bodyId);
-    const chevron  = document.getElementById(chevId);
-    const isOpen   = !body.classList.contains('hidden');
-
+    const ids = {
+        err:  { body: 'errBody',  chevron: 'errChevron'  },
+        dup:  { body: 'dupBody',  chevron: 'dupChevron'  },
+        meta: { body: 'metaBody', chevron: 'metaChevron' },
+    };
+    const { body: bodyId, chevron: chevId } = ids[type];
+    const body    = document.getElementById(bodyId);
+    const chevron = document.getElementById(chevId);
+    const isOpen  = !body.classList.contains('hidden');
     body.classList.toggle('hidden', isOpen);
     chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
-
-    // Render baris pertama kali saat dibuka
     if (!isOpen && sectionState[type].shown === 0) {
         sectionState[type].shown = ROWS_PER_PAGE;
         renderRows(type);
     }
 }
 
-// Render baris tabel sesuai jumlah yang sudah di-shown
 function renderRows(type) {
     const s         = sectionState[type];
     const rows      = s.data.slice(0, s.shown);
@@ -733,36 +1418,56 @@ function renderRows(type) {
                 <td class="px-3 py-2 font-mono text-red-500">Baris ${esc(String(e.row))}</td>
                 <td class="px-3 py-2 text-red-700">${esc(e.message)}</td>
             </tr>`).join('');
-
         const btn = document.getElementById('errShowMore');
         if (remaining > 0) {
             btn.classList.remove('hidden');
             document.getElementById('errShowMoreTxt').textContent =
                 `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
-        } else {
-            btn.classList.add('hidden');
-        }
-    } else {
+        } else btn.classList.add('hidden');
+
+    } else if (type === 'dup') {
         document.getElementById('dupTableBody').innerHTML = rows.map((r, i) => `
             <tr class="${i % 2 !== 0 ? 'bg-amber-50' : ''}">
                 <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                <td class="px-3 py-2 text-gray-500">${esc(r.nama_lokasi  ?? String(r.location_id))}</td>
+                <td class="px-3 py-2 text-gray-500">${esc(r.nama_wilayah ?? String(r.location_id))}</td>
                 <td class="px-3 py-2 text-gray-500 font-mono">${esc(String(r.period_label))}</td>
                 <td class="px-3 py-2 text-right font-mono text-gray-700">${formatNum(r.number_value)}</td>
             </tr>`).join('');
-
         const btn = document.getElementById('dupShowMore');
         if (remaining > 0) {
             btn.classList.remove('hidden');
             document.getElementById('dupShowMoreTxt').textContent =
                 `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
-        } else {
-            btn.classList.add('hidden');
-        }
+        } else btn.classList.add('hidden');
+
+    } else if (type === 'meta') {
+        document.getElementById('metaTableBody').innerHTML = rows.map((m, i) => {
+            const reasonBadge = m.reason === 'not_found'
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                           style="background:#fce7f3; color:#9d174d;">
+                       <i class="fas fa-times-circle text-xs"></i> Belum terdaftar di sistem
+                   </span>`
+                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                           style="background:#fef3c7; color:#92400e;">
+                       <i class="fas fa-clock text-xs"></i> Status ${esc(m.status_label ?? 'tidak aktif')}
+                   </span>`;
+            return `
+            <tr style="background: ${i % 2 !== 0 ? '#fdf4ff' : '#ffffff'};">
+                <td class="px-3 py-2.5 font-mono font-semibold" style="color:#7c3aed;">#${esc(String(m.metadata_id))}</td>
+                <td class="px-3 py-2.5 text-gray-700 font-medium">${esc(m.nama_metadata ?? '-')}</td>
+                <td class="px-3 py-2.5">${reasonBadge}</td>
+                <td class="px-3 py-2.5 font-mono text-gray-400">Baris ${esc(String(m.row))}</td>
+            </tr>`;
+        }).join('');
+        const btn = document.getElementById('metaShowMore');
+        if (remaining > 0) {
+            btn.classList.remove('hidden');
+            document.getElementById('metaShowMoreTxt').textContent =
+                `Tampilkan ${Math.min(remaining, ROWS_PER_PAGE)} lagi (${remaining} tersisa)`;
+        } else btn.classList.add('hidden');
     }
 }
 
-// Muat lebih banyak baris
 function showMore(type) {
     sectionState[type].shown = Math.min(
         sectionState[type].shown + ROWS_PER_PAGE,
@@ -771,33 +1476,22 @@ function showMore(type) {
     renderRows(type);
 }
 
-/* ─────────────────────────────────────────────────────────────
-   IMPORT
-───────────────────────────────────────────────────────────── */
 async function doImport() {
     if (!currentFile || !previewData) return;
-
-    const skipDup = document.getElementById('cbSkipDup')?.checked ?? true;
-    const btn     = document.getElementById('btnImport');
-
-    const msg = previewData.valid > 0
-        ? `Import ${previewData.valid} record data?\n` +
-          (skipDup && previewData.duplicate > 0
-              ? `${previewData.duplicate} duplikat akan dilewati.`
-              : '')
-        : 'Tidak ada data valid untuk diimport.';
-
-    if (!confirm(msg)) return;
-
+    const skipDup      = document.getElementById('cbSkipDup')?.checked ?? true;
+    const btn          = document.getElementById('btnImport');
+    const invalidCount = (previewData.invalid_metadata || []).length;
+    let confirmMsg     = `Import ${previewData.valid} record data?`;
+    if (skipDup && previewData.duplicate > 0) confirmMsg += `\n• ${previewData.duplicate} duplikat akan dilewati.`;
+    if (invalidCount > 0) confirmMsg += `\n• ${invalidCount} metadata tidak valid — datanya tidak akan diimport.`;
+    if (!confirm(confirmMsg)) return;
     btn.disabled = true;
     document.getElementById('importingBar').classList.remove('hidden');
     document.getElementById('previewSection').classList.add('hidden');
-
     const form = new FormData();
     form.append('_token',          CSRF);
     form.append('file_excel',      currentFile);
     form.append('skip_duplicates', skipDup ? '1' : '0');
-
     try {
         const resp = await fetch(IMPORT_URL, {
             method:  'POST',
@@ -805,20 +1499,15 @@ async function doImport() {
             body:    form,
         });
         const json = await resp.json();
-
         document.getElementById('importingBar').classList.add('hidden');
-
         if (json.success) {
             showImportAlert('success', json.message,
-                json.redirect
-                    ? `<a href="${json.redirect}" class="underline font-semibold ml-2">Ke Halaman Data →</a>`
-                    : '');
+                json.redirect ? `<a href="${json.redirect}" class="underline font-semibold ml-2">Ke Halaman Data →</a>` : '');
             resetUpload();
         } else {
             showImportAlert('error', json.message || 'Import gagal.');
             if (previewData) renderPreview(previewData);
         }
-
     } catch (err) {
         document.getElementById('importingBar').classList.add('hidden');
         showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
@@ -826,15 +1515,12 @@ async function doImport() {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   HELPERS
-───────────────────────────────────────────────────────────── */
 function showImportAlert(type, msg, extra = '') {
     const isErr = type === 'error';
     const el    = document.getElementById('importResult');
     el.innerHTML = `
         <div class="flex items-start gap-3 px-4 py-3 rounded-lg text-sm"
-             style="background:${isErr ? '#fef2f2' : '#f0fdf4'};
+            style="background:${isErr ? '#fef2f2' : '#f0fdf4'};
                     border:1px solid ${isErr ? '#fecaca' : '#bbf7d0'};
                     color:${isErr ? '#b91c1c' : '#166534'};">
             <i class="fas ${isErr ? 'fa-exclamation-circle text-red-400' : 'fa-check-circle text-green-500'} mt-0.5 shrink-0"></i>
@@ -859,11 +1545,30 @@ function formatNum(val) {
         : n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/* ─────────────────────────────────────────────────────────────
-   INIT — redirect ke tab manual jika ada error validasi
-───────────────────────────────────────────────────────────── */
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
 @if($errors->any() || session('duplicate_warning'))
     switchTab('manual');
 @endif
+
+// Inisialisasi jika ada old() value
+(function() {
+    const metaSel = document.getElementById('metadataSelect');
+    if (metaSel.value) onMetadataChange(metaSel);
+
+    const provSel = document.getElementById('selProvinsi');
+    if (provSel.value) {
+        onProvinsiChange(provSel);
+        // Restore old kabupaten jika ada
+        @if(old('kabupaten_id'))
+        setTimeout(() => {
+            const kabSel = document.getElementById('selKabupaten');
+            kabSel.value = '{{ old("kabupaten_id") }}';
+            if (kabSel.value) onKabupatenChange(kabSel);
+        }, 100);
+        @endif
+    }
+})();
 </script>
 @endsection

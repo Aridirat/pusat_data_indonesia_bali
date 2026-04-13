@@ -205,7 +205,7 @@
                                 class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
                                        focus:ring-sky-400 px-2 py-2 text-xs">
                             <option value="">-- Pilih Frekuensi --</option>
-                            @foreach(['Dekade','Tahunan','Semester','Quarter','Bulanan','Statis'] as $frek)
+                            @foreach(['Dekade','Tahunan','Semester','Kuartal','Bulanan','Statis'] as $frek)
                                 <option value="{{ $frek }}" {{ old('frekuensi_penerbitan') == $frek ? 'selected' : '' }}>
                                     {{ $frek }}
                                 </option>

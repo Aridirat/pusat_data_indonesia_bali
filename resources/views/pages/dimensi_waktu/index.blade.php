@@ -93,28 +93,44 @@
                             {{ $row->decade }}an
                         </td>
                         <td class="px-4 py-3 font-semibold text-gray-800">
-                            {{ $row->year }}
+                            @if ($row->year == 0)
+                                <span class="text-gray-500">ALL</span>
+                            @else
+                                {{ $row->year }}
+                            @endif
                         </td>
                         <td class="px-4 py-3">
+                            @if ($row->semester == 0)
+                                <span class="text-gray-500">ALL</span>
+                            @else
                             <span class="px-2 py-0.5 rounded-full text-xs font-medium
                                 {{ $row->semester == 1 ? 'bg-cyan-100 text-cyan-700' : '' }}
                                 {{ $row->semester == 2 ? 'bg-green-100 text-green-700' : '' }}
                             ">
                                 Semester {{ $row->semester }}
                             </span>
+                            @endif
                         </td>
                         <td class="px-4 py-3">
-                            <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                                {{ $row->quarter == 1 ? 'bg-sky-100 text-sky-700' : '' }}
-                                {{ $row->quarter == 2 ? 'bg-emerald-100 text-emerald-700' : '' }}
-                                {{ $row->quarter == 3 ? 'bg-amber-100 text-amber-700' : '' }}
-                                {{ $row->quarter == 4 ? 'bg-rose-100 text-rose-700' : '' }}
-                            ">
-                                Kuartal {{ $row->quarter }}
-                            </span>
+                            @if ($row->quarter == 0)
+                                <span class="text-gray-500">ALL</span>
+                            @else
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                                    {{ $row->quarter == 1 ? 'bg-sky-100 text-sky-700' : '' }}
+                                    {{ $row->quarter == 2 ? 'bg-emerald-100 text-emerald-700' : '' }}
+                                    {{ $row->quarter == 3 ? 'bg-amber-100 text-amber-700' : '' }}
+                                    {{ $row->quarter == 4 ? 'bg-rose-100 text-rose-700' : '' }}
+                                ">
+                                    Kuartal {{ $row->quarter }}
+                                </span>
+                            @endif
                         </td>
                         <td class="px-4 py-3 text-gray-700">
-                            {{ \Carbon\Carbon::create($row->year, $row->month, 1)->translatedFormat('F') }}
+                            @if ($row->month == 0)
+                                <span class="text-gray-500">ALL</span>
+                            @else
+                                {{ \Carbon\Carbon::create($row->year, $row->month, 1)->translatedFormat('F') }} 
+                            @endif
                         </td>
                     </tr>
                 @empty
