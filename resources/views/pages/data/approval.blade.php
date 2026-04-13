@@ -134,13 +134,34 @@
                         <td class="px-4 py-3 text-xs">
                             @if($row->time)
 
+                                {{--  Jika hanya dekade   --}}
+                                @if($row->time->month == 0 && $row->time->year == 0)
+                                    <p class="font-medium text-gray-700">
+                                        {{ $row->time->decade }}an
+                                    </p>
+                                    <p class="text-gray-400">Dekade</p>
+
                                 {{-- jika hanya tahun --}}
-                                @if($row->time->month == 0 && $row->time->day == 0)
+                                @elseif($row->time->month == 0)
 
                                     <p class="font-medium text-gray-700">
                                         {{ $row->time->year }}
                                     </p>
-                                    <p class="text-gray-400">ALL</p>
+                                    <p class="text-gray-400">Tahunan</p>
+                                
+                                {{-- Jika hanya Semester --}}
+                                @elseif($row->time->day == 0 && $row->time->month == 0)
+                                    <p class="font-medium text-gray-700">
+                                        {{ $row->time->year }}, Semester {{ $row->time->semester }}
+                                    </p>
+                                    <p class="text-gray-400">Semester</p>
+                                
+                                {{-- Jika hanya Kuartal --}}
+                                @elseif($row->time->day == 0 && $row->time->year == 0)
+                                    <p class="font-medium text-gray-700">
+                                        {{ $row->time->year }}, Kuartal {{ $row->time->quarter }}
+                                    </p>
+                                    <p class="text-gray-400">Kuartal</p>
 
                                 {{-- jika sampai bulan --}}
                                 @elseif($row->time->day == 0)
@@ -149,7 +170,7 @@
                                         {{ \Carbon\Carbon::create($row->time->year, $row->time->month, 1)
                                             ->translatedFormat('F Y') }}
                                     </p>
-                                    <p class="text-gray-400">ALL</p>
+                                    <p class="text-gray-400">Bulanan</p>
 
                                 {{-- jika tanggal lengkap --}}
                                 @else

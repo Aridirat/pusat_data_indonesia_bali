@@ -315,32 +315,6 @@
 
                     </div>
 
-                    {{-- Tampilan tanggal dinamis --}}
-                    <div class="mt-4 pt-4 border-t text-center">
-
-                        <p class="text-xs text-gray-400 mb-1">Periode Data</p>
-
-                        @php
-                            $periode = '-';
-
-                            if($year && $month && $day){
-                                $periode = \Carbon\Carbon::create($year,$month,$day)
-                                    ->translatedFormat('d F Y');
-                            }
-                            elseif($year && $month){
-                                $periode = $bulanList[$month] . ' ' . $year;
-                            }
-                            elseif($year){
-                                $periode = $year;
-                            }
-                        @endphp
-
-                        <p class="text-base font-semibold text-gray-700">
-                            {{ $periode }}
-                        </p>
-
-                    </div>
-
                 @else
                     <p class="text-sm text-gray-400">Data waktu tidak ditemukan.</p>
                 @endif

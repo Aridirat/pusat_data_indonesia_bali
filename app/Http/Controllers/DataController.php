@@ -115,15 +115,51 @@ class DataController extends Controller
         return response()->json($query->orderByDesc('year')->pluck('year'));
     }
 
+    private static function detectLocationLevel(string $nama): string
+    {
+        $lower = strtolower($nama);
+        if (str_contains($lower, 'provinsi'))                                    return 'provinsi';
+        if (str_contains($lower, 'kabupaten') || str_contains($lower, 'kota'))  return 'kabupaten';
+        if (str_contains($lower, 'kecamatan'))                                   return 'kecamatan';
+        return 'desa';
+    }
+    
     // ═══════════════════════════════════════════════════════════
-    // CREATE / STORE (manual)
+    // CREATE / STORE
     // ═══════════════════════════════════════════════════════════
     public function create()
     {
-        $metadataList = Metadata::select('metadata_id', 'nama', 'tipe_data', 'satuan_data', 'frekuensi_penerbitan')
-                                ->orderBy('nama')->get();
+        $metadataList = Metadata::select(
+        'metadata_id', 'nama', 'tipe_data', 'satuan_data',
+        'frekuensi_penerbitan', 'flag_desimal'
+        )
+        ->where('status', 2)
+        ->orderBy('nama')
+        ->get();
         $locationList = Location::select('location_id', 'nama_wilayah')->orderBy('nama_wilayah')->get();
-        $timeList     = Waktu::select('time_id', 'decade', 'year', 'month')
+
+        // Filter manual berdasarkan nama
+        $provinsiList = $locationList->filter(fn($l) =>
+            str_contains(strtolower($l->nama_wilayah), 'provinsi')
+        );
+        
+        $kabupatenList = $locationList->filter(fn($l) =>
+            str_contains(strtolower($l->nama_wilayah), 'kabupaten') ||
+            str_contains(strtolower($l->nama_wilayah), 'kota')
+        );
+
+        $kecamatanList = $locationList->filter(fn($l) =>
+            str_contains(strtolower($l->nama_wilayah), 'kecamatan')
+        );
+
+        $desaList = $locationList->filter(fn($l) =>
+            !str_contains(strtolower($l->nama_wilayah), 'provinsi') &&
+            !str_contains(strtolower($l->nama_wilayah), 'kabupaten') &&
+            !str_contains(strtolower($l->nama_wilayah), 'kota') &&
+            !str_contains(strtolower($l->nama_wilayah), 'kecamatan')
+        );
+
+        $timeList     = Waktu::select('time_id', 'decade', 'year', 'semester', 'quarter', 'month')
                             ->orderBy('decade', 'desc')->orderBy('year', 'desc')->orderBy('month')
                             ->get();
 
@@ -132,24 +168,50 @@ class DataController extends Controller
                 'time_id' => $t->time_id,
                 'decade'  => $t->decade,
                 'year'    => $t->year,
+                'semester' => $t->semester,
+                'quarter' => $t->quarter,
                 'month'   => $t->month,
             ];
         })->values()->toArray();
 
-        return view('pages.data.create', compact('metadataList', 'locationList', 'timeList', 'timeListJs'));
+        $locationListJs = $locationList->map(fn($l) => [
+            'location_id'  => (string) $l->location_id,
+            'nama_wilayah' => $l->nama_wilayah,
+            'level'        => self::detectLocationLevel($l->nama_wilayah),
+        ])->values()->toArray();
+
+        return view('pages.data.create', compact('metadataList', 'locationList', 'provinsiList',
+        'kabupatenList',
+        'kecamatanList',
+        'desaList', 'timeList', 'timeListJs', 'locationListJs'));
     }
 
     public function store(Request $request)
     {
+        $locationId = $request->desa_id
+        ?? $request->kecamatan_id
+        ?? $request->kabupaten_id
+        ?? $request->provinsi_id;
+        
+        $request->merge([
+            'location_id' => $locationId
+            ]);
+
+        $metadata = Metadata::where('metadata_id', $request->metadata_id)
+            ->where('status', 2)
+            ->first();
+
+        if (!$metadata) {
+            return back()->withInput()->withErrors([
+                'metadata_id' => 'Metadata tidak aktif atau tidak valid.'
+            ]);
+        }
+        
         $request->validate([
             'metadata_id'       => 'required|integer|exists:metadata,metadata_id',
             'location_id'       => 'required|integer|exists:location,location_id',
             'time_id'           => 'required|integer|exists:time,time_id',
-            'text_value'        => 'nullable|string',
             'number_value'      => 'nullable|numeric',
-            'kategori_value'    => 'nullable|integer',
-            'other'             => 'nullable|string|max:100',
-            'analisis_fenomena' => 'nullable|string',
         ]);
 
         $duplicate = Data::where('metadata_id', $request->metadata_id)
@@ -159,7 +221,7 @@ class DataController extends Controller
 
         if ($duplicate) {
             return redirect()->back()->withInput()->with('duplicate_warning', [
-                'message'         => 'Data dengan kombinasi Metadata, Lokasi, dan Waktu yang sama sudah ada.',
+                'message'         => 'Data dengan kombinasi Metadata, Lokasi, dan Waktu yang sama sudah terdaftar di sistem.',
                 'existing_id'     => $duplicate->id,
                 'existing_status' => $duplicate->status_label,
             ]);
@@ -170,11 +232,7 @@ class DataController extends Controller
             'metadata_id'       => $request->metadata_id,
             'location_id'       => $request->location_id,
             'time_id'           => $request->time_id,
-            'text_value'        => $request->text_value,
             'number_value'      => $request->number_value,
-            'kategori_value'    => $request->kategori_value,
-            'other'             => $request->other,
-            'analisis_fenomena' => $request->analisis_fenomena,
             'status'            => Data::STATUS_PENDING,
             'date_inputed'      => Carbon::now(),
         ]);

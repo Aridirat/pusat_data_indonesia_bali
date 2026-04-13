@@ -230,22 +230,9 @@ class MetadataController extends Controller
     }
     private function buildKodeWilayah($loc)
     {
-        $kode = $loc->kode_provinsi ?? '';
-
-        if (!empty($loc->kode_kabupaten)) {
-            $kode .= $loc->kode_kabupaten;
-        }
-
-        if (!empty($loc->kode_kecamatan) && $loc->kode_kecamatan != '0') {
-            $kode .= $loc->kode_kecamatan;
-        }
-
-        if (!empty($loc->kode_desa) && $loc->kode_desa != '0') {
-            $kode .= $loc->kode_desa;
-        }
-
-        return $kode;
+        return (string) $loc->location_id;
     }
+
     public function exportTemplate(Request $request)
     {
         $request->validate([
@@ -301,21 +288,11 @@ class MetadataController extends Controller
                     'time.year',
                     'time.quarter',
                     'time.month',
-                    'location.kode_provinsi',
-                    'location.kode_kabupaten',
-                    'location.kode_kecamatan',
-                    'location.kode_desa',
-                    'location.provinsi',
-                    'location.kabupaten',
-                    'location.kecamatan',
-                    'location.desa',
-                    'location.banjar',
-                    'location.rt',
+                    'location.location_id',
+                    'location.nama_wilayah' 
                 )
                 ->orderBy('data.metadata_id')
-                ->orderBy('location.kode_kabupaten')
-                ->orderBy('location.kode_kecamatan')
-                ->orderBy('location.kode_desa')
+                ->orderBy('location.location_id')
                 ->orderBy('time.year')
                 ->get();
         }
@@ -354,8 +331,8 @@ class MetadataController extends Controller
                     $row = [
                         'metadata_id'  => $metaId,
                         'nama_metadata'=> $meta->nama,
-                        'kode_wilayah' => $this->buildKodeWilayah($loc),
-                        'nama_lokasi'  => $namaLokasi,
+                        'location_id' => $this->buildKodeWilayah($loc),
+                        'nama_wilayah'  => $namaLokasi,
                         'flag_desimal' => $meta->flag_desimal ?? 0,
                         'periods'      => [],
                     ];
@@ -371,8 +348,8 @@ class MetadataController extends Controller
                 $row = [
                     'metadata_id'  => $metaId,
                     'nama_metadata'=> $meta->nama,
-                    'kode_wilayah' => '',
-                    'nama_lokasi'  => null,
+                    'location_id' => '',
+                    'nama_wilayah'  => null,
                     'flag_desimal' => $meta->flag_desimal ?? 0,
                     'periods'      => array_fill_keys($periodCols, null),
                 ];
@@ -413,7 +390,7 @@ class MetadataController extends Controller
         // ── Baris 2: Info ─────────────────────────────────────────────────────
         $totalLokasi   = count($excelRows);
         $totalWithData = array_reduce($excelRows, function($c, $r) {
-            return $c + (!empty($r['kode_wilayah']) ? 1 : 0);
+            return $c + (!empty($r['location_id']) ? 1 : 0);
         }, 0);
     
         $ws->mergeCells('A2:' . $lastColLetter . '2');
@@ -432,8 +409,8 @@ class MetadataController extends Controller
         $fixedHeaders = [
             ['label' => 'metadata_id',   'width' => 13, 'note' => 'ID metadata (otomatis, jangan diubah)'],
             ['label' => 'nama_metadata', 'width' => 40, 'note' => 'Nama metadata (otomatis, jangan diubah)'],
-            ['label' => 'kode_wilayah',   'width' => 13, 'note' => 'ID lokasi dari tabel dimensi lokasi'],
-            ['label' => 'nama_lokasi',   'width' => 40, 'note' => 'Nama lokasi (referensi, boleh dikosongkan)'],
+            ['label' => 'location_id',   'width' => 13, 'note' => 'ID lokasi dari tabel dimensi lokasi'],
+            ['label' => 'nama_wilayah',   'width' => 40, 'note' => 'Nama lokasi (referensi, boleh dikosongkan)'],
         ];
     
         foreach ($fixedHeaders as $i => $h) {
@@ -511,8 +488,8 @@ class MetadataController extends Controller
                                                     'color'       => ['rgb' => 'BFDBFE']]],
                 ]);
     
-                // ── Kolom C: kode_wilayah ─────────────────────────
-                $ws->setCellValue('C' . $rowNum, $row['kode_wilayah']);
+                // ── Kolom C: location_id ─────────────────────────
+                $ws->setCellValue('C' . $rowNum, $row['location_id']);
                 $ws->getStyle('C' . $rowNum)->applyFromArray([
                     'fill'      => ['fillType'   => Fill::FILL_SOLID,
                                     'startColor' => ['rgb' => 'FFFFFF']],
@@ -522,8 +499,8 @@ class MetadataController extends Controller
                                                     'color'       => ['rgb' => 'E2E8F0']]],
                 ]);
     
-                // ── Kolom D: nama_lokasi ─────────────────────────
-                $ws->setCellValue('D' . $rowNum, $row['nama_lokasi']);
+                // ── Kolom D: nama_wilayah ─────────────────────────
+                $ws->setCellValue('D' . $rowNum, $row['nama_wilayah']);
                 $ws->getStyle('D' . $rowNum)->applyFromArray([
                     'fill'      => ['fillType'   => Fill::FILL_SOLID,
                                     'startColor' => ['rgb' => 'FFFFFF']],
@@ -626,44 +603,15 @@ class MetadataController extends Controller
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // HELPER BARU: buildLocationName
+    // HELPER buildLocationName
     // ═══════════════════════════════════════════════════════════════════════════
     private function buildLocationName(object $row): string
     {
-        $parts = [];
-    
-        if (! empty($row->provinsi)) {
-            $parts[] = $row->provinsi;
-        }
-    
-        if (! $this->hasLevel($row->kode_kabupaten) || empty($row->kabupaten)) {
-            return implode(', ', $parts);
-        }
-        $parts[] = 'Kabupaten ' . $row->kabupaten;
-    
-        if (! $this->hasLevel($row->kode_kecamatan) || empty($row->kecamatan)) {
-            return implode(', ', $parts);
-        }
-        $parts[] = 'Kecamatan ' . $row->kecamatan;
-    
-        if (! $this->hasLevel($row->kode_desa) || empty($row->desa)) {
-            return implode(', ', $parts);
-        }
-        $parts[] = 'Desa ' . $row->desa;
-    
-        if (! empty($row->banjar)) {
-            $parts[] = 'Banjar ' . $row->banjar;
-        }
-    
-        if (! empty($row->rt)) {
-            $parts[] = 'RT ' . $row->rt;
-        }
-    
-        return implode(', ', $parts);
+        return $row->nama_wilayah ?? '-';
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // HELPER BARU: hasLevel
+    // HELPER hasLevel
     // ═══════════════════════════════════════════════════════════════════════════
     private function hasLevel(?string $kode): bool
     {
