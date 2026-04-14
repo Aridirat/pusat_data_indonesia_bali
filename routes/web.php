@@ -45,6 +45,8 @@ Route::middleware([IsLogin::class])->group(function () {
         Route::post('/',      [DataController::class, 'store'])->name('store');
 
         // AJAX (di atas wildcard)
+        Route::get('/search-wilayah', [DataController::class, 'searchWilayah'])
+                ->name('search_wilayah');
         Route::get('/kecamatan',       [DataController::class, 'getKecamatan'])->name('kecamatan');
         Route::get('/desa',            [DataController::class, 'getDesa'])->name('desa');
         Route::get('/search-metadata', [DataController::class, 'searchMetadata'])->name('search_metadata');

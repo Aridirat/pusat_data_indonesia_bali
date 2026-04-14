@@ -23,7 +23,9 @@ class DataController extends Controller
     // ═══════════════════════════════════════════════════════════
     public function index(Request $request)
     {
-        $hasFilter = $request->hasAny(['metadata_id', 'nama_wilayah', 'year', 'search', 'template_id']);
+        $hasFilter = $request->hasAny([
+            'metadata_id', 'filter_wilayah_id', 'year', 'search', 'template_id'
+        ]);
 
         if ($request->filled('template_id')) {
             $tampilan = Tampilan::where('tampilan_id', $request->template_id)
@@ -33,9 +35,9 @@ class DataController extends Controller
             if ($tampilan && $tampilan->filter_params) {
                 $fp = $tampilan->filter_params;
                 $request->merge(array_filter([
-                    'metadata_id' => $fp['metadata_id'] ?? null,
-                    'nama_wilayah'   => $fp['nama_wilayah']   ?? null,
-                    'year'        => $fp['year']         ?? null,
+                    'metadata_id'      => $fp['metadata_id']      ?? null,
+                    'filter_wilayah_id'=> $fp['filter_wilayah_id']?? null,
+                    'year'             => $fp['year']              ?? null,
                 ]));
             }
         }
@@ -47,10 +49,8 @@ class DataController extends Controller
 
             if ($request->filled('metadata_id')) $query->where('metadata_id', $request->metadata_id);
 
-            if ($request->filled('nama_wilayah')) {
-                $query->whereHas('location', function ($q) use ($request) {
-                    if ($request->filled('nama_wilayah')) $q->where('nama_wilayah', $request->nama_wilayah);
-                });
+            if ($request->filled('filter_wilayah_id')) {
+                $query->where('location_id', $request->filter_wilayah_id);
             }
 
             if ($request->filled('year')) $query->whereHas('time', fn($q) => $q->where('year', $request->year));
@@ -75,6 +75,25 @@ class DataController extends Controller
             'data', 'metadataList', 'wilayahList',
             'availableTemplates', 'pendingCount', 'hasFilter'
         ));
+    }
+
+    public function searchWilayah(Request $request)
+    {
+        $q = $request->input('q', '');
+
+        $query = Location::select('location_id', 'nama_wilayah')
+            ->orderBy('nama_wilayah');
+
+        if ($q !== '') {
+            $query->where('nama_wilayah', 'like', "%{$q}%");
+        }
+
+        $locations = $query->get()->map(fn($loc) => [
+            'id'   => $loc->location_id,
+            'path' => $loc->nama_wilayah,
+        ]);
+
+        return response()->json($locations);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -390,20 +409,16 @@ class DataController extends Controller
         $request->validate([
             'nama_tampilan'      => 'required|max:100',
             'filter_metadata_id' => 'nullable|exists:metadata,metadata_id',
-            'filter_kabupaten'   => 'nullable|string|max:100',
-            'filter_kecamatan'   => 'nullable|string|max:100',
-            'filter_desa'        => 'nullable|string|max:100',
+            'filter_wilayah_id'  => 'nullable|exists:location,location_id', // ← ganti ini
             'filter_year'        => 'nullable|integer|min:1900|max:2100',
             'data_ids'           => 'nullable|array',
             'data_ids.*'         => 'exists:data,id',
         ]);
 
         $filterParams = array_filter([
-            'metadata_id' => $request->filter_metadata_id,
-            'kabupaten'   => $request->filter_kabupaten,
-            'kecamatan'   => $request->filter_kecamatan,
-            'desa'        => $request->filter_desa,
-            'year'        => $request->filter_year,
+            'metadata_id'       => $request->filter_metadata_id,
+            'filter_wilayah_id' => $request->filter_wilayah_id,
+            'year'              => $request->filter_year,
         ]);
 
         $tampilan = Tampilan::create([
