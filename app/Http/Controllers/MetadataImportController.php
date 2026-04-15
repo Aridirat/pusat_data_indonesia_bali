@@ -104,90 +104,72 @@ class MetadataImportController extends Controller
     {
         if (!$text) return $text;
 
-        $original = $text;
+        $text = trim($text);
 
-        // ── 1. Lowercase untuk analisis ──
+        // ── 1. Hard cut (alamat jelas) ──
         $lower = mb_strtolower($text);
-
-        // ── 2. Trigger lokasi (hard cut) ──
-        $triggers = ['bertempat di', 'di ', 'lokasi', 'alamat'];
+        $triggers = ['bertempat di', 'lokasi', 'alamat'];
 
         foreach ($triggers as $trigger) {
             $pos = mb_strpos($lower, $trigger);
             if ($pos !== false) {
-                return trim(mb_substr($original, 0, $pos));
+                return trim(mb_substr($text, 0, $pos));
             }
         }
 
-        // ── 3. Split berdasarkan koma ──
-        $parts = explode(',', $text);
+        // ── 2. Hapus "di Kabupaten ..." ──
+        $text = preg_replace(
+            '/\bdi\s+(kabupaten|kab\.?|kecamatan|kota|provinsi)\s+[a-z]+/iu',
+            '',
+            $text
+        );
 
-        $resultParts = [];
+        // ── 3. Hapus "Cabang + wilayah" (INI YANG FIX UTAMA) ──
+        $text = preg_replace(
+            '/\bcabang\s+(gianyar|ubud|sukawati|denpasar|badung|bangli|karangasem)\b/iu',
+            '',
+            $text
+        );
 
-        foreach ($parts as $part) {
-            if (!$this->isLocationSegment($part)) {
-                $resultParts[] = $part;
-            }
-        }
+        // ── 4. Hapus duplikasi lokasi ──
+        $text = preg_replace(
+            '/(\bdi\s+(kabupaten|kab\.?|kecamatan|kota|provinsi)\s+[a-z]+)(\s+\1)+/iu',
+            '$1',
+            $text
+        );
 
-        $cleaned = implode(',', $resultParts);
+        // ── 5. Hapus trailing wilayah ──
+        $text = preg_replace(
+            '/\b(kabupaten|kab\.?|kecamatan|kota|provinsi)\s+[a-z]+\s*$/iu',
+            '',
+            $text
+        );
 
-        // ── 4. Bersihkan trailing kata lokasi (misal: "Kab Gianyar") ──
-        $words = explode(' ', trim($cleaned));
+        // ── 6. Hapus nama wilayah di akhir ──
+        $text = preg_replace(
+            '/\b(gianyar|ubud|sukawati|denpasar|badung|bangli|karangasem)\s*$/iu',
+            '',
+            $text
+        );
 
-        while (!empty($words) && $this->isLocationWord(end($words))) {
-            array_pop($words);
-        }
+        // ── 7. Rapikan spasi ──
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = trim($text, " ,");
 
-        return trim(implode(' ', $words));
+        return $text;
     }
 
-    private function isLocationSegment(string $text): bool
+    private function normalizeAlias(?string $rawAlias): ?string
     {
-        $text = mb_strtolower(trim($text));
+        if ($rawAlias === null || trim($rawAlias) === '') return null;
 
-        $locationKeywords = [
-            'banjar', 'desa', 'kelurahan', 'kecamatan',
-            'kabupaten', 'kota', 'provinsi',
-            'jalan', 'jl', 'gang', 'gg',
-            'no', 'rt', 'rw',
-            'sma', 'sd', 'rs', 'rsu', 'rumah sakit',
-            'dojo'
-        ];
-
-        $wilayahList = [
-            'gianyar', 'ubud', 'sukawati', 'tegalalang',
-            'denpasar', 'badung', 'bangli', 'karangasem'
-        ];
-
-        // cek keyword lokasi
-        foreach ($locationKeywords as $keyword) {
-            if (str_contains($text, $keyword)) {
-                return true;
-            }
+        $cleaned = $rawAlias;
+        foreach (self::ALIAS_WILAYAH as $pattern) {
+            $cleaned = preg_replace($pattern, '', $cleaned);
         }
+        $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
 
-        // cek nama wilayah
-        foreach ($wilayahList as $wilayah) {
-            if (str_contains($text, $wilayah)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function isLocationWord(string $word): bool
-    {
-        $word = mb_strtolower($word);
-
-        $words = [
-            'kab', 'kabupaten', 'kota',
-            'gianyar', 'ubud', 'sukawati',
-            'badung', 'denpasar'
-        ];
-
-        return in_array($word, $words);
+        return $cleaned !== '' ? $cleaned : trim($rawAlias);
     }
 
     
@@ -235,7 +217,7 @@ class MetadataImportController extends Controller
                 if (isset($seen[$key])) {
                     $skipped[] = [
                         'row'    => $rowNum,
-                        'nama'   => $this->normalizeAlias($r['nama']),
+                        'nama'   => $this->smartNormalizeWilayah($r['nama']),
                         'reason' => 'Duplikat dalam file Excel',
                     ];
                     $rowNum++;
@@ -252,8 +234,8 @@ class MetadataImportController extends Controller
 
                 $valid[] = [
                     'row'              => $rowNum,
-                    'nama'             => $this->normalizeAlias($r['nama']),
-                    'alias'            => $this->normalizeAlias($r['alias']),
+                    'nama'             => $this->smartNormalizeWilayah($r['nama']),
+                    'alias'            => $this->smartNormalizeWilayah($r['alias']),
                     'klasifikasi'      => $r['klasifikasi'],
                     'tipe_data'        => $r['tipe_data'],
                     'satuan_data'      => $r['satuan_data'],
@@ -443,18 +425,6 @@ class MetadataImportController extends Controller
         return mb_strtolower(trim(preg_replace('/\s+/', ' ', $nama)));
     }
 
-    private function normalizeAlias(?string $rawAlias): ?string
-    {
-        if ($rawAlias === null || trim($rawAlias) === '') return null;
-
-        $cleaned = $rawAlias;
-        foreach (self::ALIAS_WILAYAH as $pattern) {
-            $cleaned = preg_replace($pattern, '', $cleaned);
-        }
-        $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
-
-        return $cleaned !== '' ? $cleaned : trim($rawAlias);
-    }
 
     // ─────────────────────────────────────────────────────────────
     // HELPER: buildRow
@@ -474,8 +444,8 @@ class MetadataImportController extends Controller
         }
 
         return [
-            'nama'                   => $this->normalizeAlias($r['nama']),
-            'alias'                  => $this->normalizeAlias($r['alias']),
+            'nama'                   => $this->smartNormalizeWilayah($r['nama']),
+            'alias'                  => $this->smartNormalizeWilayah($r['alias']),
 
             'konsep'                 => $this->smartNormalizeWilayah($r['konsep']),
             'definisi'               => $this->smartNormalizeWilayah($r['definisi']),  

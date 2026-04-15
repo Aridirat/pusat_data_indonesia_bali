@@ -544,18 +544,6 @@
                                class="rounded border-gray-300 text-sky-600 focus:ring-sky-400">
                         <span>Lewati metadata yang sudah ada di database</span>
                     </label>
-
-                    <div class="flex items-center gap-2 text-sm">
-                        <label class="font-medium text-gray-600 shrink-0">Produsen default:</label>
-                        <select id="defaultProdusen"
-                                class="border border-gray-300 rounded-sm focus:outline-none focus:ring-2
-                                       focus:ring-sky-400 px-2 py-1.5 text-xs">
-                            <option value="">-- Dari file Excel --</option>
-                            @foreach($produsen as $p)
-                                <option value="{{ $p->produsen_id }}">{{ $p->nama_produsen }}</option>
-                            @endforeach
-                        </select>
-                    </div>
                 </div>
 
                 {{-- TOMBOL PREVIEW --}}
