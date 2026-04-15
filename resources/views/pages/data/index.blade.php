@@ -196,18 +196,6 @@
                                 rounded-lg shadow-lg max-h-48 overflow-y-auto"></div>
                 </div>
             </div>
-
-            {{-- ── Search teks ── --}}
-            <div>
-                <label class="block text-xs text-gray-500 font-medium mb-1">
-                    <i class="fas fa-search mr-1 text-gray-400"></i> Cari
-                </label>
-                <input type="text" name="search" value="{{ $activeSearch }}"
-                    placeholder="Nama metadata, nilai..."
-                    oninput="onFilterChange()"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-sky-400">
-            </div>
         </div>
 
         {{-- Tombol aksi filter --}}

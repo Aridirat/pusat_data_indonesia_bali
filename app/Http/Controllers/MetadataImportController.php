@@ -78,15 +78,119 @@ class MetadataImportController extends Controller
         'nama_contact_person', 'nomor_contact_person', 'email_contact_person', 'nama_rujukan', 'gambar_rujukan',
     ];
 
+    // Normalisasi kata
     private const ALIAS_WILAYAH = [
+
+        // ── KHUSUS CABANG WILAYAH ─────────────────
+        '/\s+Cabang\s+(Gianyar|Ubud|Sukawati|Denpasar|Badung|Bangli|Karangasem)(?:\s+\w+)?(?=\s|$)/iu',
+        
+        // ── POLA WILAYAH UMUM ─────────────────────
         '/\s+di\s+(Kabupaten|Kab\.?|Kecamatan|Kec\.?|Kota|Provinsi|Prov\.?|Desa|Kelurahan|Kel\.?)\s+[\w\s]+$/iu',
         '/\s+(Kabupaten|Kab\.|Kecamatan|Kec\.|Kota|Provinsi|Prov\.|Desa|Kelurahan|Kel\.)\s+\w+(\s+\w+)*$/iu',
+        
         '/\s+(Sukawati|Blahbatuh|Tampaksiring|Tegallalang|Payangan)\s*$/iu',
         '/\s+(Badung|Bangli|Buleleng|Jembrana|Karangasem|Klungkung|Tabanan|Denpasar)\s*$/iu',
         '/\s+(Utara|Selatan|Barat|Timur|Tengah)\s*$/iu',
         '/\s+(Ubud|Gianyar)\s*$/iu',
+
+        // ── CABANG TANPA NAMA (DI AKHIR) ──────────
+        '/\s+Cabang$/iu',
+
+        // ── KAB TANPA NAMA ────────────────────────
+        '/\s+Kab\.?$/iu',
     ];
 
+    private function smartNormalizeWilayah(?string $text): ?string
+    {
+        if (!$text) return $text;
+
+        $original = $text;
+
+        // ── 1. Lowercase untuk analisis ──
+        $lower = mb_strtolower($text);
+
+        // ── 2. Trigger lokasi (hard cut) ──
+        $triggers = ['bertempat di', 'di ', 'lokasi', 'alamat'];
+
+        foreach ($triggers as $trigger) {
+            $pos = mb_strpos($lower, $trigger);
+            if ($pos !== false) {
+                return trim(mb_substr($original, 0, $pos));
+            }
+        }
+
+        // ── 3. Split berdasarkan koma ──
+        $parts = explode(',', $text);
+
+        $resultParts = [];
+
+        foreach ($parts as $part) {
+            if (!$this->isLocationSegment($part)) {
+                $resultParts[] = $part;
+            }
+        }
+
+        $cleaned = implode(',', $resultParts);
+
+        // ── 4. Bersihkan trailing kata lokasi (misal: "Kab Gianyar") ──
+        $words = explode(' ', trim($cleaned));
+
+        while (!empty($words) && $this->isLocationWord(end($words))) {
+            array_pop($words);
+        }
+
+        return trim(implode(' ', $words));
+    }
+
+    private function isLocationSegment(string $text): bool
+    {
+        $text = mb_strtolower(trim($text));
+
+        $locationKeywords = [
+            'banjar', 'desa', 'kelurahan', 'kecamatan',
+            'kabupaten', 'kota', 'provinsi',
+            'jalan', 'jl', 'gang', 'gg',
+            'no', 'rt', 'rw',
+            'sma', 'sd', 'rs', 'rsu', 'rumah sakit',
+            'dojo'
+        ];
+
+        $wilayahList = [
+            'gianyar', 'ubud', 'sukawati', 'tegalalang',
+            'denpasar', 'badung', 'bangli', 'karangasem'
+        ];
+
+        // cek keyword lokasi
+        foreach ($locationKeywords as $keyword) {
+            if (str_contains($text, $keyword)) {
+                return true;
+            }
+        }
+
+        // cek nama wilayah
+        foreach ($wilayahList as $wilayah) {
+            if (str_contains($text, $wilayah)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isLocationWord(string $word): bool
+    {
+        $word = mb_strtolower($word);
+
+        $words = [
+            'kab', 'kabupaten', 'kota',
+            'gianyar', 'ubud', 'sukawati',
+            'badung', 'denpasar'
+        ];
+
+        return in_array($word, $words);
+    }
+
+    
     // ═════════════════════════════════════════════════════════════
     // PREVIEW — POST
     // ═════════════════════════════════════════════════════════════
@@ -131,7 +235,7 @@ class MetadataImportController extends Controller
                 if (isset($seen[$key])) {
                     $skipped[] = [
                         'row'    => $rowNum,
-                        'nama'   => $r['nama'],
+                        'nama'   => $this->normalizeAlias($r['nama']),
                         'reason' => 'Duplikat dalam file Excel',
                     ];
                     $rowNum++;
@@ -148,8 +252,8 @@ class MetadataImportController extends Controller
 
                 $valid[] = [
                     'row'              => $rowNum,
-                    'nama'             => $r['nama'],
-                    'alias'            => $this->normalizeAlias($r['alias'] ?: $r['nama']),
+                    'nama'             => $this->normalizeAlias($r['nama']),
+                    'alias'            => $this->normalizeAlias($r['alias']),
                     'klasifikasi'      => $r['klasifikasi'],
                     'tipe_data'        => $r['tipe_data'],
                     'satuan_data'      => $r['satuan_data'],
@@ -370,16 +474,16 @@ class MetadataImportController extends Controller
         }
 
         return [
-            'nama'                   => trim($r['nama']),
-            'alias'                  => $this->normalizeAlias($r['alias'] ?: $r['nama']),
+            'nama'                   => $this->normalizeAlias($r['nama']),
+            'alias'                  => $this->normalizeAlias($r['alias']),
 
-            'konsep'                 => $r['konsep'],
-            'definisi'               => $r['definisi'],
+            'konsep'                 => $this->smartNormalizeWilayah($r['konsep']),
+            'definisi'               => $this->smartNormalizeWilayah($r['definisi']),  
             'klasifikasi'            => $r['klasifikasi'],
             'asumsi'                 => (!empty($r['asumsi']) && $r['asumsi'] !== '-') ? $r['asumsi'] : null,
 
-            'metodologi'             => $r['metodologi'],
-            'penjelasan_metodologi'  => $r['penjelasan_metodologi'],
+            'metodologi' => $this->smartNormalizeWilayah($r['metodologi']),
+            'penjelasan_metodologi' => $this->smartNormalizeWilayah($r['penjelasan_metodologi']),
 
             'tipe_data'              => $r['tipe_data'],
             'satuan_data'            => $r['satuan_data'],
