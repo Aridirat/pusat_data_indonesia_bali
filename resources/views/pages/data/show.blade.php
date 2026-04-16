@@ -249,67 +249,59 @@
                             7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'
                         ];
 
-                        $quarterStyles = [
-                            1 => ['bg'=>'#e0f2fe','border'=>'#bae6fd','text'=>'#0369a1'],
-                            2 => ['bg'=>'#dcfce7','border'=>'#bbf7d0','text'=>'#15803d'],
-                            3 => ['bg'=>'#fef3c7','border'=>'#fde68a','text'=>'#b45309'],
-                            4 => ['bg'=>'#ffe4e6','border'=>'#fecdd3','text'=>'#be123c'],
-                        ];
-
                         $time = $datum->time;
 
-                        $decade  = $time->decade;
-                        $year    = $time->year;
-                        $quarter = $time->quarter;
-                        $month   = $time->month;
-                        $day     = $time->day;
+                        $decade   = $time->decade;
+                        $year     = $time->year;
+                        $semester = $time->semester;
+                        $quarter  = $time->quarter;
+                        $month    = $time->month;
 
-                        $qs = $quarterStyles[$quarter] ?? ['bg'=>'#f9fafb','border'=>'#e5e7eb','text'=>'#374151'];
+                        // Penentuan periode (prioritas: bulan > kuartal > semester > all)
+                        if ($month != 0) {
+                            $periode = $bulanList[$month];
+                            $label   = 'Bulan';
+                            $style   = 'bg-indigo-50 border-indigo-200 text-indigo-700';
+                        } elseif ($quarter != 0) {
+                            $periode = 'Kuartal ' . $quarter;
+                            $label   = 'Kuartal';
+                            $style   = 'bg-sky-50 border-sky-200 text-sky-700';
+                        } elseif ($semester != 0) {
+                            $periode = 'Semester ' . $semester;
+                            $label   = 'Semester';
+                            $style   = 'bg-emerald-50 border-emerald-200 text-emerald-700';
+                        } else {
+                            $periode = 'All';
+                            $label   = 'Periode';
+                            $style   = 'bg-gray-50 border-gray-200 text-gray-600';
+                        }
                     @endphp
 
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-                        {{-- Decade --}}
+                        {{-- Dekade --}}
                         <div class="bg-gray-50 border rounded-lg p-3 text-center">
-                            <p class="text-xs text-gray-400 mb-1">Decade</p>
+                            <p class="text-xs text-gray-400 mb-1">Dekade</p>
                             <p class="text-lg font-bold text-gray-700">
-                                {{ $decade . '-an' ?? 'All' }}
+                                {{ $decade ? $decade . '-an' : 'All' }}
                             </p>
                         </div>
-
 
                         {{-- Tahun --}}
                         <div class="bg-gray-50 border rounded-lg p-3 text-center">
                             <p class="text-xs text-gray-400 mb-1">Tahun</p>
                             <p class="text-lg font-bold text-gray-700">
-                                {{ $year ?? 'All' }}
+                                {{ ($year && $year != 0) ? $year : 'All' }}
                             </p>
                         </div>
 
-                        {{-- Kuartal --}}
-                        <div style="background:{{ $qs['bg'] }}; border:1px solid {{ $qs['border'] }};"
-                            class="rounded-lg p-3 text-center">
-                            <p style="color:{{ $qs['text'] }}; opacity:0.7;" class="text-xs mb-1">
-                                Kuartal
+                        {{-- Periode (Dynamic) --}}
+                        <div class="rounded-lg p-3 text-center border {{ $style }}">
+                            <p class="text-xs opacity-70 mb-1">
+                                {{ $label }}
                             </p>
-                            <p style="color:{{ $qs['text'] }};" class="text-lg font-bold">
-                                {{ ($quarter && $quarter != 0) ? 'Q'.$quarter : 'All' }}
-                            </p>
-                        </div>
-
-                        {{-- Bulan --}}
-                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
-                            <p class="text-xs text-gray-400 mb-1">Bulan</p>
-                            <p class="text-lg font-bold text-gray-700">
-                                {{ ($month && $month != 0) ? $bulanList[$month] : 'All' }}
-                            </p>
-                        </div>
-
-                        {{-- Hari --}}
-                        <div class="bg-gray-50 border rounded-lg p-3 text-center">
-                            <p class="text-xs text-gray-400 mb-1">Hari</p>
-                            <p class="text-lg font-bold text-gray-700">
-                                {{ ($day && $day != 0) ? $day : 'All' }}
+                            <p class="text-lg font-bold">
+                                {{ $periode }}
                             </p>
                         </div>
 
