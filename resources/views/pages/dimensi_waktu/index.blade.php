@@ -78,9 +78,7 @@
                     <th class="px-4 py-3 font-semibold">No</th>
                     <th class="px-4 py-3 font-semibold">Dekade</th>
                     <th class="px-4 py-3 font-semibold">Tahun</th>
-                    <th class="px-4 py-3 font-semibold">Semester</th>
-                    <th class="px-4 py-3 font-semibold">Kuartal</th>
-                    <th class="px-4 py-3 font-semibold">Bulan</th>
+                    <th class="px-4 py-3 font-semibold">Periode</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -100,21 +98,15 @@
                             @endif
                         </td>
                         <td class="px-4 py-3">
-                            @if ($row->semester == 0)
+                            @if ($row->semester == 0 && $row->quarter == 0 && $row->month == 0)
                                 <span class="text-gray-500">ALL</span>
-                            @else
-                            <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                                {{ $row->semester == 1 ? 'bg-cyan-100 text-cyan-700' : '' }}
-                                {{ $row->semester == 2 ? 'bg-green-100 text-green-700' : '' }}
-                            ">
-                                Semester {{ $row->semester }}
-                            </span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3">
-                            @if ($row->quarter == 0)
-                                <span class="text-gray-500">ALL</span>
-                            @else
+
+                            @elseif ($row->month != 0)
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                    {{ \Carbon\Carbon::create($row->year ?: 2000, $row->month, 1)->translatedFormat('F') }}
+                                </span>
+
+                            @elseif ($row->quarter != 0)
                                 <span class="px-2 py-0.5 rounded-full text-xs font-medium
                                     {{ $row->quarter == 1 ? 'bg-sky-100 text-sky-700' : '' }}
                                     {{ $row->quarter == 2 ? 'bg-emerald-100 text-emerald-700' : '' }}
@@ -123,13 +115,14 @@
                                 ">
                                     Kuartal {{ $row->quarter }}
                                 </span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3 text-gray-700">
-                            @if ($row->month == 0)
-                                <span class="text-gray-500">ALL</span>
-                            @else
-                                {{ \Carbon\Carbon::create($row->year, $row->month, 1)->translatedFormat('F') }} 
+
+                            @elseif ($row->semester != 0)
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                                    {{ $row->semester == 1 ? 'bg-cyan-100 text-cyan-700' : '' }}
+                                    {{ $row->semester == 2 ? 'bg-green-100 text-green-700' : '' }}
+                                ">
+                                    Semester {{ $row->semester }}
+                                </span>
                             @endif
                         </td>
                     </tr>
