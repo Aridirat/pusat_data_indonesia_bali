@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\rujukan;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,12 +17,13 @@ return new class extends Migration
             // PRIMARY KEY
             $table->integer('id')->autoIncrement();
             
-            // FOREIGN KEY KE
             $table->integer('user_id');
 
             $table->integer('metadata_id');
 
             $table->bigInteger('location_id');
+            
+            $table->integer('rujukan_id');
             
             $table->integer('time_id');
 
@@ -29,12 +31,17 @@ return new class extends Migration
 
             $table->integer('status')->default(1);
 
-            // INPUT DATE
             $table->dateTime('date_inputed');
 
             $table->foreign('metadata_id')
                 ->references('metadata_id')
                 ->on('metadata')
+                ->onDelete('restrict')
+                ->onUpdate('restrict');
+
+            $table->foreign('rujukan_id')
+                ->references('rujukan_id')
+                ->on('rujukan')
                 ->onDelete('restrict')
                 ->onUpdate('restrict');
             

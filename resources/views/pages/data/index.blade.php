@@ -5,7 +5,7 @@
 @php
     $activeMetadataId   = request('metadata_id', '');
     $activeWilayahId    = request('filter_wilayah_id', '');
-    $activeWilayah      = request('nama_wilayah', '');   // untuk display badge
+    $activeWilayah      = request('nama_wilayah', '');
     $activeYear         = request('year', '');
     $activeSearch       = request('search', '');
     $activeTemplateId   = request('template_id', '');
@@ -22,14 +22,16 @@
     {{-- HEADER --}}
     <div class="flex justify-between items-start">
         <div>
-            <h1 class="text-xl font-bold text-gray-800">Data</h1>
-            <p class="text-sm text-gray-400 mt-1">Pilih filter untuk menampilkan data</p>
+            <h1 class="text-xl font-bold text-gray-800">Halamana Data</h1>
+            <p class="text-sm text-gray-400 mt-1">Menyajikan data sesuai dengan kebutuhan Anda</p>
         </div>
         <div class="text-right text-sm text-gray-500">
             <p id="current-date"></p>
             <p id="current-time" class="font-mono text-sky-600 font-semibold"></p>
         </div>
     </div>
+
+    <hr class="my-3">
 
     {{-- ALERT --}}
     @if(session('success'))
@@ -40,38 +42,46 @@
     @endif
 
     {{-- ACTION BAR --}}
-    <div class="flex flex-wrap justify-between items-center mt-5 gap-3">
-        <div class="flex gap-2">
-            <a href="{{ route('data.create') }}"
-               class="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-lg
-                      shadow-md shadow-sky-400/30 flex items-center gap-2 transition-colors">
-                <i class="fas fa-plus"></i> Input Data
-            </a>
-            @if(isset($pendingCount) && $pendingCount > 0)
-                <a href="{{ route('data.approval') }}"
-                   class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg
-                          flex items-center gap-2 transition-colors">
-                    <i class="fas fa-clock"></i> Approval
-                    <span class="bg-white text-amber-600 text-xs font-bold px-1.5 py-0.5 rounded-full">
-                        {{ $pendingCount }}
-                    </span>
+    <div>
+        <div class="flex flex-col justify-between items-start my-5 gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-gray-800">
+                    Kelola Data
+                </h2>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ route('data.create') }}"
+                   class="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-lg
+                          shadow-md shadow-sky-400/30 flex items-center gap-2 transition-colors">
+                    <i class="fas fa-plus"></i> Input Data
                 </a>
-            @endif
+                @if(isset($pendingCount) && $pendingCount > 0)
+                    <a href="{{ route('data.approval') }}"
+                       class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg
+                              flex items-center gap-2 transition-colors">
+                        <i class="fas fa-clock"></i> Approval
+                        <span class="bg-white text-amber-600 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                            {{ $pendingCount }}
+                        </span>
+                    </a>
+                @endif
+            </div>
         </div>
+        <hr class="my-3">
+    </div>
+    
+    <div class="flex gap-2 items-center">
+        <button id="btnSaveTemplate" onclick="openTemplateModal()"
+            class="hidden px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-md"
+            style="background:#8b5cf6; color:#fff;"
+            onmouseover="this.style.background='#7c3aed'"
+            onmouseout="this.style.background='#8b5cf6'">
+            <i class="fas fa-bookmark"></i> Simpan Template
+        </button>
 
-        <div class="flex gap-2 items-center">
-            <button id="btnSaveTemplate" onclick="openTemplateModal()"
-                class="hidden px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-md"
-                style="background:#8b5cf6; color:#fff;"
-                onmouseover="this.style.background='#7c3aed'"
-                onmouseout="this.style.background='#8b5cf6'">
-                <i class="fas fa-bookmark"></i> Simpan Template
-            </button>
-
-            @if($hasFilter && request('metadata_id'))
-                @include('pages.data._export_buttons')
-            @endif
-        </div>
+        @if($hasFilter && request('metadata_id'))
+            @include('pages.data._export_buttons')
+        @endif
     </div>
 
     {{-- TEMPLATE PILLS --}}
@@ -80,6 +90,9 @@
             <span class="text-xs text-gray-400 font-medium shrink-0">
                 <i class="fas fa-bookmark mr-1"></i> Template saya:
             </span>
+            <div>
+                <form action=""></form>
+            </div>
             @foreach($availableTemplates as $tmpl)
                 <div class="flex items-center">
                     <a href="{{ route('data.index', ['template_id' => $tmpl->tampilan_id]) }}"

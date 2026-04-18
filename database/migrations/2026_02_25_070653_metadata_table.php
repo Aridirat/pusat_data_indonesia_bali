@@ -39,15 +39,7 @@ return new class extends Migration
 
             $table->integer('produsen_id');
             
-            $table->string('nama_contact_person', 100);
-            $table->string('nomor_contact_person', 100);
-            $table->string('email_contact_person', 100);
-            
             $table->string('tag', 255);
-            
-            $table->string('nama_rujukan', 255);
-            $table->string('link_rujukan', 255);
-            $table->string('gambar_rujukan', 255);
             
             $table->integer('flag_desimal')->default(0);           
 

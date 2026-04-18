@@ -328,6 +328,25 @@
                         @enderror
                     </div>
                 </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Rujukan
+                        <span id="satuanLabel" class="text-gray-400 font-normal text-xs ml-1"></span>
+                    </label>
+                    <select name="rujukan_id"  placeholder="Pilih rujukan..." autocomplete="off"
+                            class="tom-select w-full focus:outline-none focus:ring-2
+                                   focus:ring-sky-400 text-xs">
+                        <option value="">-- Pilih Rujukan --</option>
+                        @foreach($rujukanList as $rujukan)
+                            <option value="{{ $rujukan->rujukan_id }}"
+                                {{ old('rujukan_id') == $rujukan->rujukan_id ? 'selected' : '' }}>
+                                {{ $rujukan->nama_rujukan }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+
  
                 <div class="flex justify-end pt-2">
                     <button type="submit"
@@ -355,7 +374,7 @@
                     dengan struktur kolom:
                 </p>
                 <div class="flex flex-wrap gap-1.5 mb-3">
-                    @foreach(['metadata_id','nama_metadata','location_id','nama_wilayah'] as $col)
+                    @foreach(['metadata_id','nama_metadata','location_id','nama_wilayah', 'rujukan_id'] as $col)
                         <code class="px-2 py-0.5 rounded text-xs font-mono font-bold"
                               style="background:#e0f2fe; color:#0369a1;">{{ $col }}</code>
                     @endforeach
@@ -578,24 +597,24 @@
                 </div>
 
                 <div id="validSection" class="hidden">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="w-2 h-2 rounded-full bg-green-400"></span>
+                    <div class="flex items-center gap-2 mb-2.5">
+                        <span class="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
                         <p class="text-sm font-semibold text-green-700">Data Valid — Siap Diimport</p>
                     </div>
-                    <div class="border border-green-200 rounded-lg overflow-x-auto max-h-72">
-                        <table class="w-full text-xs">
-                            <thead class="bg-green-50 text-green-700 sticky top-0">
-                                <tr>
-                                    <th class="px-3 py-2 text-left">Metadata</th>
-                                    <th class="px-3 py-2 text-left">Lokasi</th>
-                                    <th class="px-3 py-2 text-left">Periode</th>
-                                    <th class="px-3 py-2 text-right">Nilai</th>
+                    <div class="border border-gray-200 rounded-xl overflow-x-auto">
+                        <table class="w-full text-xs" id="validPivotTable">
+                            <thead class="bg-gray-50 text-gray-500 border-b border-gray-200">
+                                <tr id="validHeaderTop">
+                                    {{-- diisi JS: kolom Nama, span Tahun, Sumber --}}
+                                </tr>
+                                <tr id="validHeaderSub">
+                                    {{-- diisi JS: kolom kosong, kolom per-periode, kosong x2 --}}
                                 </tr>
                             </thead>
-                            <tbody id="validBody" class="divide-y divide-green-100"></tbody>
+                            <tbody id="validBody"></tbody>
                         </table>
                     </div>
-                    <p id="validMore" class="hidden text-xs text-gray-400 text-right mt-1"></p>
+                    <p id="validMore" class="hidden text-xs text-gray-400 text-right mt-1.5"></p>
                 </div>
 
                 <div class="flex items-center justify-between pt-2 border-t border-gray-100">
@@ -663,6 +682,22 @@ const TS = {};
 // ══════════════════════════════════════════════════════════════
 // TOM SELECT — HELPERS
 // ══════════════════════════════════════════════════════════════
+
+function initTomSelect(selector) {
+    document.querySelectorAll(selector).forEach(el => {
+        if (!el.tomselect) {
+            new TomSelect(el, {
+                create: true,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                }
+            });
+        }
+    });
+}
+
+initTomSelect('.tom-select'); 
  
 /** Buat instance Tom Select baru */
 function makeTS(id, extraOpts = {}, onChange = null) {
@@ -1136,6 +1171,9 @@ function onMetadataChange(select) {
     applyFlagDesimal(opt ? (opt.dataset.flagDesimal ?? '0') : '0');
 }
 
+// RUJUKAN DATA
+
+
 function resetWaktuFields() {
     Object.keys(FIELD_MAP).forEach(key => {
         const sel  = document.getElementById(FIELD_MAP[key]);
@@ -1310,24 +1348,87 @@ function renderPreview(json) {
     const validSection = document.getElementById('validSection');
     const validBody    = document.getElementById('validBody');
     const validMore    = document.getElementById('validMore');
+
     if (json.rows && json.rows.length > 0) {
         validSection.classList.remove('hidden');
-        validBody.innerHTML = json.rows.slice(0, 20).map((r, i) => `
-            <tr class="${i % 2 === 1 ? 'bg-green-50' : ''}">
-                <td class="px-3 py-2 text-gray-700">${esc(r.nama_metadata ?? String(r.metadata_id))}</td>
-                <td class="px-3 py-2 text-gray-600">${esc(r.nama_wilayah ?? String(r.location_id))}</td>
-                <td class="px-3 py-2">
-                    <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                        style="background:#fef3c7; color:#b45309;">
-                        ${esc(String(r.period_label))}
-                    </span>
-                </td>
-                <td class="px-3 py-2 text-right font-mono text-gray-800 font-semibold">
-                    ${formatNum(r.number_value)}
-                </td>
-            </tr>`).join('');
-        if (json.rows.length > 20) {
-            validMore.textContent = `Menampilkan 20 dari ${json.rows.length} record valid`;
+
+        // ── Kumpulkan semua periode unik (urut sesuai kemunculan) ──
+        const periodOrder = [];
+        const periodSet   = new Set();
+        json.rows.forEach(r => {
+            const p = String(r.period_label);
+            if (!periodSet.has(p)) { periodSet.add(p); periodOrder.push(p); }
+        });
+
+        // ── Build header row 1: Nama | Tahun (colspan) | Sumber ──
+        const hTop = document.getElementById('validHeaderTop');
+        hTop.innerHTML = `
+            <th class="px-3 py-2 text-left font-medium" style="width:36%;">Nama</th>
+            <th colspan="${periodOrder.length}" class="px-3 py-2 text-center font-medium border-x border-gray-200">
+                ${json.period_type === 'tahunan' ? 'Tahun' : json.period_type === 'bulanan' ? 'Bulan' : json.period_type === 'semester' ? 'Semester' : 'Periode'}
+            </th>
+            <th class="px-3 py-2 text-left font-medium">Sumber Rujukan</th>`;
+
+        // ── Build header row 2: kosong | per-periode | kosong x2 ──
+        const hSub = document.getElementById('validHeaderSub');
+        hSub.innerHTML = `<th class="px-3 py-2 border-b border-gray-200"></th>`
+            + periodOrder.map(p => `
+                <th class="px-3 py-2 text-center font-medium border-b border-gray-200 whitespace-nowrap">${esc(p)}</th>`
+            ).join('')
+            + `<th class="px-3 py-2 border-b border-gray-200"></th>
+            <th class="px-3 py-2 border-b border-gray-200"></th>`;
+
+        // ── Pivot: kelompokkan per (metadata_id, location_id, rujukan_id) ──
+        const groups = new Map();
+        json.rows.forEach(r => {
+            const key = `${r.metadata_id}__${r.location_id}__${r.rujukan_id ?? ''}`;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    nama:      r.nama_metadata ?? String(r.metadata_id),
+                    wilayah:   r.nama_wilayah  ?? String(r.location_id),
+                    rujukan:   r.nama_rujukan   ?? String(r.rujukan_id),
+                    values:    {},
+                });
+            }
+            groups.get(key).values[String(r.period_label)] = r.number_value;
+        });
+
+        // ── Render tbody ──
+        let prevNama = null;
+        const rows = [...groups.values()];
+        validBody.innerHTML = rows.slice(0, 50).map((g, i) => {
+            const showGroupLabel = g.nama !== prevNama;
+            prevNama = g.nama;
+
+            const groupRow = showGroupLabel ? `
+                <tr>
+                    <td colspan="${periodOrder.length + 3}"
+                        class="px-3 py-1.5 text-xs text-gray-500 bg-gray-50 border-b border-gray-100 font-medium">
+                        ${esc(g.nama)}
+                    </td>
+                </tr>` : '';
+
+            const cells = periodOrder.map(p => {
+                const v = g.values[p];
+                return v !== undefined
+                    ? `<td class="px-3 py-2 text-center font-mono text-gray-800">${formatNum(v)}</td>`
+                    : `<td class="px-3 py-2 text-center text-gray-300">—</td>`;
+            }).join('');
+
+            return groupRow + `
+                <tr class="${i % 2 === 1 ? 'bg-gray-50/40' : ''}">
+                    <td class="px-3 py-2 pl-6 text-gray-600">${esc(g.wilayah)}</td>
+                    ${cells}
+                    <td class="px-3 py-2">
+                        <span class="inline-block text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 whitespace-nowrap">
+                            ${esc(g.rujukan)}
+                        </span>
+                    </td>
+                </tr>`;
+        }).join('');
+
+        if (json.rows.length > 50) {
+            validMore.textContent = `Menampilkan 50 dari ${json.rows.length} record valid`;
             validMore.classList.remove('hidden');
         } else {
             validMore.classList.add('hidden');

@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('produsen_data', function (Blueprint $table) {
             $table->integer('produsen_id')->autoIncrement();
             $table->string('nama_produsen', 100);
+            $table->string('email', 100)->nullable();
+            $table->string('nama_contact_person', 100)->nullable();
             $table->string('kontak', 100)->nullable();
             $table->string('alamat', 255)->nullable();
             $table->timestamps();

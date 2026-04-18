@@ -18,7 +18,8 @@ class DataImport
     private const COL_META_NM  = 1;
     private const COL_LOC_ID   = 2;
     private const COL_LOC_NM   = 3;
-    private const COL_PERIOD   = 4;
+    private const COL_RUJUKAN   = 4;
+    private const COL_PERIOD   = 5;
 
     private const BULAN_MAP = [
         'jan'=>1,'feb'=>2,'mar'=>3,'apr'=>4,'mei'=>5,'jun'=>6,
@@ -43,10 +44,35 @@ class DataImport
      */
     private array $metadataCache     = [];
 
+    private array $rujukanCache = [];
+
     public function __construct(int $userId = 0, bool $skipDuplicates = true)
     {
         $this->userId         = $userId ?: (Auth::check() ? Auth::user()->user_id : 0);
         $this->skipDuplicates = $skipDuplicates;
+    }
+
+    private function preloadRujukanCache(array $dataRows, ?int $rujukanColIndex): void
+    {
+        if ($rujukanColIndex === null) return;
+
+        $ids = [];
+        foreach ($dataRows as $row) {
+            if (isset($row[$rujukanColIndex])) {
+                $ids[] = (int)$row[$rujukanColIndex];
+            }
+        }
+
+        $ids = array_unique(array_filter($ids));
+        if (empty($ids)) return;
+
+        $rows = DB::table('rujukan')
+            ->whereIn('rujukan_id', $ids)
+            ->get(['rujukan_id', 'nama_rujukan']);
+
+        foreach ($rows as $r) {
+            $this->rujukanCache[$r->rujukan_id] = $r->nama_rujukan;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -55,7 +81,7 @@ class DataImport
 
     public function preview(string $filePath): array
     {
-        [$periodCols, $dataRows] = $this->readExcel($filePath);
+        [$periodCols, $dataRows, $rujukanColIndex] = $this->readExcel($filePath);
 
         $previewRows      = [];
         $errors           = [];
@@ -67,11 +93,15 @@ class DataImport
 
         $this->buildExistingSet($periodCols);
 
+        
+
+        $this->preloadRujukanCache($dataRows, $rujukanColIndex);
+
         foreach ($dataRows as $rowNum => $row) {
-            $result = $this->parseRow($row, $periodCols, $rowNum, dryRun: true);
+            $result = $this->parseRow($row, $periodCols, $rowNum, dryRun: true, rujukanColIndex: $rujukanColIndex);
 
             foreach ($result['records'] as $rec) {
-                $key = "{$rec['metadata_id']}_{$rec['location_id']}_{$rec['time_id']}";
+                $key = "{$rec['metadata_id']}_{$rec['location_id']}_{$rec['time_id']}_{$rec['rujukan_id']}";
                 if (isset($this->existingSet[$key])) {
                     $duplicates[] = array_merge($rec, ['row' => $rowNum]);
                 } else {
@@ -117,13 +147,15 @@ class DataImport
 
     public function import(string $filePath): array
     {
-        [$periodCols, $dataRows] = $this->readExcel($filePath);
+        [$periodCols, $dataRows, $rujukanColIndex] = $this->readExcel($filePath);
 
         // Pre-load validasi metadata
         $this->preloadMetadataCache($dataRows);
 
         $this->preloadTimeCache($periodCols);
         $this->buildExistingSet($periodCols);
+
+        $this->preloadRujukanCache($dataRows, $rujukanColIndex);
 
         $buffer    = [];
         $now       = Carbon::now()->format('Y-m-d H:i:s');
@@ -132,10 +164,10 @@ class DataImport
         DB::beginTransaction();
         try {
             foreach ($dataRows as $rowNum => $row) {
-                $result = $this->parseRow($row, $periodCols, $rowNum, dryRun: false);
+                $result = $this->parseRow($row, $periodCols, $rowNum, dryRun: false, rujukanColIndex: $rujukanColIndex);
 
                 foreach ($result['records'] as $rec) {
-                    $key = "{$rec['metadata_id']}_{$rec['location_id']}_{$rec['time_id']}";
+                    $key = "{$rec['metadata_id']}_{$rec['location_id']}_{$rec['time_id']}_{$rec['rujukan_id']}";
 
                     if (isset($this->existingSet[$key]) || isset($insertSet[$key])) {
                         if ($this->skipDuplicates) {
@@ -152,6 +184,7 @@ class DataImport
                         'location_id'  => $rec['location_id'],
                         'time_id'      => $rec['time_id'],
                         'number_value' => $rec['number_value'],
+                        'rujukan_id'   => $rec['rujukan_id'],
                         'status'       => Data::STATUS_PENDING,
                         'date_inputed' => $now,
                     ];
@@ -218,6 +251,14 @@ class DataImport
             }
         }
 
+        $rujukanColIndex = null;
+        foreach ($headerRow as $i => $val) {
+            if (strtolower(trim((string)$val)) === 'rujukan_id') {
+                $rujukanColIndex = $i;
+                break;
+            }
+        }
+
         $periodCols = array_slice($headerRow, self::COL_PERIOD);
 
         $dataRows = [];
@@ -236,14 +277,14 @@ class DataImport
             $dataRows[$r] = $rowData;
         }
 
-        return [$periodCols, $dataRows];
+        return [$periodCols, $dataRows, $rujukanColIndex];
     }
 
     // ══════════════════════════════════════════════════════════
     // ROW PARSER
     // ══════════════════════════════════════════════════════════
 
-    private function parseRow(array $row, array $periodCols, int $rowNum, bool $dryRun): array
+    private function parseRow(array $row, array $periodCols, int $rowNum, bool $dryRun, ?int $rujukanColIndex = null): array
     {
         $records         = [];
         $errors          = [];
@@ -253,6 +294,9 @@ class DataImport
         $locationId = isset($row[self::COL_LOC_ID]) ? (int)$row[self::COL_LOC_ID] : null;
         $metaNama   = $row[self::COL_META_NM] ?? '-';
         $locNama    = $row[self::COL_LOC_NM]  ?? '-';
+        $rujukanId = ($rujukanColIndex !== null && isset($row[$rujukanColIndex]))
+        ? (int)$row[$rujukanColIndex]
+        : null;
 
         // ── Validasi metadata (wajib ada + status = 2/active) ──
         if (!$metadataId) {
@@ -262,7 +306,7 @@ class DataImport
             ];
             $metadataId = null;
         } else {
-            $metaValidation = $this->resolveMetadata($metadataId);
+            $metaValidation = $this->metadataCache[$metadataId] ?? null;
             if (!$metaValidation['valid']) {
                 $invalidMetadata[] = [
                     'metadata_id'   => $metadataId,
@@ -333,10 +377,17 @@ class DataImport
             $records[] = [
                 'metadata_id'   => $metadataId,
                 'nama_metadata' => $metaNama,
+                'satuan_data'   => $metaValidation['satuan'] ?? null,
+
                 'location_id'   => $locationId,
                 'nama_wilayah'  => $locNama,
+
                 'time_id'       => $timeId,
                 'period_label'  => $periodLabel,
+
+                'rujukan_id'    => $rujukanId,
+                'nama_rujukan'  => $this->rujukanCache[$rujukanId] ?? null,
+
                 'number_value'  => (float)$rawValue,
             ];
         }
@@ -368,7 +419,7 @@ class DataImport
         // Ambil semua metadata yang ADA di DB (apapun statusnya)
         $rows = DB::table('metadata')
             ->whereIn('metadata_id', $ids)
-            ->get(['metadata_id', 'nama', 'status']);
+            ->get(['metadata_id', 'nama', 'status', 'alias', 'klasifikasi', 'tipe_data', 'satuan_data', 'frekuensi_penerbitan']);
 
         $found = [];
         foreach ($rows as $r) {
@@ -384,7 +435,6 @@ class DataImport
                     'nama'   => null,
                 ];
             } elseif ((int)$found[$id]->status !== 2) {
-                // Ada tapi bukan status active (2)
                 $statusLabel = $this->metadataStatusLabel((int)$found[$id]->status);
                 $this->metadataCache[$id] = [
                     'valid'  => false,
@@ -398,6 +448,11 @@ class DataImport
                     'valid'  => true,
                     'reason' => null,
                     'nama'   => $found[$id]->nama,
+                    'satuan_data' => $found[$id]->satuan_data,
+                    'tipe_data' => $found[$id]->tipe_data,
+                    'klasifikasi' => $found[$id]->klasifikasi,
+                    'alias' => $found[$id]->alias,
+                    'frekuensi_penerbitan' => $found[$id]->frekuensi_penerbitan,
                 ];
             }
         }
@@ -486,7 +541,7 @@ class DataImport
     {
         $label = trim($label);
 
-        // Tahunan: "2021"
+        // Tahunan:
         if (is_numeric($label) && strlen($label) === 4) {
             $year = (int)$label;
             return [
@@ -498,7 +553,7 @@ class DataImport
             ];
         }
 
-        // Semester: "2021_S1" atau "2021_S2"
+        // Semester: 
         if (preg_match('/^(\d{4})_S([12])$/i', $label, $m)) {
             $year     = (int)$m[1];
             $semester = (int)$m[2];
@@ -511,7 +566,7 @@ class DataImport
             ];
         }
 
-        // Quarter: "2021_Q1" s/d "2021_Q4"
+        // Quarter: 
         if (preg_match('/^(\d{4})_Q([1-4])$/i', $label, $m)) {
             $year     = (int)$m[1];
             $quarter  = (int)$m[2];
@@ -525,7 +580,7 @@ class DataImport
             ];
         }
 
-        // Bulanan: "Jan_2021"
+        // Bulanan: 
         if (preg_match('/^([A-Za-z]{3})_(\d{4})$/', $label, $m)) {
             $bulan = strtolower($m[1]);
             $year  = (int)$m[2];
@@ -615,11 +670,11 @@ class DataImport
 
         $existing = DB::table('data')
             ->whereIn('time_id', $timeIds)
-            ->select('metadata_id', 'location_id', 'time_id')
+            ->select('metadata_id', 'location_id', 'time_id', 'rujukan_id')
             ->get();
 
         foreach ($existing as $row) {
-            $key = "{$row->metadata_id}_{$row->location_id}_{$row->time_id}";
+            $key = "{$row->metadata_id}_{$row->location_id}_{$row->time_id}_{$row->rujukan_id}";
             $this->existingSet[$key] = true;
         }
     }

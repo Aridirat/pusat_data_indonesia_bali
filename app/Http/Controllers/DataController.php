@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Data;
 use App\Models\Metadata;
+use App\Models\Rujukan;
 use App\Models\Location;
 use App\Models\Waktu;
 use App\Models\Tampilan;
@@ -155,6 +156,9 @@ class DataController extends Controller
         ->where('status', 2)
         ->orderBy('nama')
         ->get();
+
+        $rujukanList= Rujukan::select('rujukan_id', 'nama_rujukan')->orderBy('nama_rujukan')->get();
+
         $locationList = Location::select('location_id', 'nama_wilayah')->orderBy('nama_wilayah')->get();
 
         // Filter manual berdasarkan nama
@@ -199,7 +203,7 @@ class DataController extends Controller
             'level'        => self::detectLocationLevel($l->nama_wilayah),
         ])->values()->toArray();
 
-        return view('pages.data.create', compact('metadataList', 'locationList', 'provinsiList',
+        return view('pages.data.create', compact('metadataList','rujukanList', 'locationList', 'provinsiList',
         'kabupatenList',
         'kecamatanList',
         'desaList', 'timeList', 'timeListJs', 'locationListJs'));
@@ -225,17 +229,27 @@ class DataController extends Controller
                 'metadata_id' => 'Metadata tidak aktif atau tidak valid.'
             ]);
         }
+
+        $rujukan = Rujukan::where('rujukan_id', $request->rujukan_id)->first();
         
+        if (!$rujukan) {
+            return back()->withInput()->withErrors([
+                'rujukan_id' => 'Rujukan tidak tersedia.'
+            ]);
+        }
+
         $request->validate([
             'metadata_id'       => 'required|integer|exists:metadata,metadata_id',
             'location_id'       => 'required|integer|exists:location,location_id',
             'time_id'           => 'required|integer|exists:time,time_id',
+            'rujukan_id'       => 'required|integer|exists:rujukan,rujukan_id',
             'number_value'      => 'nullable|numeric',
         ]);
 
         $duplicate = Data::where('metadata_id', $request->metadata_id)
             ->where('location_id', $request->location_id)
             ->where('time_id',     $request->time_id)
+            ->where('rujukan_id', $request->rujukan_id)
             ->first();
 
         if ($duplicate) {
@@ -251,6 +265,7 @@ class DataController extends Controller
             'metadata_id'       => $request->metadata_id,
             'location_id'       => $request->location_id,
             'time_id'           => $request->time_id,
+            'rujukan_id'       => $request->rujukan_id,
             'number_value'      => $request->number_value,
             'status'            => Data::STATUS_PENDING,
             'date_inputed'      => Carbon::now(),
@@ -333,7 +348,7 @@ class DataController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet       = $spreadsheet->getActiveSheet();
         $headers     = ['A1'=>'metadata_id','B1'=>'location_id','C1'=>'time_id',
-                        'D1'=>'number_value'];
+                        'D1'=>'number_value', 'E1'=>'rujukan_id'];
 
         foreach ($headers as $cell => $val) $sheet->setCellValue($cell, $val);
         $sheet->getStyle('A1:H1')->applyFromArray([
@@ -342,9 +357,9 @@ class DataController extends Controller
             'alignment' => ['horizontal'=>'center'],
         ]);
         $sheet->setCellValue('A2', 1); $sheet->setCellValue('B2', 1); $sheet->setCellValue('C2', 1);
-        $sheet->setCellValue('D2', 100.50);
+        $sheet->setCellValue('D2', 100.50); $sheet->setCellValue('E2', 1);
 
-        foreach (range('A','D') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
+        foreach (range('A','E') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
         $sheet->setTitle('Template Data');
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);

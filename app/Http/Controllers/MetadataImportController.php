@@ -57,17 +57,11 @@ class MetadataImportController extends Controller
         14 => 'bulan_pertama_rilis',
         15 => 'tanggal_rilis',
         16 => 'produsen_id',
-        17 => 'nama_contact_person',
-        18 => 'nomor_contact_person',
-        19 => 'email_contact_person',
-        20 => 'tag',
-        21 => 'nama_rujukan',
-        22 => 'link_rujukan',
-        23 => 'gambar_rujukan',
-        24 => 'flag_desimal',
-        25 => 'tipe_group',
-        26 => 'group_by',
-        27 => '_status_excel',
+        17 => 'tag',
+        18 => 'flag_desimal',
+        19 => 'tipe_group',
+        20 => 'group_by',
+        21 => '_status_excel',
     ];
 
     private const STRING_DASH = [
@@ -75,7 +69,7 @@ class MetadataImportController extends Controller
         'metodologi', 'penjelasan_metodologi',
         'tipe_data', 'satuan_data', 'tahun_mulai_data',
         'frekuensi_penerbitan',
-        'nama_contact_person', 'nomor_contact_person', 'email_contact_person', 'nama_rujukan', 'gambar_rujukan',
+        
     ];
 
     // Normalisasi kata
@@ -329,15 +323,14 @@ class MetadataImportController extends Controller
                         $seen[$key] = true;
 
                         if ($skipExisting && isset($existingInDb[$key])) { $skipped++; continue; }
-
+                        
                         $produsenId = is_numeric($r['produsen_id']) ? (int)$r['produsen_id'] : null;
-                        if (!$produsenId && !empty($r['_nama_produsen'])) {
-                            $namaProd = trim($r['_nama_produsen']);
-                            if (!isset($produsenCache[$namaProd])) {
-                                $p = ProdusenData::where('nama_produsen', $namaProd)->value('produsen_id');
-                                $produsenCache[$namaProd] = $p;
-                            }
-                            $produsenId = $produsenCache[$namaProd];
+
+                        $produsenId = $produsenId ?? $defaultProdusenId;
+
+                        if (!$produsenId) { 
+                            $skipped++; 
+                            continue; 
                         }
                         $produsenId = $produsenId ?? $defaultProdusenId;
 
@@ -465,14 +458,8 @@ class MetadataImportController extends Controller
             'tanggal_rilis'          => is_numeric($r['tanggal_rilis'])       ? (int)$r['tanggal_rilis']       : null,
 
             'produsen_id'            => $produsenId,
-            'nama_contact_person'    => $r['nama_contact_person'],
-            'nomor_contact_person'   => $r['nomor_contact_person'],
-            'email_contact_person'   => $r['email_contact_person'],
 
             'tag'                    => $r['tag'],
-            'nama_rujukan'           => $r['nama_rujukan'],
-            'link_rujukan'           => (!empty($r['link_rujukan']) && $r['link_rujukan'] !== '') ? $r['link_rujukan'] : '-',
-            'gambar_rujukan'         => $r['gambar_rujukan'],
 
             'flag_desimal'           => 0,
             'tipe_group'             => is_numeric($r['tipe_group']) ? (int)$r['tipe_group'] : 2,

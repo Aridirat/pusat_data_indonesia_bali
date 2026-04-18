@@ -127,17 +127,18 @@
                 @endif
             </div>
 
-            {{-- Analisis Fenomena --}}
-            @if($datum->analisis_fenomena)
-                <div class="bg-white rounded-xl shadow p-5">
-                    <h2 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                        <i class="fas fa-microscope text-purple-500"></i> Analisis Fenomena
-                    </h2>
-                    <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                        {{ $datum->analisis_fenomena }}
-                    </p>
-                </div>
-            @endif
+            {{-- Rujukan Data --}}
+            <div class="bg-white rounded-xl shadow p-5">
+                <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <i class="fas fa-link text-rose-500"></i> Rujukan
+                </h2>
+
+                @if($datum->rujukan)
+                    <p class="text-sm text-gray-600">{{ $datum->rujukan->nama_rujukan }}</p>
+                @else
+                    <p class="text-sm text-gray-400">Data rujukan tidak ditemukan.</p>
+                @endif
+            </div>
 
         </div>
 

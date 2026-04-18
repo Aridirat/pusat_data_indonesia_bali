@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use Database\Seeders\GroupSeeder;
 use Database\Seeders\UserSeeder;
 use Database\Seeders\ProdusenDataSeeder;
+use Database\Seeders\RujukanSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -20,6 +21,7 @@ class DatabaseSeeder extends Seeder
             GroupSeeder::class,
             UserSeeder::class,
             ProdusenDataSeeder::class,
+            RujukanSeeder::class,
         ]);
     }
 }
