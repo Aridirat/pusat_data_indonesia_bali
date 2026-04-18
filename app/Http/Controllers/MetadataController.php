@@ -566,13 +566,6 @@ class MetadataController extends Controller
         $ws->freezePane('F4');
         $ws->setAutoFilter('A3:' . $lastColLetter . '3');
     
-        // ── Proteksi: lock kolom A & B, buka C–lastCol untuk edit ────────────
-        $excelPassword = env('EXCEL_SHEET_PASSWORD', 'default_password');
-
-        $ws->getProtection()
-            ->setSheet(true)
-            ->setPassword($excelPassword);
-    
         $lastDataRow = max(count($excelRows) + 3, 4);
         $unlockStyle = ['protection' => [
             'locked' => Protection::PROTECTION_UNPROTECTED,
