@@ -88,144 +88,147 @@ class MetadataController extends Controller
             'frekuensi'   => 'nullable|string|max:50',
         ]);
 
-        // Bangun query
-        $query = Metadata::with(['produsen', 'user'])
-                          ->where('status', self::STATUS_ACTIVE)
-                          ->orderBy('klasifikasi')
-                          ->orderBy('nama');
+        $query = Metadata::where('status', self::STATUS_ACTIVE)
+            ->orderBy('metadata_id');
 
-        if ($request->filled('produsen_id')) { $query->where('produsen_id', $request->produsen_id); }
-        if ($request->filled('frekuensi'))   { $query->where('frekuensi_penerbitan', $request->frekuensi); }
+        if ($request->filled('produsen_id')) {
+            $query->where('produsen_id', $request->produsen_id);
+        }
+
+        if ($request->filled('frekuensi')) {
+            $query->where('frekuensi_penerbitan', $request->frekuensi);
+        }
 
         $rows = $query->get();
 
         $parts = ['Metadata'];
-        $produsenLabel = null;
         if ($request->filled('produsen_id')) {
             $p = ProdusenData::find($request->produsen_id);
-            if ($p) { $produsenLabel = $p->nama_produsen; $parts[] = str_replace(' ', '_', $p->nama_produsen); }
+            if ($p) {
+                $parts[] = str_replace(' ', '_', $p->nama_produsen);
+            }
         }
-        if ($request->filled('frekuensi')) { $parts[] = str_replace(' ', '_', $request->frekuensi); }
-        $parts[]  = now()->format('Ymd');
+
+        if ($request->filled('frekuensi')) {
+            $parts[] = str_replace(' ', '_', $request->frekuensi);
+        }
+
+        $parts[] = now()->format('Ymd');
         $filename = implode('_', $parts) . '.xlsx';
 
-        // ── Spreadsheet ───────────────────────────────────────
         $spreadsheet = new Spreadsheet();
-        $sheet       = $spreadsheet->getActiveSheet()->setTitle('Metadata');
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Metadata');
 
-        $COL_HEADER = '0284C7'; 
-        $COL_ALT    = 'F0F9FF'; 
-
-        $bulanList = ['','Januari','Februari','Maret','April','Mei','Juni',
-                      'Juli','Agustus','September','Oktober','November','Desember'];
-
-        // Baris 1: Judul
-        $sheet->mergeCells('A1:R1');
-        $sheet->setCellValue('A1', 'Data Metadata — ' . now()->translatedFormat('d F Y'));
-        $sheet->getStyle('A1')->applyFromArray([
-            'font'      => ['bold'=>true,'size'=>13,'color'=>['rgb'=>$COL_HEADER]],
-            'alignment' => ['horizontal'=>Alignment::HORIZONTAL_CENTER],
-        ]);
-        $sheet->getRowDimension(1)->setRowHeight(26);
-
-        // Baris 2: Info filter
-        $info = 'Total: '.$rows->count().' metadata';
-        if ($request->filled('frekuensi'))  $info .= '  |  Frekuensi: '.$request->frekuensi;
-        if ($produsenLabel)                 $info .= '  |  Produsen: '.$produsenLabel;
-        $sheet->mergeCells('A2:R2');
-        $sheet->setCellValue('A2', $info);
-        $sheet->getStyle('A2')->applyFromArray([
-            'font'      => ['size'=>9,'italic'=>true,'color'=>['rgb'=>'64748B']],
-            'alignment' => ['horizontal'=>Alignment::HORIZONTAL_CENTER],
-        ]);
-        $sheet->getRowDimension(2)->setRowHeight(16);
-
-        // Baris 3: Header tabel
         $headers = [
-            'A'=>['No',18=>4],    'B'=>['Nama',18=>38],   'C'=>['Alias',18=>24],
-            'D'=>['Klasifikasi',18=>16], 'E'=>['Konsep',18=>35], 'F'=>['Definisi',18=>35],
-            'G'=>['Asumsi',18=>25],  'H'=>['Metodologi',18=>20],
-            'I'=>['Tipe Data',18=>12], 'J'=>['Satuan',18=>12],
-            'K'=>['Tahun Mulai',18=>14], 'L'=>['Frekuensi',18=>14],
-            'M'=>['Thn Pertama Rilis',18=>16], 'N'=>['Bln Pertama Rilis',18=>16],
-            'O'=>['Tgl Rilis',18=>10], 'P'=>['Produsen',18=>28],
-            'Q'=>['Contact Person',18=>24], 'R'=>['Email',18=>28],
+            'ID',
+            'Nama',
+            'Alias',
+            'Konsep',
+            'Definisi',
+            'Klasifikasi',
+            'Asumsi',
+            'Metodologi',
+            'Penjelasan Metodologi',
+            'Tipe Data',
+            'Satuan Data',
+            'Tahun Mulai Data',
+            'Frekuensi Penerbitan',
+            'Tahun Pertama Rilis',
+            'Bulan Pertama Rilis',
+            'Tanggal Rilis',
+            'Produsen Id',
+            'Tag',
+            'Flag Desimal',
+            'Tipe Group',
+            'Group By',
+            'Status',
         ];
-        $widths   = [4,38,24,16,35,35,25,20,12,12,14,14,16,16,10,28,24,28];
-        $hLabels  = ['No','Nama Metadata','Alias','Klasifikasi','Konsep','Definisi',
-                     'Asumsi','Metodologi','Tipe Data','Satuan Data','Tahun Mulai Data',
-                     'Frekuensi Penerbitan','Tahun Pertama Rilis','Bulan Pertama Rilis',
-                     'Tanggal Rilis','Produsen Data','Contact Person','Email'];
-        $cols     = range('A','R');
 
-        foreach ($cols as $idx => $col) {
-            $sheet->setCellValue($col.'3', $hLabels[$idx]);
-            $sheet->getColumnDimension($col)->setWidth($widths[$idx]);
+        /*
+        |--------------------------------------------------------------------------
+        | Header Row
+        |--------------------------------------------------------------------------
+        */
+
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '1', $header);
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+            $col++;
         }
 
-        $sheet->getStyle('A3:R3')->applyFromArray([
-            'font'      => ['bold'=>true,'color'=>['rgb'=>'FFFFFF'],'size'=>10],
-            'fill'      => ['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>$COL_HEADER]],
-            'alignment' => ['horizontal'=>Alignment::HORIZONTAL_CENTER,
-                            'vertical'=>Alignment::VERTICAL_CENTER,'wrapText'=>true],
-            'borders'   => ['allBorders'=>['borderStyle'=>Border::BORDER_THIN,
-                                           'color'=>['rgb'=>'0369A1']]],
+        $sheet->getStyle('A1:V1')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 10,
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                ],
+            ],
         ]);
-        $sheet->getRowDimension(3)->setRowHeight(22);
 
-        // Baris data
-        foreach ($rows as $i => $m) {
-            $r = $i + 4;
-            $sheet->setCellValue("A$r", $i + 1);
-            $sheet->setCellValue("B$r", $m->nama);
-            $sheet->setCellValue("C$r", $m->alias ?? '-');
-            $sheet->setCellValue("D$r", $m->klasifikasi);
-            $sheet->setCellValue("E$r", $m->konsep);
-            $sheet->setCellValue("F$r", $m->definisi);
-            $sheet->setCellValue("G$r", $m->asumsi ?? '-');
-            $sheet->setCellValue("H$r", $m->metodologi);
-            $sheet->setCellValue("I$r", $m->tipe_data);
-            $sheet->setCellValue("J$r", $m->satuan_data);
-            $sheet->setCellValue("K$r", $m->tahun_mulai_data);
-            $sheet->setCellValue("L$r", $m->frekuensi_penerbitan);
-            $sheet->setCellValue("M$r", $m->tahun_pertama_rilis ?? '-');
-            $sheet->setCellValue("N$r", $m->bulan_pertama_rilis ? ($bulanList[$m->bulan_pertama_rilis] ?? '-') : '-');
-            $sheet->setCellValue("O$r", $m->tanggal_rilis ?? '-');
-            $sheet->setCellValue("P$r", $m->produsen?->nama_produsen ?? '-');
-            $sheet->setCellValue("Q$r", $m->nama_contact_person);
-            $sheet->setCellValue("R$r", $m->email_contact_person);
+        /*
+        |--------------------------------------------------------------------------
+        | Data Rows
+        |--------------------------------------------------------------------------
+        */
 
-            $bg = $i % 2 === 0 ? 'FFFFFF' : $COL_ALT;
-            $sheet->getStyle("A$r:R$r")->applyFromArray([
-                'fill'      => ['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>$bg]],
-                'font'      => ['size'=>9],
-                'alignment' => ['vertical'=>Alignment::VERTICAL_TOP,'wrapText'=>true],
-                'borders'   => ['allBorders'=>['borderStyle'=>Border::BORDER_HAIR,'color'=>['rgb'=>'E2E8F0']]],
-            ]);
-            $sheet->getStyle("A$r")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("D$r")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getRowDimension($r)->setRowHeight(38);
+        foreach ($rows as $index => $m) {
+            $row = $index + 2;
+
+            $sheet->setCellValue("A{$row}", $m->metadata_id);
+            $sheet->setCellValue("B{$row}", $m->nama);
+            $sheet->setCellValue("C{$row}", $m->alias);
+            $sheet->setCellValue("D{$row}", $m->konsep);
+            $sheet->setCellValue("E{$row}", $m->definisi);
+            $sheet->setCellValue("F{$row}", $m->klasifikasi);
+            $sheet->setCellValue("G{$row}", $m->asumsi);
+            $sheet->setCellValue("H{$row}", $m->metodologi);
+            $sheet->setCellValue("I{$row}", $m->penjelasan_metodologi);
+            $sheet->setCellValue("J{$row}", $m->tipe_data);
+            $sheet->setCellValue("K{$row}", $m->satuan_data);
+            $sheet->setCellValue("L{$row}", $m->tahun_mulai_data);
+            $sheet->setCellValue("M{$row}", $m->frekuensi_penerbitan);
+            $sheet->setCellValue("N{$row}", $m->tahun_pertama_rilis);
+            $sheet->setCellValue("O{$row}", $m->bulan_pertama_rilis);
+            $sheet->setCellValue("P{$row}", $m->tanggal_rilis);
+            $sheet->setCellValue("Q{$row}", $m->produsen_id);
+
+            // tag harus format JSON string
+            $sheet->setCellValue(
+                "R{$row}",
+                is_array($m->tag)
+                    ? json_encode($m->tag, JSON_UNESCAPED_UNICODE)
+                    : ($m->tag ?? '[]')
+            );
+
+            $sheet->setCellValue("S{$row}", $m->flag_decimal ?? 0);
+            $sheet->setCellValue("T{$row}", $m->tipe_group ?? 0);
+            $sheet->setCellValue("U{$row}", $m->group_by);
+            $sheet->setCellValue("V{$row}", $m->status ?? 1);
+
+            $sheet->getStyle("A{$row}:V{$row}")
+                ->getBorders()
+                ->getAllBorders()
+                ->setBorderStyle(Border::BORDER_HAIR);
         }
-
-        // Jika tidak ada data
-        if ($rows->isEmpty()) {
-            $sheet->mergeCells('A4:R4');
-            $sheet->setCellValue('A4', 'Tidak ada data sesuai filter yang dipilih.');
-            $sheet->getStyle('A4')->applyFromArray([
-                'alignment' => ['horizontal'=>Alignment::HORIZONTAL_CENTER],
-                'font'      => ['italic'=>true,'color'=>['rgb'=>'9CA3AF']],
-            ]);
-        }
-
-        $sheet->freezePane('A4');
-        $sheet->setAutoFilter('A3:R3');
 
         $writer = new Xlsx($spreadsheet);
 
         return response()->streamDownload(
-            fn() => $writer->save('php://output'),
+            fn () => $writer->save('php://output'),
             $filename,
-            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+            [
+                'Content-Type' =>
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ]
         );
     }
     private function buildKodeWilayah($loc)
@@ -333,6 +336,7 @@ class MetadataController extends Controller
                         'nama_metadata'=> $meta->nama,
                         'location_id' => $this->buildKodeWilayah($loc),
                         'nama_wilayah'  => $namaLokasi,
+                        'rujukan_id'    => null,
                         'flag_desimal' => $meta->flag_desimal ?? 0,
                         'periods'      => [],
                     ];
@@ -350,6 +354,7 @@ class MetadataController extends Controller
                     'nama_metadata'=> $meta->nama,
                     'location_id' => '',
                     'nama_wilayah'  => null,
+                    'rujukan_id'    => null,
                     'flag_desimal' => $meta->flag_desimal ?? 0,
                     'periods'      => array_fill_keys($periodCols, null),
                 ];
@@ -371,7 +376,7 @@ class MetadataController extends Controller
     
         $ws = $spreadsheet->getActiveSheet()->setTitle('Data Import');
     
-        $totalCols     = 4 + count($periodCols);
+        $totalCols     = 5 + count($periodCols);
         $lastColLetter = $this->colLetter($totalCols);
     
         // ── Baris 1: Judul ────────────────────────────────────────────────────
@@ -411,6 +416,7 @@ class MetadataController extends Controller
             ['label' => 'nama_metadata', 'width' => 40, 'note' => 'Nama metadata (otomatis, jangan diubah)'],
             ['label' => 'location_id',   'width' => 13, 'note' => 'ID lokasi dari tabel dimensi lokasi'],
             ['label' => 'nama_wilayah',   'width' => 40, 'note' => 'Nama lokasi (referensi, boleh dikosongkan)'],
+            ['label' => 'rujukan_id',    'width' => 15, 'note' => 'ID rujukan dari tabel rujukan'],
         ];
     
         foreach ($fixedHeaders as $i => $h) {
@@ -422,13 +428,13 @@ class MetadataController extends Controller
         }
     
         foreach ($periodCols as $pi => $periodLabel) {
-            $col = $this->colLetter(5 + $pi);
+            $col = $this->colLetter(6 + $pi);
             $ws->setCellValue($col . '3', $periodLabel);
             $ws->getColumnDimension($col)->setWidth(12);
         }
     
-        // Style header A–D (sky-600)
-        $ws->getStyle('A3:D3')->applyFromArray([
+        // Style header A–E (sky-600)
+        $ws->getStyle('A3:E3')->applyFromArray([
             'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
             'fill'      => ['fillType' => Fill::FILL_SOLID,
                             'startColor' => ['rgb' => $C_HEADER]],
@@ -439,7 +445,7 @@ class MetadataController extends Controller
         ]);
     
         if (count($periodCols) > 0) {
-            $ws->getStyle('E3:' . $lastColLetter . '3')->applyFromArray([
+            $ws->getStyle('F3:' . $lastColLetter . '3')->applyFromArray([
                 'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
                 'fill'      => ['fillType' => Fill::FILL_SOLID,
                                 'startColor' => ['rgb' => $C_PERIOD]],
@@ -508,6 +514,24 @@ class MetadataController extends Controller
                     'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_HAIR,
                                                     'color'       => ['rgb' => 'E2E8F0']]],
                 ]);
+
+                $ws->setCellValue('E' . $rowNum, $row['rujukan_id']);
+                $ws->getStyle('E' . $rowNum)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFFFFF']
+                    ],
+                    'font' => ['size' => 9],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_HAIR,
+                            'color' => ['rgb' => 'E2E8F0']
+                        ]
+                    ],
+                ]);
     
                 // ── Kolom E+: nilai per periode ──────────────────
                 $flagDesimal = (int) ($row['flag_desimal'] ?? 0);
@@ -539,11 +563,8 @@ class MetadataController extends Controller
         }
     
         // ── Freeze & AutoFilter ───────────────────────────────────────────────
-        $ws->freezePane('E4');
+        $ws->freezePane('F4');
         $ws->setAutoFilter('A3:' . $lastColLetter . '3');
-    
-        // ── Proteksi: lock kolom A & B, buka C–lastCol untuk edit ────────────
-        $ws->getProtection()->setSheet(true)->setPassword('pdib2026');
     
         $lastDataRow = max(count($excelRows) + 3, 4);
         $unlockStyle = ['protection' => [
@@ -675,20 +696,6 @@ class MetadataController extends Controller
 
     public function store(Request $request)
     {
-        $gambarPath = '-';
-
-        if ($request->hasFile('gambar_rujukan')) {
-
-            $file = $request->file('gambar_rujukan');
-
-            $filename = time().'_'.$file->getClientOriginalName();
-
-            $gambarPath = $file->storeAs(
-                'gambar_rujukan',
-                $filename,
-                'public'
-            );
-        }
 
         $request->validate([
             'nama'                  => ['required','max:100',Rule::unique('metadata','nama')],
@@ -708,11 +715,7 @@ class MetadataController extends Controller
             'tanggal_rilis'         => 'nullable|integer|between:1,31',
             'flag_desimal'          => 'required|integer',
             'tag'                   => 'required|max:255',
-            'gambar_rujukan' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:500',
             'produsen_id'           => 'required|exists:produsen_data,produsen_id',
-            'nama_contact_person'   => 'required|max:100',
-            'nomor_contact_person'  => 'required|max:100',
-            'email_contact_person'  => 'required|email|max:100',
             'tipe_group'            => 'required|integer',
             'group_by'              => [
                 'nullable',
@@ -739,13 +742,7 @@ class MetadataController extends Controller
             'tanggal_rilis'          => $request->tanggal_rilis,
             'flag_desimal'           => $request->flag_desimal,
             'tag'                    => $request->tag,
-            'nama_rujukan'           => $request->nama_rujukan,
-            'gambar_rujukan'         => $gambarPath,
-            'link_rujukan'           => $request->link_rujukan,
             'produsen_id'            => $request->produsen_id,
-            'nama_contact_person'    => $request->nama_contact_person,
-            'nomor_contact_person'   => $request->nomor_contact_person,
-            'email_contact_person'   => $request->email_contact_person,
             'tipe_group'             => $request->tipe_group ?? 0,
             'group_by'               => $request->tipe_group == 1 ? $request->group_by : null,
             'status'                 => self::STATUS_PENDING,

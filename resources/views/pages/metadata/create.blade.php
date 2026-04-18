@@ -116,14 +116,38 @@
                         <label class="block font-medium text-sm mb-1">
                             Klasifikasi <span class="text-red-500">*</span>
                         </label>
-                        <select name="klasifikasi"
-                                class="w-full border @error('klasifikasi') border-red-400 @else border-gray-300 @enderror
-                                       rounded-sm focus:outline-none focus:ring-2 focus:ring-sky-400 px-2 py-2 text-xs">
+                        <select name="klasifikasi" placeholder="Pilih klasifikasi..." autocomplete="off"
+                            class="tom-select w-full border @error('klasifikasi') border-red-400 @else border-gray-300 @enderror
+                                rounded-sm focus:outline-none focus:ring-2 focus:ring-sky-400 text-xs">
+
                             <option value="">-- Pilih Klasifikasi --</option>
-                            @foreach(['Kependudukan','Kesehatan','Ketenagakerjaan','Pendidikan','Ekonomi','Sosial','Pertanian','Infrastruktur','Lingkungan','Pariwisata','Lainnya'] as $klas)
+
+                            @foreach([
+                                'Kependudukan','Pendidikan','Kesehatan','Ketenagakerjaan','Sosial','Ekonomi',
+                                'Pendapatan Regional','Keuangan Daerah dan Harga','Pengeluaran Penduduk dan Konsumsi',
+                                'Perdagangan','Perindustrian','Industri Mikro dan Kecil','Industri Besar dan Sedang',
+                                'Koperasi, Usaha Kecil dan Menengah','Penanaman Modal',
+                                'Pertanian','Pertanian Tanaman Pangan','Hortikultura','Perkebunan','Peternakan',
+                                'Perikanan','Kelautan dan Perikanan','Kehutanan','Pangan',
+                                'Infrastruktur','Konstruksi','Pekerjaan Umum dan Penataan Ruang','Perhubungan',
+                                'Transportasi dan Komunikasi','Lingkungan Hidup','Energi','Listrik','PDAM',
+                                'Kemiskinan dan Pembangunan Manusia','Stunting',
+                                'Pemberdayaan Perempuan dan Perlindungan Anak','Pemberdayaan Masyarakat Desa',
+                                'Pengendalian Penduduk dan Keluarga Berencana',
+                                'Pemerintahan','Administrasi Kependudukan dan Pencatatan Sipil',
+                                'Kesatuan Bangsa dan Politik','Pemilu','Perbandingan Antar Kabupaten/Kota',
+                                'Hukum','Kriminalitas','Ketentraman dan Ketertiban Umum','Kepolisian',
+                                'Kejaksaan','Pengadilan',
+                                'Pariwisata','Hotel dan Pariwisata','Kebudayaan','Agama',
+                                'Kepemudaan dan Olahraga','Komunikasi dan Informatika',
+                                'Geografi dan Iklim','Kearsipan','Perpustakaan','POS',
+                                'Kendaraan','Rumah Sakit','Lainnya'
+                            ] as $klas)
+
                                 <option value="{{ $klas }}" {{ old('klasifikasi') == $klas ? 'selected' : '' }}>
                                     {{ $klas }}
                                 </option>
+
                             @endforeach
                         </select>
                         @error('klasifikasi')
@@ -284,12 +308,11 @@
                             Group By
                             <span class="text-gray-400 font-normal text-xs ml-1">(pilih metadata induk)</span>
                         </label>
-                        <select name="group_by" id="group_by"
-                            class="w-full border @error('group_by') border-red-400 @else border-gray-300 @enderror
-                                   rounded-sm focus:outline-none focus:ring-2 focus:ring-sky-400 px-2 py-2 text-xs
+                        <select name="group_by" id="group_by" placeholder="Pilih group..." autocomplete="off"
+                            class="tom-select w-full border @error('group_by') border-red-400 @else border-gray-300 @enderror
+                                   rounded-sm focus:outline-none focus:ring-2 focus:ring-sky-400 text-xs
                                    disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                             disabled>
-                            <option value="">-- Pilih Metadata Induk --</option>
                             @forelse($metadataList as $item)
                                 <option value="{{ $item->metadata_id }}"
                                     {{ old('group_by') == $item->metadata_id ? 'selected' : '' }}>
@@ -318,78 +341,14 @@
                         </select>
                     </div>
 
-                    {{-- NAMA RUJUKAN --}}
-                    <div>
-                        <label class="block font-medium text-sm mb-1">Nama Rujukan</label>
-                        <input type="text" name="nama_rujukan" value="{{ old('nama_rujukan') }}"
-                            class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
-                                focus:ring-sky-400 px-2 py-2 text-xs"
-                            placeholder="cth: BPS Kabupaten Gianyar">
-                        @error('nama_rujukan')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    
-                    {{-- LINK RUJUKAN --}}
-                    <div>
-                        <label class="block font-medium text-sm mb-1">Link Rujukan</label>
-                        <input type="text" name="link_rujukan" value="{{ old('link_rujukan') }}"
-                            class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
-                                focus:ring-sky-400 px-2 py-2 text-xs"
-                            placeholder="cth: https://gianyarkab.bps.go.id">
-                        @error('link_rujukan')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    
-                    {{-- GAMBAR RUJUKAN --}}
-                    <div>
-                        <label class="block font-medium text-sm mb-1">Gambar Rujukan</label>
-                    
-                        {{-- Preview area (muncul setelah file dipilih) --}}
-                        <div id="gambarPreviewWrap" class="hidden mb-2">
-                            <img id="gambarPreview"
-                                src="" alt="Preview"
-                                class="h-24 w-auto rounded border border-gray-200 object-contain">
-                            <p id="gambarPreviewName" class="mt-1 text-xs text-gray-500 truncate"></p>
-                        </div>
-                    
-                        <label for="gambar_rujukan_file"
-                            class="flex items-center gap-2 cursor-pointer border border-dashed border-gray-300
-                                    rounded-sm px-3 py-2.5 text-xs text-gray-500 hover:border-sky-400
-                                    hover:bg-sky-50 transition-colors">
-                            <i class="fas fa-upload text-gray-400"></i>
-                            <span id="gambarLabel">Pilih gambar (JPG / PNG / SVG / WEBP, maks 500 KB)</span>
-                        </label>
-                    
-                        <input type="file"
-                            name="gambar_rujukan"
-                            id="gambar_rujukan_file"
-                            accept=".jpg,.jpeg,.png,.svg,.webp,image/jpeg,image/png,image/svg+xml,image/webp"
-                            class="hidden"
-                            onchange="handleGambarRujukan(this)">
-                    
-                        {{-- Error dari validasi server --}}
-                        @error('gambar_rujukan')
-                            <p class="mt-1 text-xs text-red-500">
-                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                            </p>
-                        @enderror
-                    
-                        <p class="mt-1 text-xs text-gray-400">
-                            Ukuran file maksimal <strong>500 KB</strong>.
-                            Format: JPG, JPEG, PNG, SVG, WEBP.
-                        </p>
-                    </div>
-
                     {{-- PRODUSEN DATA --}}
                     <div>
                         <label class="block font-medium text-sm mb-1">
                             Produsen Data <span class="text-red-500">*</span>
                         </label>
-                        <select name="produsen_id"
-                                class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
-                                       focus:ring-sky-400 px-2 py-2 text-xs">
+                        <select name="produsen_id"  placeholder="Pilih produsen..." autocomplete="off"
+                                class="tom-select w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
+                                       focus:ring-sky-400 text-xs">
                             <option value="">-- Pilih Produsen Data --</option>
                             @foreach($produsen as $item)
                                 <option value="{{ $item->produsen_id }}"
@@ -398,34 +357,6 @@
                                 </option>
                             @endforeach
                         </select>
-                    </div>
-
-                    {{-- CONTACT PERSON --}}
-                    <div>
-                        <label class="block font-medium text-sm mb-1">
-                            Nama Contact Person <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="nama_contact_person" value="{{ old('nama_contact_person') }}"
-                            class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
-                                   focus:ring-sky-400 px-2 py-2 text-xs">
-                    </div>
-
-                    <div>
-                        <label class="block font-medium text-sm mb-1">
-                            No. HP/WA CP <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="nomor_contact_person" value="{{ old('nomor_contact_person') }}"
-                            class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
-                                   focus:ring-sky-400 px-2 py-2 text-xs">
-                    </div>
-
-                    <div>
-                        <label class="block font-medium text-sm mb-1">
-                            Email CP <span class="text-red-500">*</span>
-                        </label>
-                        <input type="email" name="email_contact_person" value="{{ old('email_contact_person') }}"
-                            class="w-full border border-gray-300 rounded-sm focus:outline-none focus:ring-2
-                                   focus:ring-sky-400 px-2 py-2 text-xs">
                     </div>
 
                     {{-- TAG --}}
@@ -646,6 +577,29 @@
 </div>
 
 <style>
+.ts-wrapper {
+    width: 100%;
+    font-size: 0.75rem; /* text-xs */
+}
+
+.ts-control {
+    border: 1px solid #bdbfc3; /* gray-300 */
+    border-radius: 0.125rem; /* rounded-sm */
+    padding: 0.5rem; /* py-2 px-2 */
+}
+
+.ts-wrapper.disabled .ts-control {
+    background-color: #eaedf0; /* bg-gray-100 */
+    color: #15419a;           /* text-gray-400 */
+    cursor: not-allowed;
+}
+
+.ts-control:focus-within {
+    outline: none;
+    box-shadow: 0 0 0 2px #38bdf8; /* sky-400 */
+    border-color: #38bdf8;
+}
+
 /* Tab active/inactive styles */
 .tab-btn-active {
     background: #fff;
@@ -681,6 +635,21 @@ let currentFile = null;
 let previewData = [];
 let skippedData = [];
 let skippedOpen = false;
+
+function initTomSelect(selector) {
+    document.querySelectorAll(selector).forEach(el => {
+        if (!el.tomselect) {
+            new TomSelect(el, {
+                create: true,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                }
+            });
+        }
+    });
+}
+
 
 /* ============================================================
    UTILITY
@@ -838,12 +807,23 @@ function initTipeGroupSystem() {
     const tipeGroup = document.getElementById('tipe_group');
     const groupBy   = document.getElementById('group_by');
 
-    if (!tipeGroup) return;
+    if (!tipeGroup || !groupBy) return;
 
     function handleTipeGroup() {
-        groupBy.disabled = tipeGroup.value !== '1';
-        groupBy.required = tipeGroup.value === '1';
-        if (tipeGroup.value !== '1') groupBy.value = '';
+        const isActive = tipeGroup.value === '1';
+
+        if (groupBy.tomselect) {
+            if (isActive) {
+                groupBy.tomselect.enable();
+            } else {
+                groupBy.tomselect.disable();
+                groupBy.tomselect.clear();
+            }
+        } else {
+            groupBy.disabled = !isActive;
+            groupBy.required = isActive;
+            if (!isActive) groupBy.value = '';
+        }
     }
 
     tipeGroup.addEventListener('change', handleTipeGroup);
@@ -1048,7 +1028,9 @@ async function doImport() {
     formData.append('_token', CSRF);
     formData.append('skip_existing', document.getElementById('skipExisting').checked ? '1' : '0');
 
-    const dp = document.getElementById('defaultProdusen').value;
+    const dpEl = document.getElementById('defaultProdusen');
+    const dp = dpEl ? dpEl.value : null;
+
     if (dp) formData.append('produsen_default_id', dp);
 
     try {
@@ -1213,9 +1195,10 @@ document.addEventListener('DOMContentLoaded', function () {
     updateDateTime();
     setInterval(updateDateTime, 1000);
 
+    initTomSelect('.tom-select');   
     initTagSystem();
     initFrekuensiSystem();
-    initTipeGroupSystem();  // ← sebelumnya tidak dipanggil sama sekali!
+    initTipeGroupSystem(); 
     initNamaChecker();
 });
 </script>

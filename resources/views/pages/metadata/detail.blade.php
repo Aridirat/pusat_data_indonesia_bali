@@ -275,47 +275,8 @@
                 Informasi Publikasi
             </h2>
             <div class="space-y-4 text-sm">
-                <div x-data="{ open: false }">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                        Gambar Rujukan
-                    </p>
-
-                    @if((($metadata->gambar_rujukan) != "-") && ($metadata->gambar_rujukan != null))
-                        {{-- Thumbnail --}}
-                        <img src="{{ asset('storage/' . $metadata->gambar_rujukan) }}"
-                            alt="Gambar Rujukan"
-                            @click="open = true"
-                            class="w-28 h-20 object-cover rounded-md border cursor-pointer
-                                    hover:scale-105 transition-transform duration-200">
-
-                        {{-- Modal --}}
-                        <div x-show="open"
-                            x-transition
-                            @click="open = false"
-                            class="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-
-                            <img src="{{ asset('storage/' . $metadata->gambar_rujukan) }}"
-                                class="max-w-3xl max-h-[80vh] rounded-lg shadow-lg"
-                                @click.stop>
-                        </div>
-
-                    @else
-                        {{-- Placeholder --}}
-                        <div class="w-28 h-20 flex items-center justify-center
-                                    bg-gray-100 border border-gray-300 rounded-md">
-                            -
-                        </div>
-                    @endif
-                </div>
+                
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Nama Rujukan</p>
-                        <p class="text-gray-700 font-medium">{{ $metadata->nama_rujukan }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Link Rujukan</p>
-                        <p class="text-gray-700 font-medium">{{ $metadata->link_rujukan }}</p>
-                    </div>
                     <div>
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Tahun Mulai Data</p>
                         <p class="text-gray-700 font-medium">{{ $metadata->tahun_mulai_data ?? '-' }}</p>
@@ -383,37 +344,9 @@
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Produsen Data</p>
                     <p class="text-gray-800 font-semibold">{{ $metadata->produsen->nama_produsen ?? '-' }}</p>
                 </div>
-                <div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Nama Contact Person</p>
-                    <p class="text-gray-800 font-semibold">{{ $metadata->nama_contact_person ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">No. HP / WA</p>
-                    @if($metadata->nomor_contact_person)
-                        <a href="tel:{{ $metadata->nomor_contact_person }}"
-                           class="text-sky-600 hover:text-sky-800 font-semibold transition-colors flex items-center gap-1">
-                            <i class="fas fa-phone text-xs"></i>
-                            {{ $metadata->nomor_contact_person }}
-                        </a>
-                    @else
-                        <p class="text-gray-400">-</p>
-                    @endif
-                </div>
-                <div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Email</p>
-                    @if($metadata->email_contact_person)
-                        <a href="mailto:{{ $metadata->email_contact_person }}"
-                           class="text-sky-600 hover:text-sky-800 font-semibold transition-colors flex items-center gap-1 break-all">
-                            <i class="fas fa-envelope text-xs shrink-0"></i>
-                            {{ $metadata->email_contact_person }}
-                        </a>
-                    @else
-                        <p class="text-gray-400">-</p>
-                    @endif
-                </div>
+                
             </div>
         </div>
-
     </div>
 
     {{-- ═══════════════════════════════════════════ --}}

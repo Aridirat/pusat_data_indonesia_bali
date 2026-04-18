@@ -14,6 +14,7 @@ class Data extends Model
         'user_id',
         'metadata_id',
         'location_id',
+        'rujukan_id',
         'time_id',
         'number_value',
         'status',
@@ -50,6 +51,11 @@ class Data extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function rujukan()
+    {
+        return $this->belongsTo(Rujukan::class, 'rujukan_id', 'rujukan_id');
     }
 
     // ─── SCOPE ────────────────────────────────────────────────
