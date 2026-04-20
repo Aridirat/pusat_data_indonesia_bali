@@ -31,8 +31,6 @@
         </div>
     </div>
 
-    <hr class="my-3">
-
     {{-- ALERT --}}
     @if(session('success'))
         <div class="mt-4 flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
@@ -67,78 +65,41 @@
                 @endif
             </div>
         </div>
-        <hr class="my-3">
     </div>
-    
-    <div class="flex gap-2 items-center">
-        <button id="btnSaveTemplate" onclick="openTemplateModal()"
-            class="hidden px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-md"
-            style="background:#8b5cf6; color:#fff;"
-            onmouseover="this.style.background='#7c3aed'"
-            onmouseout="this.style.background='#8b5cf6'">
-            <i class="fas fa-bookmark"></i> Simpan Template
-        </button>
+</div>
 
-        @if($hasFilter && request('metadata_id'))
-            @include('pages.data._export_buttons')
-        @endif
-    </div>
-
-    {{-- TEMPLATE PILLS --}}
-    @if($availableTemplates->count() > 0)
-        <div class="mt-4 flex flex-wrap gap-2 items-center">
-            <span class="text-xs text-gray-400 font-medium shrink-0">
-                <i class="fas fa-bookmark mr-1"></i> Template saya:
-            </span>
-            <div>
-                <form action=""></form>
-            </div>
-            @foreach($availableTemplates as $tmpl)
-                <div class="flex items-center">
-                    <a href="{{ route('data.index', ['template_id' => $tmpl->tampilan_id]) }}"
-                       title="{{ $tmpl->filter_params ? collect($tmpl->filter_params)->filter()->map(fn($v,$k) => "$k: $v")->implode(' | ') : 'Tidak ada filter tersimpan' }}"
-                       class="px-3 py-1 rounded-l-full text-xs font-medium border transition-colors
-                           {{ request('template_id') == $tmpl->tampilan_id
-                               ? 'bg-purple-500 text-white border-purple-500'
-                               : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400 hover:text-purple-600' }}">
-                        {{ $tmpl->nama_tampilan }}
-                    </a>
-                    <form action="{{ route('data.template.delete', $tmpl->tampilan_id) }}"
-                          method="POST"
-                          onsubmit="return confirm('Hapus template \'{{ $tmpl->nama_tampilan }}\'?')">
-                        @csrf @method('DELETE')
-                        <button type="submit"
-                            class="px-2 py-1 rounded-r-full text-xs border border-l-0 transition-colors
-                               {{ request('template_id') == $tmpl->tampilan_id
-                                   ? 'bg-purple-500 text-purple-200 border-purple-500 hover:text-white'
-                                   : 'bg-white text-gray-400 border-gray-300 hover:text-red-500 hover:border-red-300' }}">
-                            ×
-                        </button>
-                    </form>
-                </div>
-            @endforeach
-            @if(request('template_id'))
-                <a href="{{ route('data.index') }}"
-                   class="px-3 py-1 rounded-full text-xs border border-gray-200 text-gray-400
-                          hover:text-red-500 hover:border-red-300 transition-colors">
-                    <i class="fas fa-times mr-1"></i> Reset
-                </a>
-            @endif
+<div class="mt-2 bg-white rounded-xl shadow p-6">
+    {{-- HEADER --}}
+    <div class="flex justify-between items-start mb-7">
+        <div>
+            <h2 class="text-lg font-bold text-gray-800">Cari Data</h2>
+            <p class="text-sm text-gray-400 mt-1">Temukan data yang Anda butuhkan dengan mengakses template Anda</p>
         </div>
-    @endif
+    </div>
 
-    {{-- ═══════════ FILTER ═══════════ --}}
-    <form method="GET" id="filterForm" class="mt-5 space-y-3">
+    <div class="flex gap-2 my-6">
+        <a href="{{ route('data.create') }}"
+            class="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-lg
+                    shadow-md shadow-sky-400/30 flex items-center gap-2 transition-colors">
+            <i class="fas fa-plus"></i> Buat Template Tampilan
+        </a>
+        <a href="{{ route('data.create') }}"
+            class="px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white text-sm font-semibold rounded-lg
+                    shadow-md shadow-violet-400/30 flex items-center gap-2 transition-colors">
+            <i class="fas fa-list"></i> Daftar Template
+        </a>
+    </div>
+
+    <form method="GET" id="filterForm" class="mt-4 space-y-3">
         @if(request('template_id'))
             <input type="hidden" name="template_id" value="{{ request('template_id') }}">
         @endif
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-
-            {{-- ── Metadata ── --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {{-- ── Nama Template ── --}}
             <div>
                 <label class="block text-xs text-gray-500 font-medium mb-1">
-                    <i class="fas fa-database mr-1 text-gray-400"></i> Metadata
+                    <i class="fas fa-database mr-1 text-gray-400"></i> Nama Template
                 </label>
                 <div class="relative" id="metadataDropdownWrap">
                     <input type="text" id="metadataSearch"
@@ -160,56 +121,67 @@
                 </div>
             </div>
 
-            {{-- ── Wilayah ── --}}
+            {{-- Frekuensi Penerbitan --}}
             <div>
-                <label class="block text-xs text-gray-500 font-medium mb-1">
-                    <i class="fas fa-map-marker-alt mr-1 text-gray-400"></i> Wilayah
+                <label for="frekuensi" class="block text-xs text-gray-500 font-medium mb-1">
+                    <i class="fas fa-clock mr-1 text-gray-400"></i> Frekuensi Penerbitan
                 </label>
-                <div class="relative" id="wilayahDropdownWrap">
-                    <input type="text" id="wilayahSearch"
-                        placeholder="Klik atau ketik wilayah..."
-                        autocomplete="off"
-                        value="{{ $activeWilayah }}"
-                        oninput="onWilayahInput()"
-                        onfocus="onWilayahFocus()"
-                        class="w-full border border-gray-300 rounded-md pl-8 pr-7 py-2 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white cursor-pointer">
-                    <i class="fas fa-map-marker-alt absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
-                    <button type="button" id="clearWilayah" onclick="clearWilayahFilter()"
-                        class="{{ $activeWilayah ? '' : 'hidden' }} absolute right-2 top-1/2 -translate-y-1/2
-                               text-gray-400 hover:text-gray-600 text-sm leading-none">×</button>
-                    {{-- Nama wilayah dikirim untuk keperluan display badge di server --}}
-                    <input type="hidden" name="nama_wilayah" id="wilayahNama" value="{{ $activeWilayah }}">
-                    {{-- ID wilayah untuk query filter --}}
-                    <input type="hidden" name="filter_wilayah_id" id="wilayahId" value="{{ $activeWilayahId }}">
-                    <div id="wilayahSuggestions"
-                         class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200
-                                rounded-lg shadow-lg max-h-72 overflow-y-auto"></div>
-                </div>
-            </div>
-
-            {{-- ── Tahun ── --}}
-            <div>
-                <label class="block text-xs text-gray-500 font-medium mb-1">
-                    <i class="fas fa-calendar mr-1 text-gray-400"></i> Tahun
-                </label>
-                <div class="relative" id="yearDropdownWrap">
-                    <input type="text" id="yearSearch" name="year"
-                        placeholder="Klik atau ketik tahun..."
-                        autocomplete="off"
-                        value="{{ $activeYear }}"
-                        maxlength="4"
-                        oninput="onYearInput(); onFilterChange()"
-                        onfocus="onYearFocus()"
-                        class="w-full border border-gray-300 rounded-md pl-8 pr-3 py-2 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white cursor-pointer">
-                    <i class="fas fa-chevron-down absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
-                    <div id="yearSuggestions"
-                         class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200
-                                rounded-lg shadow-lg max-h-48 overflow-y-auto"></div>
-                </div>
+                <select name="frekuensi" id="frekuensi" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                    <option value="">Semua Frekuensi</option>
+                    <option value="dekade">Dekade</option>
+                    <option value="tahunan">Tahunan</option>
+                    <option value="semester">Semester</option>
+                    <option value="kuartal">Kuartal</option>
+                    <option value="bulanan">Bulanan</option>
+                </select>
             </div>
         </div>
+        @if ($activeMetadataNama == "dekade" || $activeMetadataNama == "tahunan")
+            <div class="flex flex-col gap-3 my-5">
+                <div class="col-1">
+                    <div class="flex gap-4 items-center">
+                        <label for="frekuensi" class="block text-xs text-gray-500 font-medium mb-1">
+                            Tahun
+                        </label>
+                        <select name="frekuensi" id="frekuensi" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                            <option value="">Pilih Tahun</option>
+                        </select>
+
+                        <label for="frekuensi" class="block text-xs text-gray-500 font-medium mb-1">
+                            Periode
+                        </label>
+                        <select name="frekuensi" id="frekuensi" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                            <option value="">Dari</option>
+                        </select>
+                        <label for="periode2" class="text-xs text-gray-500 font-medium mb-1">
+                            -
+                        </label>
+                        <select name="periode2" id="periode2"  class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                            <option value="">Sampai</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        @elseif($activeMetadataNama == "semester" || $activeMetadataNama == "kuartal" || $activeMetadataNama == "bulanan")
+            <div class="flex flex-col gap-3 my-5">
+                <div class="col-1">
+                    <div class="flex gap-4 items-center">
+                        <label for="frekuensi" class="block text-xs text-gray-500 font-medium mb-1">
+                            Periode
+                        </label>
+                        <select name="frekuensi" id="frekuensi" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                            <option value="">Dari</option>
+                        </select>
+                        <label for="periode2" class="text-xs text-gray-500 font-medium mb-1">
+                            -
+                        </label>
+                        <select name="periode2" id="periode2"  class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                            <option value="">Sampai</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         {{-- Tombol aksi filter --}}
         <div class="flex gap-2 items-center flex-wrap pt-1">
@@ -249,22 +221,13 @@
             @endif
         </div>
     </form>
-    <hr class="my-3">
+
+    <hr class="my-4">
 
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- TABEL                                                       --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
     @if(!$hasFilter)
-        <div class="mt-8 flex flex-col items-center gap-3 py-16 text-gray-400">
-            <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background:#f0f9ff;">
-                <i class="fas fa-filter text-2xl" style="color:#bae6fd;"></i>
-            </div>
-            <p class="font-semibold text-gray-500 text-base">Pilih filter untuk menampilkan data</p>
-            <p class="text-sm text-gray-400 text-center max-w-sm">
-                Gunakan filter di atas (metadata, lokasi, tahun) lalu klik
-                <strong class="text-sky-500">Terapkan Filter</strong>
-            </p>
-        </div>
 
     @elseif($data && $data->count() > 0)
 
@@ -389,7 +352,6 @@
             </a>
         </div>
     @endif
-
 </div>
 
 {{-- ═══ MODAL SIMPAN TEMPLATE ═══ --}}
