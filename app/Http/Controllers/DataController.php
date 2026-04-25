@@ -69,7 +69,7 @@ class DataController extends Controller
 
         $metadataList       = Metadata::where('status', 2)->orderBy('nama')->get(['metadata_id', 'nama']);
         $wilayahList      = Location::select('nama_wilayah')->distinct()->orderBy('nama_wilayah')->pluck('nama_wilayah');
-        $availableTemplates = Tampilan::where('user_id', Auth::user()->user_id)->orderBy('tampilan_id', 'desc')->get();
+        $availableTemplates = Tampilan::where('user_id', Auth::user()->user_id)->withCount('isiTampilan')->orderBy('created_at', 'desc')->get();
         $pendingCount       = Data::where('status', Data::STATUS_PENDING)->count();
 
         return view('pages.data.index', compact(
@@ -381,10 +381,11 @@ class DataController extends Controller
 
         $data          = $query->orderBy('date_inputed', 'desc')->paginate(20)->withQueryString();
         $metadataList  = Metadata::select('metadata_id', 'nama')->orderBy('nama')->get();
+        $pendingCount  = Data::where('status', Data::STATUS_PENDING)->count();
         $approvedCount = Data::where('status', Data::STATUS_AVAILABLE)->count();
         $rejectedCount = Data::where('status', Data::STATUS_REJECTED)->count();
 
-        return view('pages.data.approval', compact('data', 'metadataList', 'approvedCount', 'rejectedCount'));
+        return view('pages.data.approval', compact('data', 'metadataList', 'pendingCount', 'approvedCount', 'rejectedCount'));
     }
 
     public function bulkApprove(Request $request)

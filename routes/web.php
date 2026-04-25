@@ -8,20 +8,59 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\WaktuController;
 use App\Http\Controllers\DataController;
 use App\Http\Controllers\DataExportController;
+use App\Http\Controllers\TemplateController;
 use App\Http\Middleware\IsLogin;
 
 // ── Auth ─────────────────────────────────────────────────────
 Route::get('/login',  [AuthController::class, 'loginView'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout',[AuthController::class, 'logout']);
-
 Route::get('/', function () {
     return redirect()->route('data.index');
 })->name('home');
 
 // ─────────────────────────────────────────────────────────────
+// TEMPLATE TAMPILAN — Sebagian bisa diakses tanpa login
+// (user tanpa akun bisa buat template, disimpan di localStorage)
+// ─────────────────────────────────────────────────────────────
+
+Route::prefix('template-tampilan')->name('template.')->group(function () {
+
+    // Halaman pilih jenis template — PUBLIK (tanpa auth)
+    Route::get('/',       [TemplateController::class, 'index'])->name('index');
+    Route::get('/create', [TemplateController::class, 'create'])->name('create');
+
+    // Form per jenis — PUBLIK (tanpa auth)
+    Route::get('/create/metadata',    [TemplateController::class, 'createByMetadata'])->name('create.metadata');
+    Route::get('/create/klasifikasi', [TemplateController::class, 'createByKlasifikasi'])->name('create.klasifikasi');
+    Route::get('/create/wilayah',     [TemplateController::class, 'createByWilayah'])->name('create.wilayah');
+
+    // AJAX helpers — PUBLIK (data publik, tanpa auth)
+    Route::get('/search-metadata',    [TemplateController::class, 'searchMetadata'])->name('search_metadata');
+    Route::post('/fetch-preview',     [TemplateController::class, 'fetchMetadataPreview'])->name('fetch_preview');
+    Route::post('/fetch-klasifikasi', [TemplateController::class, 'fetchByKlasifikasi'])->name('fetch_klasifikasi');
+    Route::post('/fetch-wilayah',     [TemplateController::class, 'fetchByWilayah'])->name('fetch_wilayah');
+    Route::get('/child-locations',    [TemplateController::class, 'getChildLocations'])->name('child_locations');
+    Route::get('/fetch-data',         [TemplateController::class, 'fetchData'])->name('fetch_data');
+
+    // Cascade dropdown wilayah — PUBLIK
+    Route::get('/get-provinsi',  [TemplateController::class, 'getProvinsi'])->name('get_provinsi');
+    Route::get('/get-kabupaten', [TemplateController::class, 'getKabupaten'])->name('get_kabupaten');
+    Route::get('/get-kecamatan', [TemplateController::class, 'getKecamatan'])->name('get_kecamatan_wil');
+    Route::get('/get-desa',      [TemplateController::class, 'getDesa'])->name('get_desa_wil');
+
+    // CRUD — Membutuhkan login (simpan ke DB)
+    Route::middleware([IsLogin::class])->group(function () {
+        Route::post('/',             [TemplateController::class, 'store'])->name('store');
+        Route::delete('/{tampilan}', [TemplateController::class, 'destroy'])->name('destroy');
+        Route::get('/{tampilan}/show', [TemplateController::class, 'show'])->name('show');
+    });
+});
+
+// ─────────────────────────────────────────────────────────────
 // AUTHENTICATED ROUTES
 // ─────────────────────────────────────────────────────────────
+
 Route::middleware([IsLogin::class])->group(function () {
 
     // ── Dimensi Lokasi ──────────────────────────────────────
@@ -45,24 +84,22 @@ Route::middleware([IsLogin::class])->group(function () {
         Route::post('/',      [DataController::class, 'store'])->name('store');
 
         // AJAX (di atas wildcard)
-        Route::get('/search-wilayah', [DataController::class, 'searchWilayah'])
-                ->name('search_wilayah');
-        Route::get('/kecamatan',       [DataController::class, 'getKecamatan'])->name('kecamatan');
-        Route::get('/desa',            [DataController::class, 'getDesa'])->name('desa');
-        Route::get('/search-metadata', [DataController::class, 'searchMetadata'])->name('search_metadata');
-        Route::get('/search-year',     [DataController::class, 'searchYear'])->name('search_year');
+        Route::get('/search-wilayah',  [DataController::class, 'searchWilayah'])->name('search_wilayah');
+        Route::get('/kecamatan',        [DataController::class, 'getKecamatan'])->name('kecamatan');
+        Route::get('/desa',             [DataController::class, 'getDesa'])->name('desa');
+        Route::get('/search-metadata',  [DataController::class, 'searchMetadata'])->name('search_metadata');
+        Route::get('/search-year',      [DataController::class, 'searchYear'])->name('search_year');
 
         // Template
         Route::post('/template',              [DataController::class, 'storeTemplate'])->name('template.store');
         Route::delete('/template/{tampilan}', [DataController::class, 'deleteTemplate'])->name('template.delete');
 
         // Excel
-        Route::post('/preview-excel', [DataController::class, 'previewExcel'])->name('preview_excel');
-        Route::post('/import-excel',  [DataController::class, 'importExcel'])->name('import_excel');
-        Route::get('/template-excel', [DataController::class, 'downloadTemplateExcel'])->name('template_excel');
+        Route::post('/preview-excel',  [DataController::class, 'previewExcel'])->name('preview_excel');
+        Route::post('/import-excel',   [DataController::class, 'importExcel'])->name('import_excel');
+        Route::get('/template-excel',  [DataController::class, 'downloadTemplateExcel'])->name('template_excel');
 
-        // ── Export Data (Excel / PDF / JSON) ───────────
-        // Filter params: metadata_id, kabupaten, year (sama dengan index)
+        // Export Data (Excel / PDF / JSON)
         Route::get('/export/excel', [DataExportController::class, 'excel'])->name('export.excel');
         Route::get('/export/pdf',   [DataExportController::class, 'pdf'])->name('export.pdf');
         Route::get('/export/json',  [DataExportController::class, 'json'])->name('export.json');
@@ -78,26 +115,21 @@ Route::middleware([IsLogin::class])->group(function () {
     });
 
     // ── Metadata ─────────────────────────────────────────────
-
     Route::get( '/metadata',            [MetadataController::class, 'index'])->name('metadata.index');
     Route::get( '/metadata/create',     [MetadataController::class, 'create'])->name('metadata.create');
     Route::post('/metadata',            [MetadataController::class, 'store'])->name('metadata.store');
     Route::get( '/metadata/check-nama', [MetadataController::class, 'checkNama'])->name('metadata.check_nama');
     Route::get( '/metadata/approval',   [MetadataController::class, 'approval'])->name('metadata.approval');
 
-    // count_only: digunakan modal untuk preview jumlah data (JSON)
-    // export: download file .xlsx
     Route::get('/metadata/export/count', [MetadataController::class, 'exportCount'])->name('metadata.export.count');
     Route::get('/metadata/export',       [MetadataController::class, 'export'])->name('metadata.export');
-
-    // Menghasilkan file .xlsx kosong berisi metadata_id + nama + kolom periode waktu
     Route::get('/metadata/template',     [MetadataController::class, 'exportTemplate'])->name('metadata.template');
 
     // ── Import Excel ──────────────────────────────────────────
     Route::post('/metadata/import/preview', [MetadataImportController::class, 'preview'])->name('metadata.import.preview');
     Route::post('/metadata/import/store',   [MetadataImportController::class, 'store'])->name('metadata.import.store');
 
-    // ── Bulk Approve (statis, di atas wildcard) ───────────────
+    // ── Bulk Approve ───────────────────────────────────────────
     Route::post('/metadata/bulk-approve',     [MetadataController::class, 'bulkApprove'])->name('metadata.bulk_approve');
     Route::post('/metadata/bulk-approve-all', [MetadataController::class, 'bulkApproveAll'])->name('metadata.bulk_approve_all');
 
@@ -106,5 +138,5 @@ Route::middleware([IsLogin::class])->group(function () {
     Route::post('/metadata/{metadata}/reject',     [MetadataController::class, 'reject'])->name('metadata.reject');
     Route::post('/metadata/{metadata}/reactivate', [MetadataController::class, 'reactivate'])->name('metadata.reactivate');
     Route::get( '/metadata/{metadata}',            [MetadataController::class, 'detail'])->name('metadata.detail');
-    
+
 });

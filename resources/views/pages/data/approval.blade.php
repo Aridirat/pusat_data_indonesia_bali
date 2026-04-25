@@ -33,7 +33,7 @@
     <div class="grid grid-cols-3 gap-4 mt-6">
         <div class="bg-amber-50 border border-amber-100 rounded-lg p-4">
             <p class="text-xs text-amber-500 font-medium uppercase tracking-wide">Menunggu Verifikasi</p>
-            <p class="text-2xl font-bold text-amber-700 mt-1">{{ number_format($data->total()) }}</p>
+            <p class="text-2xl font-bold text-amber-700 mt-1">{{ number_format($pendingCount) }}</p>
             <p class="text-xs text-amber-400 mt-1">data pending</p>
         </div>
         <div class="bg-green-50 border border-green-100 rounded-lg p-4">
