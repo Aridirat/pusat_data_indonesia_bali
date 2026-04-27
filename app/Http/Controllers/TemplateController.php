@@ -209,7 +209,7 @@ class TemplateController extends Controller
         ]);
 
         $klasifikasi = $request->klasifikasi;
-        $locationIds = $request->input('location_ids', []);
+        $locationIds = array_map('intval', $request->input('location_ids', []));
 
         $query = Metadata::where('status', Metadata::STATUS_ACTIVE)
             ->where('klasifikasi', $klasifikasi)
@@ -218,12 +218,24 @@ class TemplateController extends Controller
         if (!empty($locationIds)) {
             $query->whereHas('data', function ($q) use ($locationIds) {
                 $q->whereIn('location_id', $locationIds)
-                  ->where('status', Data::STATUS_AVAILABLE);
+                ->where('status', Data::STATUS_AVAILABLE);
             });
         }
 
-        $metadataList = $query->get(['metadata_id', 'nama', 'klasifikasi', 'satuan_data', 'frekuensi_penerbitan']);
+        $metadataList = $query->get([
+            'metadata_id',
+            'nama',
+            'klasifikasi',
+            'satuan_data',
+            'frekuensi_penerbitan'
+        ]);
 
+        $locationMap = !empty($locationIds)
+            ? Location::whereIn('location_id', $locationIds)
+                ->pluck('nama_wilayah', 'location_id')
+            : collect();
+
+        $rows = [];
         $grouped = [
             'dekade'   => [],
             'tahunan'  => [],
@@ -234,39 +246,64 @@ class TemplateController extends Controller
 
         foreach ($metadataList as $m) {
             $freq = strtolower($m->frekuensi_penerbitan);
-            if (!isset($grouped[$freq])) continue;
 
-            // Filter berdasarkan periode jika ada
-            $hasData = $this->checkMetadataHasDataInPeriod(
-                $m->metadata_id,
-                $locationIds,
-                $request
-            );
-
-            if (!$hasData) continue;
-
-            $item = $m->toArray();
-
-            if (!empty($locationIds)) {
-                $item['locations'] = Location::whereIn('location_id', $locationIds)
-                    ->select('location_id', 'nama_wilayah')
-                    ->get()
-                    ->map(fn($l) => [
-                        'location_id'  => $l->location_id,
-                        'nama_wilayah' => $l->nama_wilayah,
-                        'has_children' => $this->hasChildrenWithData($l->location_id, $m->metadata_id),
-                    ])->toArray();
-            } else {
-                $item['locations'] = [];
+            if (!isset($grouped[$freq])) {
+                continue;
             }
 
-            $grouped[$freq][] = $item;
+            // Jika tidak pilih wilayah → tampilkan global
+            if (empty($locationIds)) {
+                $row = [
+                    'metadata_id'          => $m->metadata_id,
+                    'nama'                 => $m->nama,
+                    'klasifikasi'          => $m->klasifikasi,
+                    'satuan_data'          => $m->satuan_data,
+                    'frekuensi_penerbitan' => $m->frekuensi_penerbitan,
+                    'location_id'          => null,
+                    'nama_wilayah'         => 'Semua Wilayah',
+                    'has_children'         => false,
+                    'depth'                => 0,
+                ];
+
+                $rows[] = $row;
+                $grouped[$freq][] = $row;
+                continue;
+            }
+
+            // Jika pilih wilayah → buat metadata × wilayah
+            foreach ($locationIds as $locId) {
+                $checkQuery = Data::where('metadata_id', $m->metadata_id)
+                    ->where('location_id', $locId)
+                    ->where('status', Data::STATUS_AVAILABLE);
+
+                $checkQuery = $this->applyTimeFilter($checkQuery, $request);
+
+                if (!$checkQuery->exists()) {
+                    continue;
+                }
+
+                $row = [
+                    'metadata_id'          => $m->metadata_id,
+                    'nama'                 => $m->nama,
+                    'klasifikasi'          => $m->klasifikasi,
+                    'satuan_data'          => $m->satuan_data,
+                    'frekuensi_penerbitan' => $m->frekuensi_penerbitan,
+                    'location_id'          => $locId,
+                    'nama_wilayah'         => $locationMap[$locId] ?? '-',
+                    'has_children'         => $this->hasChildrenWithData($locId, $m->metadata_id),
+                    'depth'                => 0,
+                ];
+
+                $rows[] = $row;
+                $grouped[$freq][] = $row;
+            }
         }
 
         return response()->json([
             'success' => true,
+            'rows'    => $rows,
             'grouped' => $grouped,
-            'total'   => array_sum(array_map('count', $grouped)),
+            'total'   => count($rows),
         ]);
     }
 
@@ -616,6 +653,23 @@ class TemplateController extends Controller
             ->with('success', "Template \"{$request->nama_tampilan}\" berhasil disimpan.");
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // SHOW GRAFIK — halaman visualisasi grafik
+    // ═══════════════════════════════════════════════════════════════
+
+    public function showGrafik(Request $request)
+    {
+        $metadataId = $request->input('metadata_id');
+        $locationId = $request->input('location_id');
+
+        $metadata = Metadata::where('metadata_id', $metadataId)
+            ->where('status', Metadata::STATUS_ACTIVE)
+            ->firstOrFail();
+
+        $location = Location::find($locationId);
+
+        return view('pages.template.grafik', compact('metadata', 'location'));
+    }
     // ═══════════════════════════════════════════════════════════
     // DELETE
     // ═══════════════════════════════════════════════════════════

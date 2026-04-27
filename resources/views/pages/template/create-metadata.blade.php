@@ -56,22 +56,21 @@
                 </label>
                 <div class="relative" id="metaDropWrap">
                     <input type="text" id="metaSearch"
-                           placeholder="Ketik untuk mencari metadata..."
+                           placeholder="Memuat metadata..."
                            autocomplete="off"
+                           disabled
                            oninput="onMetaSearchInput()"
                            onfocus="onMetaSearchFocus()"
                            class="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2.5 text-sm
-                                  focus:outline-none focus:ring-2 focus:ring-sky-400 transition-shadow">
+                                  focus:outline-none focus:ring-2 focus:ring-sky-400 transition-shadow
+                                  disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed">
                     <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
 
                     {{-- Dropdown list --}}
                     <div id="metaDropList"
                          class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200
                                 rounded-xl shadow-xl max-h-72 overflow-y-auto">
-                        {{-- Diisi JS — tidak ada spinner, langsung render dari cache --}}
-                        <p class="px-4 py-3 text-xs text-gray-400 text-center">
-                            <i class="fas fa-circle-notch fa-spin mr-1"></i> Memuat…
-                        </p>
+                        <p class="px-4 py-3 text-xs text-gray-400 text-center">Mulai ketik untuk mencari metadata</p>
                     </div>
                 </div>
 
@@ -86,69 +85,82 @@
                     <span class="text-gray-400 font-normal">(opsional — pilih hingga level yang diinginkan)</span>
                 </label>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
                     {{-- PROVINSI --}}
                     <div>
-                        <label class="block text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wide">Provinsi</label>
-                        <div class="relative" id="m_wrapProvinsi">
-                            <select id="m_selectProvinsi"
-                                    onchange="mSelectFromNative('provinsi', this.value, this.options[this.selectedIndex].text)"
-                                    class="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm
-                                           focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white appearance-none">
-                                <option value="">— Pilih Provinsi —</option>
-                                @foreach($provinsiList as $p)
-                                    <option value="{{ $p->location_id }}">{{ $p->nama_wilayah }}</option>
-                                @endforeach
-                            </select>
-                            <i class="fas fa-map-marker-alt absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                        <label class="block text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Provinsi</label>
+                        <div class="relative" id="wrapProvinsi">
+                            <input type="text" id="inputProvinsi" placeholder="Cari provinsi..."
+                                autocomplete="off"
+                                oninput="onWilInput('provinsi')"
+                                onfocus="onWilFocus('provinsi')"
+                                class="w-full border border-gray-300 rounded-lg pl-7 pr-7 py-2 text-sm
+                                    focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white">
+                            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                            <button type="button" id="clearProvinsi" onclick="clearLevel('provinsi')"
+                                class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm leading-none">×</button>
+                            <div id="dropProvinsi"
+                                class="hidden absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto"></div>
                         </div>
-                        <input type="hidden" id="m_valProvinsi">
+                        <input type="hidden" id="valProvinsi">
                     </div>
 
                     {{-- KABUPATEN --}}
                     <div>
-                        <label class="block text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wide">Kabupaten / Kota</label>
-                        <div class="relative" id="m_wrapKabupaten">
-                            <select id="m_selectKabupaten" disabled
-                                    onchange="mSelectFromNative('kabupaten', this.value, this.options[this.selectedIndex].text)"
-                                    class="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm
-                                           focus:outline-none focus:ring-2 focus:ring-sky-400 bg-gray-100 text-gray-400 cursor-not-allowed appearance-none">
-                                <option value="">— Pilih Provinsi dulu —</option>
-                            </select>
-                            <i class="fas fa-map-marker-alt absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                        <label class="block text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Kabupaten / Kota</label>
+                        <div class="relative" id="wrapKabupaten">
+                            <input type="text" id="inputKabupaten" placeholder="Pilih provinsi dulu..."
+                                autocomplete="off" disabled
+                                oninput="onWilInput('kabupaten')"
+                                onfocus="onWilFocus('kabupaten')"
+                                class="w-full border border-gray-200 rounded-lg pl-7 pr-7 py-2 text-sm
+                                    focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-100 text-gray-400 cursor-not-allowed">
+                            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-xs pointer-events-none"></i>
+                            <button type="button" id="clearKabupaten" onclick="clearLevel('kabupaten')"
+                                class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm leading-none">×</button>
+                            <div id="dropKabupaten"
+                                class="hidden absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto"></div>
                         </div>
-                        <input type="hidden" id="m_valKabupaten">
+                        <input type="hidden" id="valKabupaten">
                     </div>
 
                     {{-- KECAMATAN --}}
                     <div>
-                        <label class="block text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wide">Kecamatan</label>
-                        <div class="relative" id="m_wrapKecamatan">
-                            <select id="m_selectKecamatan" disabled
-                                    onchange="mSelectFromNative('kecamatan', this.value, this.options[this.selectedIndex].text)"
-                                    class="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm
-                                           focus:outline-none focus:ring-2 focus:ring-sky-400 bg-gray-100 text-gray-400 cursor-not-allowed appearance-none">
-                                <option value="">— Pilih Kabupaten dulu —</option>
-                            </select>
-                            <i class="fas fa-map-marker-alt absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                        <label class="block text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Kecamatan</label>
+                        <div class="relative" id="wrapKecamatan">
+                            <input type="text" id="inputKecamatan" placeholder="Pilih kabupaten dulu..."
+                                autocomplete="off" disabled
+                                oninput="onWilInput('kecamatan')"
+                                onfocus="onWilFocus('kecamatan')"
+                                class="w-full border border-gray-200 rounded-lg pl-7 pr-7 py-2 text-sm
+                                    focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-100 text-gray-400 cursor-not-allowed">
+                            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-xs pointer-events-none"></i>
+                            <button type="button" id="clearKecamatan" onclick="clearLevel('kecamatan')"
+                                class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm leading-none">×</button>
+                            <div id="dropKecamatan"
+                                class="hidden absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto"></div>
                         </div>
-                        <input type="hidden" id="m_valKecamatan">
+                        <input type="hidden" id="valKecamatan">
                     </div>
 
                     {{-- DESA --}}
                     <div>
-                        <label class="block text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wide">Desa / Kelurahan</label>
-                        <div class="relative" id="m_wrapDesa">
-                            <select id="m_selectDesa" disabled
-                                    onchange="mSelectFromNative('desa', this.value, this.options[this.selectedIndex].text)"
-                                    class="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm
-                                           focus:outline-none focus:ring-2 focus:ring-sky-400 bg-gray-100 text-gray-400 cursor-not-allowed appearance-none">
-                                <option value="">— Pilih Kecamatan dulu —</option>
-                            </select>
-                            <i class="fas fa-map-marker-alt absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                        <label class="block text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Desa / Kelurahan</label>
+                        <div class="relative" id="wrapDesa">
+                            <input type="text" id="inputDesa" placeholder="Pilih kecamatan dulu..."
+                                autocomplete="off" disabled
+                                oninput="onWilInput('desa')"
+                                onfocus="onWilFocus('desa')"
+                                class="w-full border border-gray-200 rounded-lg pl-7 pr-7 py-2 text-sm
+                                    focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-100 text-gray-400 cursor-not-allowed">
+                            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-xs pointer-events-none"></i>
+                            <button type="button" id="clearDesa" onclick="clearLevel('desa')"
+                                class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm leading-none">×</button>
+                            <div id="dropDesa"
+                                class="hidden absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto"></div>
                         </div>
-                        <input type="hidden" id="m_valDesa">
+                        <input type="hidden" id="valDesa">
                     </div>
                 </div>
 
@@ -317,6 +329,56 @@
     </div>
 </div>
 
+{{-- ═══ MODAL SIMPAN ═══ --}}
+<div id="modalSave"
+     style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:1rem;">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div class="px-6 py-4 rounded-t-xl" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">
+            <div class="flex items-center justify-between">
+                <h3 class="text-white font-bold text-base flex items-center gap-2">
+                    <i class="fas fa-bookmark"></i> Simpan Template
+                </h3>
+                <button onclick="closeModal()" class="text-purple-200 hover:text-white text-2xl leading-none">×</button>
+            </div>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Nama Template <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="inputNama" placeholder="cth: Data kepadatan penduduk Bali"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-purple-400">
+                <p id="errNama" class="hidden mt-1 text-xs text-red-500">
+                    <i class="fas fa-exclamation-circle mr-1"></i> Nama template wajib diisi.
+                </p>
+            </div>
+            <div class="p-3 bg-purple-50 rounded-lg border border-purple-100 text-xs text-purple-700">
+                <i class="fas fa-list-check mr-1"></i>
+                <span id="modalMetaCount">0</span> metadata akan disimpan.
+            </div>
+            @guest
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                <i class="fas fa-info-circle mr-1"></i>
+                Anda belum login. Template akan disimpan di browser ini saja.
+                <a href="{{ route('login') }}" class="underline font-semibold">Login</a> untuk menyimpan ke server.
+            </div>
+            @endguest
+        </div>
+        <div class="px-6 py-4 border-t bg-gray-50 rounded-b-xl flex justify-end gap-2">
+            <button onclick="closeModal()"
+                class="border border-gray-300 text-gray-500 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm">Batal</button>
+            <button onclick="submitTemplate()"
+                class="px-5 py-2 text-white text-sm font-semibold rounded-lg flex items-center gap-2"
+                style="background:#8b5cf6;"
+                onmouseover="this.style.background='#7c3aed'"
+                onmouseout="this.style.background='#8b5cf6'">
+                <i class="fas fa-save"></i> Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- HIDDEN FORM --}}
 <form id="formSaveTemplateHidden" action="{{ route('template.store') }}" method="POST" class="hidden">
     @csrf
@@ -340,21 +402,34 @@ const ALL_LOCATIONS = @json(
 );
 
 const LOC_PROVINSI = ALL_LOCATIONS.filter(l => l.id.slice(-8) === '00000000');
-
 const idxKab = {};
 const idxKec = {};
 const idxDes = {};
 
 ALL_LOCATIONS.forEach(l => {
-    if (l.id.length < 10) return;
+    const len = l.id.length;
+    if (len < 10) return;
+
     const isProvinsi  = l.id.slice(-8) === '00000000';
     const isKabupaten = !isProvinsi && l.id.slice(-6) === '000000';
     const isKecamatan = !isProvinsi && !isKabupaten && l.id.slice(-4) === '0000';
     const isDesa      = !isProvinsi && !isKabupaten && !isKecamatan;
-    if (isKabupaten) { const p = l.id.slice(0,2); if (!idxKab[p]) idxKab[p]=[]; idxKab[p].push(l); }
-    else if (isKecamatan) { const p = l.id.slice(0,4); if (!idxKec[p]) idxKec[p]=[]; idxKec[p].push(l); }
-    else if (isDesa) { const p = l.id.slice(0,6); if (!idxDes[p]) idxDes[p]=[]; idxDes[p].push(l); }
+
+    if (isKabupaten) {
+        const p = l.id.slice(0, 2);
+        if (!idxKab[p]) idxKab[p] = [];
+        idxKab[p].push(l);
+    } else if (isKecamatan) {
+        const p = l.id.slice(0, 4);
+        if (!idxKec[p]) idxKec[p] = [];
+        idxKec[p].push(l);
+    } else if (isDesa) {
+        const p = l.id.slice(0, 6);
+        if (!idxDes[p]) idxDes[p] = [];
+        idxDes[p].push(l);
+    }
 });
+
 
 // ═══════════════════════════════════════════════════════════════
 // ENDPOINTS & CONFIG
@@ -383,90 +458,144 @@ const mCaches = { kabupaten: {}, kecamatan: {}, desa: {} };
 
 function mCap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-async function mSelectFromNative(level, id, nama) {
-    if (!id) { mClearFromLevel(level); return; }
-    mSelLoc[level] = { id, nama };
-    document.getElementById('m_val' + mCap(level)).value = id;
-    const idx = M_LEVELS.indexOf(level);
-    M_LEVELS.slice(idx + 1).forEach(l => mResetLevel(l));
-    const next = M_LEVELS[idx + 1];
-    if (next && M_URLS[next]) await mFillSelect(next, id);
-    mUpdateBadge();
+function onWilFocus(level) {
+    const drop = document.getElementById('drop' + mCap(level));
+    if (!drop.classList.contains('hidden')) return;
+    showDropForLevel(level, '');
 }
 
-async function mFillSelect(level, parentId) {
-    const sel = document.getElementById('m_select' + mCap(level));
-    if (mCaches[level][parentId]) { mRenderOptions(sel, level, mCaches[level][parentId]); return; }
-    sel.disabled = true;
-    sel.classList.add('opacity-60');
-    const paramKey = level === 'kabupaten' ? 'provinsi_id' : level === 'kecamatan' ? 'kabupaten_id' : 'kecamatan_id';
-    try {
-        const r = await fetch(`${M_URLS[level]}?${paramKey}=${parentId}`);
-        const d = await r.json();
-        mCaches[level][parentId] = d;
-        mRenderOptions(sel, level, d);
-    } catch { sel.innerHTML = '<option value="">Gagal memuat</option>'; }
-    finally {
-        sel.disabled = false;
-        sel.classList.remove('opacity-60', 'bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
-        sel.classList.add('bg-white', 'text-gray-700');
+function onWilInput(level) {
+    const q = document.getElementById('input' + mCap(level)).value.trim();
+    showDropForLevel(level, q);
+}
+
+function getLocationsForLevel(level) {
+    if (level === 'provinsi') return LOC_PROVINSI;
+    if (level === 'kabupaten') {
+        if (!mSelLoc.provinsi) return [];
+        return idxKab[mSelLoc.provinsi.id.slice(0, 2)] || [];
     }
+    if (level === 'kecamatan') {
+        if (!mSelLoc.kabupaten) return [];
+        return idxKec[mSelLoc.kabupaten.id.slice(0, 4)] || [];
+    }
+    if (level === 'desa') {
+        if (!mSelLoc.kecamatan) return [];
+        return idxDes[mSelLoc.kecamatan.id.slice(0, 6)] || [];
+    }
+    return [];
 }
 
-function mRenderOptions(sel, level, items) {
-    sel.innerHTML = `<option value="">— Pilih ${M_LEVEL_LABEL[level]} —</option>` +
-        items.map(x => `<option value="${x.location_id}">${escH(x.nama_wilayah)}</option>`).join('');
+function showDropForLevel(level, q) {
+    const drop = document.getElementById('drop' + mCap(level));
+    let items = getLocationsForLevel(level);
+
+    if (q) {
+        items = items.filter(x => x.nama.toLowerCase().includes(q.toLowerCase()));
+    }
+
+    if (!items.length) {
+        drop.innerHTML = '<p class="px-4 py-3 text-xs text-gray-400 text-center">Tidak ada hasil</p>';
+        drop.classList.remove('hidden');
+        return;
+    }
+
+    drop.innerHTML = items.map(x => {
+        const isSel = mSelLoc[level] && mSelLoc[level].id === x.id;
+        return `<button type="button"
+            onclick="selectLevel('${level}', '${x.id}', '${escH(x.nama).replace(/'/g, "\\'")}')"
+            class="w-full text-left px-4 py-2.5 flex items-center gap-2.5 border-b border-gray-50 last:border-0 transition-colors
+                   ${isSel ? 'bg-emerald-50' : 'hover:bg-gray-50'}">
+            ${isSel
+                ? '<i class="fas fa-check-circle text-emerald-500 text-xs shrink-0"></i>'
+                : '<i class="far fa-circle text-gray-300 text-xs shrink-0"></i>'}
+            <span class="text-xs ${isSel ? 'font-semibold text-emerald-700' : 'text-gray-700'}">${escH(x.nama)}</span>
+        </button>`;
+    }).join('');
+    drop.classList.remove('hidden');
 }
 
-function mResetLevel(level) {
-    mSelLoc[level] = null;
-    document.getElementById('m_val' + mCap(level)).value = '';
-    const sel = document.getElementById('m_select' + mCap(level));
-    sel.innerHTML = `<option value="">— Pilih ${M_LEVEL_LABEL[M_LEVELS[M_LEVELS.indexOf(level)-1]]} dulu —</option>`;
-    sel.disabled = true;
-    sel.classList.add('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
-    sel.classList.remove('bg-white', 'text-gray-700');
+function selectLevel(level, id, nama) {
+    mSelLoc[level] = { id, nama };
+    document.getElementById('input' + mCap(level)).value = nama;
+    document.getElementById('val'   + mCap(level)).value = id;
+    document.getElementById('clear' + mCap(level)).classList.remove('hidden');
+    document.getElementById('drop'  + mCap(level)).classList.add('hidden');
+
+    const idx = M_LEVELS.indexOf(level);
+    M_LEVELS.slice(idx + 1).forEach(l => {
+        mSelLoc[l] = null;
+        document.getElementById('input' + mCap(l)).value = '';
+        document.getElementById('val'   + mCap(l)).value = '';
+        document.getElementById('clear' + mCap(l)).classList.add('hidden');
+        document.getElementById('drop'  + mCap(l)).classList.add('hidden');
+    });
+
+    const next = M_LEVELS[idx + 1];
+    if (next) {
+        const ni = document.getElementById('input' + mCap(next));
+        ni.disabled = false;
+        ni.classList.remove('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
+        ni.classList.add('bg-white', 'text-gray-700');
+        ni.placeholder = 'Cari ' + K_LEVEL_LABEL[next] + '...';
+    }
+
+    mUpdateBadge();
+    updatePilihBtn();
 }
 
-function mClearFromLevel(level) {
+function clearLevel(level) {
     const idx = M_LEVELS.indexOf(level);
     M_LEVELS.slice(idx).forEach(l => {
         mSelLoc[l] = null;
-        document.getElementById('m_val' + mCap(l)).value = '';
+        document.getElementById('input' + mCap(l)).value = '';
+        document.getElementById('val'   + mCap(l)).value = '';
+        document.getElementById('clear' + mCap(l)).classList.add('hidden');
+        document.getElementById('drop'  + mCap(l)).classList.add('hidden');
         if (l !== 'provinsi') {
-            const sel = document.getElementById('m_select' + mCap(l));
-            sel.innerHTML = `<option value="">— Pilih ${M_LEVEL_LABEL[M_LEVELS[M_LEVELS.indexOf(l)-1]]} dulu —</option>`;
-            sel.disabled = true;
-            sel.classList.add('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
-            sel.classList.remove('bg-white', 'text-gray-700');
-        } else {
-            document.getElementById('m_selectProvinsi').value = '';
+            const ni = document.getElementById('input' + mCap(l));
+            ni.disabled = true;
+            ni.classList.add('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
+            ni.classList.remove('bg-white', 'text-gray-700');
+            ni.placeholder = 'Pilih ' + K_LEVEL_LABEL[M_LEVELS[M_LEVELS.indexOf(l) - 1]] + ' dulu...';
         }
     });
     mUpdateBadge();
+    updatePilihBtn();
 }
+
+function updatePilihBtn() {
+    // Halaman ini pakai dropdown metadata custom (selectedMeta), bukan <select id="metadataSelect">.
+    const hasMeta = Object.keys(selectedMeta || {}).length > 0;
+    const btn  = document.getElementById('btnPilih');
+    const hint = document.getElementById('pilihHint');
+    if (btn) btn.disabled = !hasMeta;
+    if (hint) hint.textContent = hasMeta ? 'Wilayah bersifat opsional' : 'Pilih metadata terlebih dahulu';
+}
+
+
 
 function mUpdateBadge() {
     let deepest = null;
-    for (let i = M_LEVELS.length - 1; i >= 0; i--) {
-        if (mSelLoc[M_LEVELS[i]]) { deepest = { level: M_LEVELS[i], ...mSelLoc[M_LEVELS[i]] }; break; }
+    for (let i = M_LEVELS.length-1; i >= 0; i--) {
+        if (mSelLoc[M_LEVELS[i]]) { deepest = { level:M_LEVELS[i], ...mSelLoc[M_LEVELS[i]] }; break; }
     }
     const badge = document.getElementById('m_selectedWilayahBadge');
     if (deepest) {
         badge.classList.remove('hidden');
         document.getElementById('m_badgeNama').textContent  = deepest.nama;
         document.getElementById('m_badgeLevel').textContent = '(' + M_LEVEL_LABEL[deepest.level] + ')';
-    } else {
-        badge.classList.add('hidden');
-    }
+    } else { badge.classList.add('hidden'); }
 }
 
 function mGetDeepestLocId() {
-    for (let i = M_LEVELS.length - 1; i >= 0; i--) {
+    for (let i = M_LEVELS.length-1; i >= 0; i--) {
         if (mSelLoc[M_LEVELS[i]]) return mSelLoc[M_LEVELS[i]].id;
     }
     return null;
 }
+
+
 
 // ═══════════════════════════════════════════════════════════════
 // METADATA DROPDOWN — pre-load saat DOMContentLoaded
@@ -475,44 +604,53 @@ let selectedMeta = {};
 let metaCache    = null;
 let metaTimeout  = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+let metaPrefetchStarted = false;
+function prefetchMetaCache() {
+    if (metaPrefetchStarted) return;
+    metaPrefetchStarted = true;
+
+    const input = document.getElementById('metaSearch');
+    if (!input) return;
+
+    // Hindari "loading" saat klik: input metadata baru bisa dipakai setelah cache siap.
+    input.disabled = true;
+    input.placeholder = 'Memuat metadata...';
+
     fetch(`${SEARCH_META_URL}?q=`)
         .then(r => r.json())
-        .then(d => { metaCache = d; })
-        .catch(() => {});
-});
+        .then(d => {
+            metaCache = Array.isArray(d) ? d : [];
+            input.disabled = false;
+            input.placeholder = 'Ketik untuk mencari metadata...';
+        })
+        .catch(() => {
+            // Tetap non-interaktif: kalau gagal, user tidak akan memicu fetch saat klik.
+            metaCache = [];
+            input.disabled = true;
+            input.placeholder = 'Gagal memuat metadata';
+        });
+}
+
+// Mulai fetch secepat mungkin (tanpa menunggu user klik/focus).
+prefetchMetaCache();
 
 function onMetaSearchFocus() {
     const box = document.getElementById('metaDropList');
     if (!box.classList.contains('hidden')) return;
-    if (metaCache) { renderMetaDrop(metaCache); return; }
-    fetchMetaDrop('');
+    if (!metaCache) return;
+    renderMetaDrop(metaCache);
 }
 
 function onMetaSearchInput() {
     clearTimeout(metaTimeout);
     const q = document.getElementById('metaSearch').value.trim();
     metaTimeout = setTimeout(() => {
-        if (metaCache) {
-            const filtered = q
-                ? metaCache.filter(m => m.nama.toLowerCase().includes(q.toLowerCase()))
-                : metaCache;
-            renderMetaDrop(filtered);
-        } else {
-            fetchMetaDrop(q);
-        }
+        if (!metaCache) return;
+        const filtered = q
+            ? metaCache.filter(m => (m.nama || '').toLowerCase().includes(q.toLowerCase()))
+            : metaCache;
+        renderMetaDrop(filtered);
     }, 150);
-}
-
-function fetchMetaDrop(q) {
-    const box = document.getElementById('metaDropList');
-    box.classList.remove('hidden');
-    fetch(`${SEARCH_META_URL}?q=${encodeURIComponent(q)}`)
-        .then(r => r.json())
-        .then(d => { if (!q) metaCache = d; renderMetaDrop(d); })
-        .catch(() => {
-            box.innerHTML = '<p class="px-4 py-3 text-xs text-red-400 text-center">Gagal memuat</p>';
-        });
 }
 
 function renderMetaDrop(results) {
@@ -561,6 +699,8 @@ function renderMetaChips() {
                         class="text-sky-400 hover:text-sky-600 ml-1 leading-none">×</button>
             </span>`
         ).join('');
+    // Sinkronkan state tombol/hint (jika ada di halaman).
+    updatePilihBtn();
 }
 
 function removeMeta(id) { delete selectedMeta[id]; renderMetaChips(); }
@@ -874,12 +1014,13 @@ function buildRow(row) {
         </td>
         <td class="px-4 py-3 text-center">${detailBtn}</td>
         <td class="px-4 py-3 text-center">
-            <button type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200
-                       hover:border-sky-300 hover:bg-sky-50 text-gray-500 hover:text-sky-600
-                       text-xs font-medium rounded-lg transition-colors">
+            <a href="/template-tampilan/grafik?metadata_id=${row.metadata_id}&location_id=${row.location_id}"
+            target="_blank"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200
+                    hover:border-sky-300 hover:bg-sky-50 text-gray-500 hover:text-sky-600
+                    text-xs font-medium rounded-lg transition-colors">
                 <i class="fas fa-chart-bar text-xs"></i> Grafik
-            </button>
+            </a>
         </td>
     </tr>`;
 }
@@ -999,9 +1140,16 @@ function goPage(p) { currentPage = p; renderTable(); }
 // MODAL SIMPAN
 // ═══════════════════════════════════════════════════════════════
 function openSaveModal() {
-    const count = Object.keys(selectedMap).length;
-    if (!count) { alert('Pilih minimal 1 metadata untuk disimpan.'); return; }
-    document.getElementById('modalMetaCount').textContent = count;
+    // Bisa simpan dari pilihan tabel preview (selectedMap) atau langsung dari chips metadata (selectedMeta).
+    const metaCountFromMap = Object.keys(selectedMap || {}).length
+        ? new Set(Object.values(selectedMap).map(r => r.metadata_id)).size
+        : 0;
+    const metaCountFromChips = Object.keys(selectedMeta || {}).length;
+
+    const metaCount = metaCountFromMap || metaCountFromChips;
+    if (!metaCount) { alert('Pilih minimal 1 metadata untuk disimpan.'); return; }
+
+    document.getElementById('modalMetaCount').textContent = metaCount;
     document.getElementById('inputNama').value = '';
     document.getElementById('errNama').classList.add('hidden');
     document.getElementById('modalSave').style.display = 'flex';
@@ -1014,8 +1162,18 @@ async function submitTemplate() {
     const nama = document.getElementById('inputNama').value.trim();
     if (!nama) { document.getElementById('errNama').classList.remove('hidden'); return; }
 
-    const metaSet = new Set(Object.values(selectedMap).map(r => r.metadata_id));
-    const locSet  = new Set(Object.values(selectedMap).map(r => r.location_id));
+    const hasMapSelection = Object.keys(selectedMap || {}).length > 0;
+
+    const metaSet = hasMapSelection
+        ? new Set(Object.values(selectedMap).map(r => r.metadata_id))
+        : new Set(Object.keys(selectedMeta || {}).map(x => parseInt(x, 10)).filter(n => !Number.isNaN(n)));
+
+    const locSet  = hasMapSelection
+        ? new Set(Object.values(selectedMap).map(r => r.location_id))
+        : (() => {
+            const deepest = mGetDeepestLocId();
+            return new Set(deepest ? [deepest] : []);
+        })();
 
     if (IS_LOGGED_IN) {
         document.getElementById('hidNama').value = nama;

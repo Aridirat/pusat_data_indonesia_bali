@@ -35,6 +35,8 @@ Route::prefix('template-tampilan')->name('template.')->group(function () {
     Route::get('/create/klasifikasi', [TemplateController::class, 'createByKlasifikasi'])->name('create.klasifikasi');
     Route::get('/create/wilayah',     [TemplateController::class, 'createByWilayah'])->name('create.wilayah');
 
+    Route::get('/restore-state', [TemplateController::class, 'restoreState'])->name('restore_state');
+
     // AJAX helpers — PUBLIK (data publik, tanpa auth)
     Route::get('/search-metadata',    [TemplateController::class, 'searchMetadata'])->name('search_metadata');
     Route::post('/fetch-preview',     [TemplateController::class, 'fetchMetadataPreview'])->name('fetch_preview');
@@ -42,6 +44,17 @@ Route::prefix('template-tampilan')->name('template.')->group(function () {
     Route::post('/fetch-wilayah',     [TemplateController::class, 'fetchByWilayah'])->name('fetch_wilayah');
     Route::get('/child-locations',    [TemplateController::class, 'getChildLocations'])->name('child_locations');
     Route::get('/fetch-data',         [TemplateController::class, 'fetchData'])->name('fetch_data');
+
+    // Halaman grafik visualisasi — PUBLIK
+    Route::get('/grafik', [TemplateController::class, 'showGrafik'])->name('grafik');
+    // AJAX helpers — PUBLIK (data publik, tanpa auth)
+    Route::get('/search-metadata',    [TemplateController::class, 'searchMetadata'])->name('search_metadata');
+    Route::post('/fetch-preview',     [TemplateController::class, 'fetchMetadataPreview'])->name('fetch_preview');
+    Route::post('/fetch-klasifikasi', [TemplateController::class, 'fetchByKlasifikasi'])->name('fetch_klasifikasi');
+    Route::post('/fetch-wilayah',     [TemplateController::class, 'fetchByWilayah'])->name('fetch_wilayah');
+    Route::get('/child-locations',    [TemplateController::class, 'getChildLocations'])->name('child_locations');
+    Route::get('/fetch-data',         [TemplateController::class, 'fetchData'])->name('fetch_data');
+    Route::get('/grafik',             [TemplateController::class, 'showGrafik'])->name('grafik');  // ← tambah ini
 
     // Cascade dropdown wilayah — PUBLIK
     Route::get('/get-provinsi',  [TemplateController::class, 'getProvinsi'])->name('get_provinsi');

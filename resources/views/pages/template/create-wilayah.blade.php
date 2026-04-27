@@ -339,6 +339,99 @@
 
 {{-- ═══ DATA SEMUA LOKASI — di-embed dari server tanpa loading ═══ --}}
 <script>
+
+// Tambahkan setelah const IS_LOGGED_IN
+const URL_RESTORE_STATE = '{{ route("template.restore_state") }}';
+
+// Deteksi jika kembali dari grafik
+const urlParams = new URLSearchParams(window.location.search);
+const shouldRestore = urlParams.get('restore') === '1';
+
+if (shouldRestore) {
+    restoreWilayahState();
+}
+
+// Tambahkan fungsi ini setelah fungsi updatePilihBtn()
+async function restoreWilayahState() {
+    try {
+        const grafikState = sessionStorage.getItem('grafikState');
+        if (!grafikState) return;
+
+        const state = JSON.parse(grafikState);
+        console.log('[Restore] Memulihkan state:', state);
+
+        // 1. Restore pilihan wilayah
+        await restoreWilayahSelection(state.locId);
+        
+        // 2. Auto-click "Pilih & Tampilkan"
+        setTimeout(() => {
+            document.getElementById('btnPilih').click();
+        }, 500);
+
+    } catch (err) {
+        console.error('[Restore] Error:', err);
+    }
+}
+
+async function restoreWilayahSelection(locId) {
+    // Parse location_id untuk menentukan level dan cascade selection
+    const locStr = String(locId);
+    
+    if (locStr.slice(-8) === '00000000') {
+        // Provinsi
+        const provinsi = ALL_LOCATIONS.find(l => l.id === locId);
+        if (provinsi) selectLevel('provinsi', provinsi.id, provinsi.nama);
+        
+    } else if (locStr.slice(-6) === '000000') {
+        // Kabupaten
+        const kab = ALL_LOCATIONS.find(l => l.id === locId);
+        if (kab) {
+            const provId = locStr.slice(0, 2) + '00000000';
+            const prov = LOC_PROVINSI.find(l => l.id === provId);
+            if (prov) selectLevel('provinsi', prov.id, prov.nama);
+            setTimeout(() => selectLevel('kabupaten', kab.id, kab.nama), 100);
+        }
+        
+    } else if (locStr.slice(-4) === '0000') {
+        // Kecamatan
+        const kec = ALL_LOCATIONS.find(l => l.id === locId);
+        if (kec) {
+            const provId = locStr.slice(0, 2) + '00000000';
+            const kabId = locStr.slice(0, 4) + '000000';
+            const prov = LOC_PROVINSI.find(l => l.id === provId);
+            const kab = ALL_LOCATIONS.find(l => l.id === kabId);
+            
+            if (prov) selectLevel('provinsi', prov.id, prov.nama);
+            setTimeout(() => {
+                if (kab) selectLevel('kabupaten', kab.id, kab.nama);
+                setTimeout(() => selectLevel('kecamatan', kec.id, kec.nama), 100);
+            }, 100);
+        }
+        
+    } else {
+        // Desa - full cascade
+        const desa = ALL_LOCATIONS.find(l => l.id === locId);
+        if (desa) {
+            const kecId = locStr.slice(0, 6) + '0000';
+            const kabId = locStr.slice(0, 4) + '000000';
+            const provId = locStr.slice(0, 2) + '00000000';
+            
+            const prov = LOC_PROVINSI.find(l => l.id === provId);
+            const kab = ALL_LOCATIONS.find(l => l.id === kabId);
+            const kec = ALL_LOCATIONS.find(l => l.id === kecId);
+            
+            if (prov) selectLevel('provinsi', prov.id, prov.nama);
+            setTimeout(() => {
+                if (kab) selectLevel('kabupaten', kab.id, kab.nama);
+                setTimeout(() => {
+                    if (kec) selectLevel('kecamatan', kec.id, kec.nama);
+                    setTimeout(() => selectLevel('desa', desa.id, desa.nama), 100);
+                }, 100);
+            }, 100);
+        }
+    }
+}
+
 // Semua data lokasi di-inject langsung dari PHP (tanpa AJAX saat buka halaman)
 // Format: { location_id, nama_wilayah }
 // Dikelompokkan berdasarkan level menggunakan suffix location_id
@@ -597,6 +690,8 @@ function buildTimeBody() {
 async function loadWilayahTable() {
     const deepLocId = getDeepLocId();
     if (!deepLocId) return;
+
+    
 
     const btn = document.getElementById('btnPilih');
     btn.disabled = true;
@@ -871,12 +966,13 @@ function buildRow(row) {
         </td>
         <td class="px-4 py-3 text-center">${detailBtn}</td>
         <td class="px-4 py-3 text-center">
-            <button type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200
-                       hover:border-sky-300 hover:bg-sky-50 text-gray-500 hover:text-sky-600
-                       text-xs font-medium rounded-lg transition-colors">
+            <a href="/template-tampilan/grafik?metadata_id=${row.metadata_id}&location_id=${row.location_id}"
+            target="_blank"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200
+                    hover:border-sky-300 hover:bg-sky-50 text-gray-500 hover:text-sky-600
+                    text-xs font-medium rounded-lg transition-colors">
                 <i class="fas fa-chart-bar text-xs"></i> Grafik
-            </button>
+            </a>
         </td>
     </tr>`;
 }
