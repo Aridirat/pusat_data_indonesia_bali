@@ -31,14 +31,6 @@
         </div>
     </div>
 
-    {{-- ALERT --}}
-    @if(session('success'))
-        <div class="mt-4 flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-            <i class="fas fa-check-circle text-green-500 shrink-0"></i>
-            <span>{{ session('success') }}</span>
-        </div>
-    @endif
-
     {{-- ACTION BAR --}}
     <div>
         <div class="flex flex-col justify-between items-start my-5 gap-3">
@@ -69,92 +61,6 @@
 </div>
     
 @include('pages.template._template-panel')
-
-{{-- ═══ MODAL SIMPAN TEMPLATE ═══ --}}
-<div id="modalTemplate"
-    class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"
-    style="background:rgba(0,0,0,0.45);">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-        <div class="px-6 py-4 shrink-0" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-white font-bold text-base flex items-center gap-2">
-                        <i class="fas fa-bookmark"></i> Simpan Template
-                    </h3>
-                    <p class="text-purple-200 text-xs mt-0.5">Menyimpan filter aktif beserta data yang dicentang (opsional)</p>
-                </div>
-                <button onclick="closeTemplateModal()" class="text-purple-200 hover:text-white text-2xl leading-none">×</button>
-            </div>
-        </div>
-        <div class="p-6 overflow-y-auto flex-1 space-y-5">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Nama Template <span class="text-red-500">*</span>
-                </label>
-                <input type="text" id="templateNama" placeholder="cth: Data Penduduk 2023"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-purple-400">
-                <p id="templateNamaError" class="hidden mt-1 text-xs text-red-500">
-                    <i class="fas fa-exclamation-circle mr-1"></i> Nama template wajib diisi.
-                </p>
-            </div>
-            <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    <i class="fas fa-filter mr-1"></i> Filter Tersimpan
-                </p>
-                <div id="modalFilterBadges" class="flex flex-wrap gap-1.5 min-h-6"></div>
-            </div>
-            <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center justify-between">
-                    Data Terpilih
-                    <span id="modalDataCount" class="font-bold px-2 py-0.5 rounded-full text-xs"
-                          style="background:#f5f3ff; color:#7c3aed;">0 baris</span>
-                </p>
-                <div id="modalDataEmpty"
-                     class="text-xs text-gray-400 italic py-3 text-center border rounded-lg bg-gray-50">
-                    Tidak ada data dicentang — template hanya menyimpan filter
-                </div>
-                <div id="modalDataTableWrap" class="hidden border rounded-lg overflow-hidden max-h-52 overflow-y-auto">
-                    <table class="w-full text-xs">
-                        <thead class="bg-gray-50 border-b text-gray-500 sticky top-0">
-                            <tr>
-                                <th class="px-3 py-2 text-left font-semibold">Metadata</th>
-                                <th class="px-3 py-2 text-left font-semibold">Lokasi</th>
-                                <th class="px-3 py-2 text-left font-semibold">Tahun</th>
-                                <th class="px-3 py-2 text-left font-semibold">Nilai</th>
-                                <th class="px-3 py-2 w-8"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="modalDataBody" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">
-            <button onclick="closeTemplateModal()"
-                class="border border-gray-300 text-gray-500 hover:bg-gray-100 px-4 py-2 rounded-md text-sm transition-colors">
-                Batal
-            </button>
-            <button onclick="submitTemplate()"
-                class="px-5 py-2 rounded-md text-sm font-semibold text-white flex items-center gap-2 transition-colors"
-                style="background:#8b5cf6;"
-                onmouseover="this.style.background='#7c3aed'"
-                onmouseout="this.style.background='#8b5cf6'">
-                <i class="fas fa-save"></i> Simpan Template
-            </button>
-        </div>
-    </div>
-</div>
-
-{{-- Form tersembunyi untuk submit template --}}
-<form id="formSaveTemplate" action="{{ route('data.template.store') }}" method="POST" class="hidden">
-    @csrf
-    <input type="hidden" name="nama_tampilan"       id="formTemplateName">
-    <input type="hidden" name="filter_metadata_id"  id="formFilterMetadataId"  value="{{ $activeMetadataId }}">
-    <input type="hidden" name="filter_wilayah_id"   id="formFilterWilayahId"   value="{{ $activeWilayahId }}">
-    <input type="hidden" name="filter_year"         id="formFilterYear"        value="{{ $activeYear }}">
-    <div id="formDataIds"></div>
-</form>
 
 <script>
 // ────────────────────────────────────────────────────────────────

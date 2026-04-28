@@ -7,6 +7,14 @@
         </div>
     </div>
 
+    {{-- ALERT --}}
+    @if(session('success'))
+        <div class="mt-4 flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+            <i class="fas fa-check-circle text-green-500 shrink-0"></i>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+
     <div class="flex gap-2 my-6">
         <a href="{{ route('template.create') }}"
             class="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-lg
@@ -49,7 +57,12 @@
             </div>
 
             {{-- List --}}
-            <div class="flex flex-col gap-2 my-4 mx-3" id="templateList">
+            <div 
+                class="flex flex-col gap-2 my-4 mx-3 
+                    max-h-50 overflow-y-auto pr-1
+                    scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+                id="templateList"
+            >
                 @foreach($availableTemplates as $tmpl)
                     @php
                         $fp = $tmpl->filter_params ?? [];

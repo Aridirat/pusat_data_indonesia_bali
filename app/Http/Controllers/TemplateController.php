@@ -6,7 +6,6 @@ use App\Models\Tampilan;
 use App\Models\IsiTampilan;
 use App\Models\Metadata;
 use App\Models\Location;
-use App\Models\Waktu;
 use App\Models\Data;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +30,12 @@ class TemplateController extends Controller
         return view('pages.template.index', compact('templates'));
     }
 
+    public function restoreState(Request $request)
+    {
+        $state = session('wilayah_state', []);
+        return response()->json(['success' => true, 'state' => $state]);
+    }
+
     // ═══════════════════════════════════════════════════════════
     // CREATE — form pilih jenis template (PUBLIK)
     // ═══════════════════════════════════════════════════════════
@@ -46,12 +51,16 @@ class TemplateController extends Controller
 
     public function createByMetadata()
     {
-        // Hanya ambil provinsi untuk cascade awal (lebih ringan)
         $provinsiList = Location::whereRaw("RIGHT(CAST(location_id AS CHAR), 8) = '00000000'")
             ->orderBy('nama_wilayah')
             ->get(['location_id', 'nama_wilayah']);
 
-        return view('pages.template.create-metadata', compact('provinsiList'));
+        $allMetadata = Metadata::where('status', Metadata::STATUS_ACTIVE)
+            ->orderBy('nama')
+            ->limit(100)
+            ->get(['metadata_id', 'nama', 'klasifikasi', 'satuan_data', 'frekuensi_penerbitan']);
+
+        return view('pages.template.create-metadata', compact('provinsiList', 'allMetadata'));
     }
 
     // ═══════════════════════════════════════════════════════════

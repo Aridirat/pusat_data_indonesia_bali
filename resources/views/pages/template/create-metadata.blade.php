@@ -56,14 +56,12 @@
                 </label>
                 <div class="relative" id="metaDropWrap">
                     <input type="text" id="metaSearch"
-                           placeholder="Memuat metadata..."
-                           autocomplete="off"
-                           disabled
-                           oninput="onMetaSearchInput()"
-                           onfocus="onMetaSearchFocus()"
-                           class="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2.5 text-sm
-                                  focus:outline-none focus:ring-2 focus:ring-sky-400 transition-shadow
-                                  disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed">
+                            placeholder="Ketik untuk mencari metadata..."
+                            autocomplete="off"
+                            oninput="onMetaSearchInput()"
+                            onfocus="onMetaSearchFocus()"
+                            class="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2.5 text-sm
+                                    focus:outline-none focus:ring-2 focus:ring-sky-400 transition-shadow">
                     <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
 
                     {{-- Dropdown list --}}
@@ -537,7 +535,7 @@ function selectLevel(level, id, nama) {
         ni.disabled = false;
         ni.classList.remove('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
         ni.classList.add('bg-white', 'text-gray-700');
-        ni.placeholder = 'Cari ' + K_LEVEL_LABEL[next] + '...';
+        ni.placeholder = 'Cari ' + M_LEVEL_LABEL[next] + '...';
     }
 
     mUpdateBadge();
@@ -557,7 +555,7 @@ function clearLevel(level) {
             ni.disabled = true;
             ni.classList.add('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
             ni.classList.remove('bg-white', 'text-gray-700');
-            ni.placeholder = 'Pilih ' + K_LEVEL_LABEL[M_LEVELS[M_LEVELS.indexOf(l) - 1]] + ' dulu...';
+            ni.placeholder = 'Pilih ' + M_LEVEL_LABEL[M_LEVELS[M_LEVELS.indexOf(l) - 1]] + ' dulu...';
         }
     });
     mUpdateBadge();
@@ -601,38 +599,9 @@ function mGetDeepestLocId() {
 // METADATA DROPDOWN — pre-load saat DOMContentLoaded
 // ═══════════════════════════════════════════════════════════════
 let selectedMeta = {};
-let metaCache    = null;
 let metaTimeout  = null;
 
-let metaPrefetchStarted = false;
-function prefetchMetaCache() {
-    if (metaPrefetchStarted) return;
-    metaPrefetchStarted = true;
-
-    const input = document.getElementById('metaSearch');
-    if (!input) return;
-
-    // Hindari "loading" saat klik: input metadata baru bisa dipakai setelah cache siap.
-    input.disabled = true;
-    input.placeholder = 'Memuat metadata...';
-
-    fetch(`${SEARCH_META_URL}?q=`)
-        .then(r => r.json())
-        .then(d => {
-            metaCache = Array.isArray(d) ? d : [];
-            input.disabled = false;
-            input.placeholder = 'Ketik untuk mencari metadata...';
-        })
-        .catch(() => {
-            // Tetap non-interaktif: kalau gagal, user tidak akan memicu fetch saat klik.
-            metaCache = [];
-            input.disabled = true;
-            input.placeholder = 'Gagal memuat metadata';
-        });
-}
-
-// Mulai fetch secepat mungkin (tanpa menunggu user klik/focus).
-prefetchMetaCache();
+const metaCache = @json($allMetadata);
 
 function onMetaSearchFocus() {
     const box = document.getElementById('metaDropList');
@@ -1015,7 +984,7 @@ function buildRow(row) {
         <td class="px-4 py-3 text-center">${detailBtn}</td>
         <td class="px-4 py-3 text-center">
             <a href="/template-tampilan/grafik?metadata_id=${row.metadata_id}&location_id=${row.location_id}"
-            target="_blank"
+            
             class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200
                     hover:border-sky-300 hover:bg-sky-50 text-gray-500 hover:text-sky-600
                     text-xs font-medium rounded-lg transition-colors">

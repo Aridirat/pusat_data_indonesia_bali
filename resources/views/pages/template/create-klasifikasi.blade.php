@@ -1005,7 +1005,7 @@ function buildRow(row) {
         <td class="px-4 py-3 text-center">${detailBtn}</td>
         <td class="px-4 py-3 text-center">
             <a href="/template-tampilan/grafik?metadata_id=${row.metadata_id}&location_id=${row.location_id}"
-            target="_blank"
+            
             class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200
                     hover:border-sky-300 hover:bg-sky-50 text-gray-500 hover:text-sky-600
                     text-xs font-medium rounded-lg transition-colors">

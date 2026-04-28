@@ -239,10 +239,10 @@
 ══════════════════════════════════════════════════ --}}
 <div class="grafik-page px-2 py-6">
 
-    <div class="px-3 pb-3 font-medium text-md text-gray-500 hover:text-gray-800 flex items-center gap-2">
+    <div class="px-2 pb-2 font-medium text-md text-gray-500 hover:text-gray-800 flex items-center gap-2">
         <button onclick="goBack()"
-                class="px-3 pb-3 font-medium text-md text-gray-500 hover:text-gray-800 flex items-center gap-2">
-            <i class="fas fa-arrow-left"></i> Kembali
+                class="pe-2 pb-3 font-medium text-md text-sky-500 hover:text-sky-600 flex items-center">
+            <i class="fas fa-chevron-left"></i> Kembali
         </button>
     </div>
 
@@ -251,9 +251,9 @@
 
         {{-- ── Header: Nama Metadata — Nama Wilayah — Frekuensi ── --}}
         <div class="chart-header">
-            <h1 class="text-xl font-bold pb-6">Grafik</h1>
+            <h1 class="text-xl font-bold pb-4">Grafik</h1>
 
-            <div class="grid grid-cols-2 gap-5">
+            <div class="grid grid-cols-2 gap-3">
                 <div class="col-1">
                     <div class="text-md font-semibold text-gray-800">
                         {{ $metadata->nama ?? '—' }} di
@@ -261,7 +261,7 @@
                         <span class="font-medium text-gray-500">—</span>
                         <span class="font-medium text-gray-500">{{ ucfirst($metadata->frekuensi_penerbitan ?? '—') }}</span>
                     </div>
-                    <div class="flex flex-row gap-2 text-xs font-medium text-gray-400 mt-4">
+                    <div class="flex flex-row gap-2 text-xs font-medium text-gray-300 mt-2">
                         <span class="col-1">
                             <i class="fas fa-tag"></i>
                             {{ $metadata->klasifikasi ?? '—' }}
@@ -349,7 +349,7 @@
 
         {{-- ── Footer: Klasifikasi + Nama Produsen ── --}}
         <div class="chart-footer">
-            <div class="font-medium text-sm text-gray-400">
+            <div class="font-medium text-sm text-gray-300">
                 {{ $metadata->klasifikasi ?? '—' }}
             </div>
             <div class="font-medium text-sm text-gray-500">
@@ -701,16 +701,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Tambahkan fungsi ini di akhir script sebelum DOMContentLoaded
 function goBack() {
-    // Simpan state grafik ke sessionStorage untuk referensi
+    // Simpan state jika masih diperlukan
     sessionStorage.setItem('grafikState', JSON.stringify({
         metaId: APP_CONFIG.metaId,
         locId: APP_CONFIG.locId,
         metaNama: APP_CONFIG.metaNama,
         locNama: '{{ addslashes($location->nama_wilayah ?? "") }}'
     }));
-    
-    // Kembali ke halaman wilayah dengan parameter restore
-    window.location.href = `{{ route("template.create.wilayah") }}?restore=1`;
+
+    // Jika ada halaman sebelumnya, kembali ke sana
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        // fallback jika tidak ada history
+        window.location.href = `{{ route("template.create") }}`;
+    }
 }
 </script>
 
