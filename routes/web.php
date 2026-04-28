@@ -24,52 +24,6 @@ Route::get('/', function () {
 // (user tanpa akun bisa buat template, disimpan di localStorage)
 // ─────────────────────────────────────────────────────────────
 
-Route::prefix('template-tampilan')->name('template.')->group(function () {
-
-    // Halaman pilih jenis template — PUBLIK (tanpa auth)
-    Route::get('/',       [TemplateController::class, 'index'])->name('index');
-    Route::get('/create', [TemplateController::class, 'create'])->name('create');
-
-    // Form per jenis — PUBLIK (tanpa auth)
-    Route::get('/create/metadata',    [TemplateController::class, 'createByMetadata'])->name('create.metadata');
-    Route::get('/create/klasifikasi', [TemplateController::class, 'createByKlasifikasi'])->name('create.klasifikasi');
-    Route::get('/create/wilayah',     [TemplateController::class, 'createByWilayah'])->name('create.wilayah');
-
-    Route::get('/restore-state', [TemplateController::class, 'restoreState'])->name('restore_state');
-
-    // AJAX helpers — PUBLIK (data publik, tanpa auth)
-    Route::get('/search-metadata',    [TemplateController::class, 'searchMetadata'])->name('search_metadata');
-    Route::post('/fetch-preview',     [TemplateController::class, 'fetchMetadataPreview'])->name('fetch_preview');
-    Route::post('/fetch-klasifikasi', [TemplateController::class, 'fetchByKlasifikasi'])->name('fetch_klasifikasi');
-    Route::post('/fetch-wilayah',     [TemplateController::class, 'fetchByWilayah'])->name('fetch_wilayah');
-    Route::get('/child-locations',    [TemplateController::class, 'getChildLocations'])->name('child_locations');
-    Route::get('/fetch-data',         [TemplateController::class, 'fetchData'])->name('fetch_data');
-
-    // Halaman grafik visualisasi — PUBLIK
-    Route::get('/grafik', [TemplateController::class, 'showGrafik'])->name('grafik');
-    // AJAX helpers — PUBLIK (data publik, tanpa auth)
-    Route::get('/search-metadata',    [TemplateController::class, 'searchMetadata'])->name('search_metadata');
-    Route::post('/fetch-preview',     [TemplateController::class, 'fetchMetadataPreview'])->name('fetch_preview');
-    Route::post('/fetch-klasifikasi', [TemplateController::class, 'fetchByKlasifikasi'])->name('fetch_klasifikasi');
-    Route::post('/fetch-wilayah',     [TemplateController::class, 'fetchByWilayah'])->name('fetch_wilayah');
-    Route::get('/child-locations',    [TemplateController::class, 'getChildLocations'])->name('child_locations');
-    Route::get('/fetch-data',         [TemplateController::class, 'fetchData'])->name('fetch_data');
-    Route::get('/grafik',             [TemplateController::class, 'showGrafik'])->name('grafik');  // ← tambah ini
-
-    // Cascade dropdown wilayah — PUBLIK
-    Route::get('/get-provinsi',  [TemplateController::class, 'getProvinsi'])->name('get_provinsi');
-    Route::get('/get-kabupaten', [TemplateController::class, 'getKabupaten'])->name('get_kabupaten');
-    Route::get('/get-kecamatan', [TemplateController::class, 'getKecamatan'])->name('get_kecamatan_wil');
-    Route::get('/get-desa',      [TemplateController::class, 'getDesa'])->name('get_desa_wil');
-
-    // CRUD — Membutuhkan login (simpan ke DB)
-    Route::middleware([IsLogin::class])->group(function () {
-        Route::post('/',             [TemplateController::class, 'store'])->name('store');
-        Route::delete('/{tampilan}', [TemplateController::class, 'destroy'])->name('destroy');
-        Route::get('/{tampilan}/show', [TemplateController::class, 'show'])->name('show');
-    });
-});
-
 // ─────────────────────────────────────────────────────────────
 // AUTHENTICATED ROUTES
 // ─────────────────────────────────────────────────────────────
@@ -88,6 +42,42 @@ Route::middleware([IsLogin::class])->group(function () {
         Route::get('/',       [WaktuController::class, 'index'])->name('index');
         Route::get('/create', [WaktuController::class, 'create'])->name('create');
         Route::post('/',      [WaktuController::class, 'store'])->name('store');
+    });
+
+    // ── Template Tampilan ─────────────────────────────────────────────────
+    Route::prefix('template-tampilan')->name('template.')->group(function () {
+    
+        // Halaman pilih jenis template
+        Route::get('/',                   [TemplateController::class, 'index'])->name('index');
+        Route::get('/create',             [TemplateController::class, 'create'])->name('create');
+    
+        // Form per jenis
+        Route::get('/create/metadata',    [TemplateController::class, 'createByMetadata'])->name('create.metadata');
+        Route::get('/create/klasifikasi', [TemplateController::class, 'createByKlasifikasi'])->name('create.klasifikasi');
+        Route::get('/create/wilayah',     [TemplateController::class, 'createByWilayah'])->name('create.wilayah');
+    
+        // AJAX helpers
+        Route::get('/search-metadata',    [TemplateController::class, 'searchMetadata'])->name('search_metadata');
+        Route::post('/fetch-preview',     [TemplateController::class, 'fetchMetadataPreview'])->name('fetch_preview');
+        Route::post('/fetch-klasifikasi', [TemplateController::class, 'fetchByKlasifikasi'])->name('fetch_klasifikasi');
+        Route::post('/fetch-wilayah',     [TemplateController::class, 'fetchByWilayah'])->name('fetch_wilayah');
+        Route::get('/child-locations',    [TemplateController::class, 'getChildLocations'])->name('child_locations');
+        Route::get('/fetch-data',         [TemplateController::class, 'fetchData'])->name('fetch_data');
+    
+        // Cascade dropdown wilayah (Template Wilayah)
+        Route::get('/get-provinsi',       [TemplateController::class, 'getProvinsi'])->name('get_provinsi');
+        Route::get('/get-kabupaten',      [TemplateController::class, 'getKabupaten'])->name('get_kabupaten');
+        Route::get('/get-kecamatan',      [TemplateController::class, 'getKecamatan'])->name('get_kecamatan_wil');
+        Route::get('/get-desa',           [TemplateController::class, 'getDesa'])->name('get_desa_wil');
+    
+        // CRUD
+        Route::post('/',                   [TemplateController::class, 'store'])->name('store');
+        Route::get('/{tampilan}/edit',     [TemplateController::class, 'edit'])->name('edit');
+        Route::put('/{tampilan}',          [TemplateController::class, 'update'])->name('update');
+        Route::delete('/{tampilan}',       [TemplateController::class, 'destroy'])->name('destroy');
+    
+        // Show (AJAX) — untuk panel di halaman index data
+        Route::get('/{tampilan}/show',    [TemplateController::class, 'show'])->name('show');
     });
 
     // ── Data ─────────────────────────────────────────────────

@@ -132,8 +132,7 @@
                             onclick="event.stopPropagation()"
                         >
                             {{-- Edit --}}
-                            <a href="#"
-                            >
+                            <a href="{{ route('template.edit', $tmpl->tampilan_id) }}">
                                 <i class="fas fa-pen"></i>
                             </a>
 

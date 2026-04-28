@@ -698,6 +698,95 @@ class TemplateController extends Controller
         return redirect()->route('data.index')->with('success', 'Template berhasil dihapus.');
     }
 
+     // ═══════════════════════════════════════════════════════════
+    // EDIT — halaman form edit template
+    // ═══════════════════════════════════════════════════════════
+    public function edit(Tampilan $tampilan)
+    {
+        if ($tampilan->user_id !== Auth::user()->user_id) {
+            abort(403);
+        }
+ 
+        // Load metadata yang sudah ada di template ini
+        $tampilan->load('isiTampilan.metadata');
+ 
+        $existingMetadataIds = $tampilan->isiTampilan->pluck('metadata_id')->toArray();
+ 
+        // Load detail metadata yang sudah terpilih (untuk ditampilkan sebagai chips)
+        $existingMetadata = Metadata::whereIn('metadata_id', $existingMetadataIds)
+            ->where('status', Metadata::STATUS_ACTIVE)
+            ->orderBy('nama')
+            ->get(['metadata_id', 'nama', 'klasifikasi', 'satuan_data', 'frekuensi_penerbitan']);
+ 
+        $fp          = $tampilan->filter_params ?? [];
+        $locationIds = $fp['location_ids'] ?? [];
+ 
+        // Load lokasi yang tersimpan di filter_params (untuk ditampilkan sebagai info)
+        $existingLocations = !empty($locationIds)
+            ? Location::whereIn('location_id', $locationIds)
+                ->select('location_id', 'nama_wilayah')
+                ->get()
+            : collect();
+ 
+        // Load semua metadata aktif (untuk dropdown pencarian tambah metadata baru)
+        $allMetadata = Metadata::where('status', Metadata::STATUS_ACTIVE)
+            ->orderBy('nama')
+            ->limit(200)
+            ->get(['metadata_id', 'nama', 'klasifikasi', 'satuan_data', 'frekuensi_penerbitan']);
+ 
+        return view('pages.template.edit', compact(
+            'tampilan',
+            'existingMetadata',
+            'existingLocations',
+            'allMetadata',
+            'fp'
+        ));
+    }
+ 
+    // ═══════════════════════════════════════════════════════════
+    // UPDATE — simpan perubahan template
+    // ═══════════════════════════════════════════════════════════
+    public function update(Request $request, Tampilan $tampilan)
+    {
+        if ($tampilan->user_id !== Auth::user()->user_id) {
+            abort(403);
+        }
+ 
+        $request->validate([
+            'nama_tampilan'  => 'required|string|max:100',
+            'metadata_ids'   => 'required|array|min:1',
+            'metadata_ids.*' => 'integer|exists:metadata,metadata_id',
+        ]);
+ 
+        // Update nama tampilan
+        $tampilan->update([
+            'nama_tampilan' => $request->nama_tampilan,
+        ]);
+ 
+        // Ganti seluruh isi tampilan dengan yang baru (delete lama → insert baru)
+        IsiTampilan::where('tampilan_id', $tampilan->tampilan_id)->delete();
+ 
+        foreach ($request->metadata_ids as $metadataId) {
+            IsiTampilan::create([
+                'tampilan_id' => $tampilan->tampilan_id,
+                'metadata_id' => $metadataId,
+            ]);
+        }
+ 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success'     => true,
+                'message'     => "Template \"{$tampilan->nama_tampilan}\" berhasil diperbarui.",
+                'tampilan_id' => $tampilan->tampilan_id,
+                'redirect'    => route('data.index', ['template_id' => $tampilan->tampilan_id]),
+            ]);
+        }
+ 
+        return redirect()
+            ->route('data.index', ['template_id' => $tampilan->tampilan_id])
+            ->with('success', "Template \"{$tampilan->nama_tampilan}\" berhasil diperbarui.");
+    }
+
     // ═══════════════════════════════════════════════════════════
     // SHOW — detail isi template (AJAX untuk panel data index)
     // ═══════════════════════════════════════════════════════════
