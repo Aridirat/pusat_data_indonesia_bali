@@ -23,33 +23,15 @@ Route::get('/', function () {
 // TEMPLATE TAMPILAN — Sebagian bisa diakses tanpa login
 // (user tanpa akun bisa buat template, disimpan di localStorage)
 // ─────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────
-// AUTHENTICATED ROUTES
-// ─────────────────────────────────────────────────────────────
-
-Route::middleware([IsLogin::class])->group(function () {
-
-    // ── Dimensi Lokasi ──────────────────────────────────────
-    Route::prefix('dimensi_lokasi')->name('dimensi_lokasi.')->group(function () {
-        Route::get('/',       [LocationController::class, 'index'])->name('index');
-        Route::get('/create', [LocationController::class, 'create'])->name('create');
-        Route::post('/',      [LocationController::class, 'store'])->name('store');
-    });
-
-    // ── Dimensi Waktu ────────────────────────────────────────
-    Route::prefix('dimensi_waktu')->name('dimensi_waktu.')->group(function () {
-        Route::get('/',       [WaktuController::class, 'index'])->name('index');
-        Route::get('/create', [WaktuController::class, 'create'])->name('create');
-        Route::post('/',      [WaktuController::class, 'store'])->name('store');
-    });
-
-    // ── Template Tampilan ─────────────────────────────────────────────────
+// ── Template Tampilan ─────────────────────────────────────────────────
     Route::prefix('template-tampilan')->name('template.')->group(function () {
     
         // Halaman pilih jenis template
         Route::get('/',                   [TemplateController::class, 'index'])->name('index');
+        Route::get('/available-periods', [TemplateController::class, 'getAvailablePeriods'])->name('available_periods');
+        Route::post('/table-data',       [TemplateController::class, 'fetchTableData'])->name('table_data');
         Route::get('/create',             [TemplateController::class, 'create'])->name('create');
+
     
         // Form per jenis
         Route::get('/create/metadata',    [TemplateController::class, 'createByMetadata'])->name('create.metadata');
@@ -78,6 +60,26 @@ Route::middleware([IsLogin::class])->group(function () {
     
         // Show (AJAX) — untuk panel di halaman index data
         Route::get('/{tampilan}/show',    [TemplateController::class, 'show'])->name('show');
+    });
+    
+// ─────────────────────────────────────────────────────────────
+// AUTHENTICATED ROUTES
+// ─────────────────────────────────────────────────────────────
+
+Route::middleware([IsLogin::class])->group(function () {
+
+    // ── Dimensi Lokasi ──────────────────────────────────────
+    Route::prefix('dimensi_lokasi')->name('dimensi_lokasi.')->group(function () {
+        Route::get('/',       [LocationController::class, 'index'])->name('index');
+        Route::get('/create', [LocationController::class, 'create'])->name('create');
+        Route::post('/',      [LocationController::class, 'store'])->name('store');
+    });
+
+    // ── Dimensi Waktu ────────────────────────────────────────
+    Route::prefix('dimensi_waktu')->name('dimensi_waktu.')->group(function () {
+        Route::get('/',       [WaktuController::class, 'index'])->name('index');
+        Route::get('/create', [WaktuController::class, 'create'])->name('create');
+        Route::post('/',      [WaktuController::class, 'store'])->name('store');
     });
 
     // ── Data ─────────────────────────────────────────────────

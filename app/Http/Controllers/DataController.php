@@ -67,6 +67,7 @@ class DataController extends Controller
             $data = $query->orderBy('date_inputed', 'desc')->paginate(15)->withQueryString();
         }
 
+        $activeTemplateId = (int) $request->input('template_id', 0);
         $metadataList       = Metadata::where('status', 2)->orderBy('nama')->get(['metadata_id', 'nama']);
         $wilayahList      = Location::select('nama_wilayah')->distinct()->orderBy('nama_wilayah')->pluck('nama_wilayah');
         $availableTemplates = Tampilan::where('user_id', Auth::user()->user_id)->withCount('isiTampilan')->orderBy('created_at', 'desc')->get();
@@ -74,7 +75,7 @@ class DataController extends Controller
 
         return view('pages.data.index', compact(
             'data', 'metadataList', 'wilayahList',
-            'availableTemplates', 'pendingCount', 'hasFilter'
+            'availableTemplates', 'pendingCount', 'hasFilter', 'activeTemplateId'
         ));
     }
 
