@@ -21,7 +21,6 @@
     {{-- Cari transaksi aktif milik user --}}
     @php
         $aktifNow = $transaksis->first(fn($t) => $t->isSuccess() && $t->isAktif());
-        // fallback: cari dari semua transaksi jika halaman bukan 1
         if (! $aktifNow) {
             $aktifNow = \App\Models\Transaksi::where('user_id', Auth::id())
                 ->where('status', 'success')
@@ -35,7 +34,7 @@
     @endphp
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-    {{-- Paket Aktif --}}
+        {{-- Paket Aktif --}}
         <div class="card-panel p-4 h-full self-stretch flex flex-col gap-3">
             <div class="w-9 h-9 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
                 <i class="fas fa-gift text-sm"></i>
@@ -107,7 +106,6 @@
         </div>
     </div>
 
-    {{-- Peringatan: Tidak ada langganan aktif --}}
     @if(!$aktifNow)
     <div class="card-panel bg-yellow-50 border border-yellow-200 px-4 py-3 flex items-center gap-3">
         <div class="w-8 h-8 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center flex-shrink-0">
@@ -125,7 +123,6 @@
     @endif
 
     <div class="card-panel">
-        {{-- Filter --}}
         <div class="card-panel">
         <div class="p-4 border-b border-gray-100">
             <form id="form-riwayat" method="GET" action="{{ route('transaksi.riwayat') }}">
@@ -136,6 +133,8 @@
                         <option value="success"   {{ request('status') === 'success'   ? 'selected' : '' }}>Berhasil</option>
                         <option value="pending"   {{ request('status') === 'pending'   ? 'selected' : '' }}>Menunggu</option>
                         <option value="failed"    {{ request('status') === 'failed'    ? 'selected' : '' }}>Gagal</option>
+                        <option value="expired"   {{ request('status') === 'expired'   ? 'selected' : '' }}>Kedaluwarsa</option>
+                        <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
                     </select>
 
                     @if(request()->filled('status'))
@@ -148,7 +147,6 @@
             </form>
         </div>
 
-        {{-- Tabel --}}
         <div class="overflow-x-auto">
             @if($transaksis->isEmpty())
             <div class="py-16 text-center">
@@ -163,14 +161,14 @@
             </div>
             @else
 
-            {{-- Tabel lengkap — tablet & desktop (sm ke atas) --}}
+            {{-- Tabel lengkap — tablet & desktop --}}
             <table class="w-full text-sm hidden sm:table">
                 <thead>
                     <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                         <th class="px-5 py-3 text-left font-medium">Order ID</th>
                         <th class="px-5 py-3 text-left font-medium">Layanan</th>
                         <th class="px-5 py-3 text-left font-medium">Harga</th>
-                        <th class="px-5 py-3 text-left font-medium">Menunggu Bayar</th>
+                        <th class="px-5 py-3 text-left font-medium">Status Bayar</th>
                         <th class="px-5 py-3 text-left font-medium">Masa Aktif</th>
                         <th class="px-5 py-3 text-left font-medium">Tanggal</th>
                         <th class="px-5 py-3 text-right font-medium">Aksi</th>
@@ -178,6 +176,14 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($transaksis as $item)
+                    @php
+                        // isExpired() true kalau: (a) status sudah literal 'expired' di DB
+                        // (sudah disapu command), ATAU (b) masih 'pending' tapi created_at
+                        // sudah lewat 24 jam (transisi sebelum sempat disapu). Kedua kasus
+                        // sama-sama harus menyembunyikan tombol Bayar.
+                        $isExpired = $item->isExpired();
+                        $isPayable = $item->isPayable();
+                    @endphp
                     <tr class="hover:bg-gray-50 transition">
                         <td class="px-5 py-3.5 font-mono text-xs text-gray-500">{{ $item->order_id }}</td>
                         <td class="px-5 py-3.5">
@@ -186,10 +192,15 @@
                         </td>
                         <td class="px-5 py-3.5 font-medium text-gray-700">{{ $item->harga_format }}</td>
                         <td class="px-5 py-3.5">
-                            @if($item->status === 'pending')
+                            @if($isPayable)
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
                                     <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span>
-                                    Ya
+                                    Menunggu bayar
+                                </span>
+                            @elseif($isExpired)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block"></span>
+                                    Kedaluwarsa
                                 </span>
                             @else
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
@@ -217,7 +228,7 @@
                         <td class="px-5 py-3.5 text-xs text-gray-500">{{ $item->created_at->format('d M Y, H:i') }}</td>
                         <td class="px-5 py-3.5 text-right">
                             <div class="flex items-center justify-end gap-3">
-                                @if($item->status === 'pending')
+                                @if($isPayable)
                                     <button type="button"
                                             onclick="bayarSekarang({{ $item->transaksi_id }})"
                                             class="text-xs text-white bg-stikom-blue px-3 py-1.5 rounded-lg hover:bg-blue-700 font-medium">
@@ -236,15 +247,18 @@
                 </tbody>
             </table>
 
-            {{-- Card list — mobile (<sm), cuma 4 info penting --}}
+            {{-- Card list — mobile --}}
             <div class="sm:hidden divide-y divide-gray-100">
                 @foreach($transaksis as $item)
                 @php
-                    $statusDot = match($item->status) {
-                        'success' => 'bg-emerald-500',
-                        'pending' => 'bg-yellow-400',
-                        'failed'  => 'bg-red-500',
-                        default   => 'bg-gray-400',
+                    $isExpired = $item->isExpired();
+                    $isPayable = $item->isPayable();
+                    $statusDot = match(true) {
+                        $item->status === 'success' => 'bg-emerald-500',
+                        $isPayable                  => 'bg-yellow-400',
+                        $isExpired                   => 'bg-gray-400',
+                        $item->status === 'failed'   => 'bg-red-500',
+                        default                      => 'bg-gray-400',
                     };
                 @endphp
                 <button type="button"
@@ -256,9 +270,12 @@
                         <span class="block font-mono text-[11px] text-gray-400 truncate">{{ $item->order_id }}</span>
                         <span class="block font-medium text-gray-800 text-sm truncate">{{ $item->nama_layanan }}</span>
                         <span class="block text-sm font-semibold text-gray-700 mt-0.5">{{ $item->harga_format }}</span>
+                        @if($isExpired)
+                            <span class="block text-[11px] text-gray-400 mt-0.5">Kedaluwarsa</span>
+                        @endif
                     </span>
 
-                    @if($item->status === 'pending')
+                    @if($isPayable)
                         <span onclick="event.stopPropagation(); bayarSekarang({{ $item->transaksi_id }})"
                             class="flex-shrink-0 text-xs text-white bg-stikom-blue px-2.5 py-1.5 rounded-lg font-medium mr-1">
                             Bayar
@@ -277,14 +294,11 @@
 
         @if($transaksis->hasPages())
         <div class="px-5 py-3 border-t border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-500">
-
             <span class="hidden sm:inline text-xs sm:text-sm">
                 Menampilkan {{ $transaksis->firstItem() }}–{{ $transaksis->lastItem() }} dari {{ $transaksis->total() }} data
             </span>
 
             <nav class="flex items-center justify-center sm:justify-end gap-1.5">
-
-                {{-- Previous --}}
                 @if($transaksis->onFirstPage())
                     <span class="w-9 h-9 rounded-full border border-gray-200 text-gray-300 flex items-center justify-center cursor-not-allowed">
                         <i class="fas fa-chevron-left text-xs"></i>
@@ -301,19 +315,16 @@
                     $last    = $transaksis->lastPage();
                 @endphp
 
-                {{-- Halaman 1 --}}
                 <a href="{{ $transaksis->url(1) }}"
                 class="w-9 h-9 rounded-full flex items-center justify-center text-sm
                 {{ $current == 1 ? 'bg-gray-900 text-white font-semibold' : 'border border-gray-200 text-gray-600 hover:bg-gray-50' }}">
                     1
                 </a>
 
-                {{-- Titik jika jauh dari halaman 2 --}}
                 @if($current > 3)
                     <span class="w-9 h-9 flex items-center justify-center text-gray-400">…</span>
                 @endif
 
-                {{-- Halaman tengah (current ±1) --}}
                 @for($i = max(2, $current - 1); $i <= min($last - 1, $current + 1); $i++)
                     <a href="{{ $transaksis->url($i) }}"
                     class="w-9 h-9 rounded-full flex items-center justify-center text-sm
@@ -322,12 +333,10 @@
                     </a>
                 @endfor
 
-                {{-- Titik sebelum last --}}
                 @if($current < $last - 2)
                     <span class="w-9 h-9 flex items-center justify-center text-gray-400">…</span>
                 @endif
 
-                {{-- Halaman terakhir (kalau lebih dari 1 halaman) --}}
                 @if($last > 1)
                     <a href="{{ $transaksis->url($last) }}"
                     class="w-9 h-9 rounded-full flex items-center justify-center text-sm
@@ -336,7 +345,6 @@
                     </a>
                 @endif
 
-                {{-- Next --}}
                 @if($transaksis->hasMorePages())
                     <a href="{{ $transaksis->nextPageUrl() }}"
                     class="w-9 h-9 rounded-full border border-gray-200 text-gray-500 flex items-center justify-center hover:bg-gray-50 transition">
@@ -347,16 +355,13 @@
                         <i class="fas fa-chevron-right text-xs"></i>
                     </span>
                 @endif
-
             </nav>
         </div>
         @endif
     </div>
 </div>
 
-{{-- ══════════════════════════════════════════════════════
-     MODAL DETAIL TRANSAKSI — Portrait style
-═══════════════════════════════════════════════════════ --}}
+{{-- MODAL DETAIL TRANSAKSI --}}
 <div id="modal-detail"
      class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
      onclick="closeDetail(event)">
@@ -365,29 +370,33 @@
          id="modal-card"
          onclick="event.stopPropagation()">
 
-        {{-- Loading state --}}
         <div id="modal-loading" class="flex flex-col items-center justify-center py-16">
             <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
             <p class="text-sm text-gray-500 mt-3">Memuat detail...</p>
         </div>
 
-        {{-- Content (diisi JS) --}}
         <div id="modal-content" class="hidden"></div>
     </div>
 </div>
 
-{{-- Data transaksi (JSON, untuk JS) --}}
 <script>
 const transaksiData = {
     @foreach($transaksis as $item)
+    @php
+        $isExpiredJson = $item->isExpired();
+        $isPayableJson = $item->isPayable();
+        // 'expired' di sini murni label tampilan JS, tidak pernah jadi nilai kolom status di DB.
+        $statusForJs = $isExpiredJson ? 'expired' : $item->status;
+    @endphp
     {{ $item->transaksi_id }}: {
         id:           {{ $item->transaksi_id }},
         order_id:     "{{ $item->order_id }}",
         nama_layanan: "{{ e($item->nama_layanan) }}",
         harga_format: "{{ $item->harga_format }}",
         durasi_label: "{{ $item->durasi_label }}",
-        status:       "{{ $item->status }}",
-        status_label: "{{ match($item->status) { 'success'=>'Berhasil','pending'=>'Menunggu','failed'=>'Gagal', default=>$item->status } }}",
+        status:       "{{ $statusForJs }}",
+        is_payable:   {{ $isPayableJson ? 'true' : 'false' }},
+        status_label: "{{ match($statusForJs) { 'success'=>'Berhasil','pending'=>'Menunggu','expired'=>'Kedaluwarsa','failed'=>'Gagal', default=>$statusForJs } }}",
         payment_type: "{{ $item->payment_type ? strtoupper(str_replace('_',' ',$item->payment_type)) : '—' }}",
         midtrans_id:  "{{ $item->midtrans_transaction_id ?? '—' }}",
         aktif_mulai:  "{{ $item->aktif_mulai ? $item->aktif_mulai->format('d M Y') : '—' }}",
@@ -419,16 +428,16 @@ const transaksiData = {
                     alert(data.message || 'Gagal memuat pembayaran.');
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;
+                    // Kalau ternyata sudah kedaluwarsa, refresh supaya UI ikut sinkron.
+                    if (data.message && data.message.includes('kedaluwarsa')) {
+                        window.location.reload();
+                    }
                     return;
                 }
 
                 snap.pay(data.snap_token, {
-                    onSuccess: function () {
-                        window.location.reload();
-                    },
-                    onPending: function () {
-                        window.location.reload();
-                    },
+                    onSuccess: function () { window.location.reload(); },
+                    onPending: function () { window.location.reload(); },
                     onError: function () {
                         alert('Pembayaran gagal. Silakan coba lagi.');
                         btn.disabled = false;
@@ -450,43 +459,44 @@ const transaksiData = {
     const statusCfg = {
         success:   { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Berhasil'   },
         pending:   { bg: 'bg-yellow-50',   text: 'text-yellow-700',  dot: 'bg-yellow-400',  label: 'Menunggu'   },
+        expired:   { bg: 'bg-gray-100',    text: 'text-gray-600',    dot: 'bg-gray-400',     label: 'Kedaluwarsa' },
         failed:    { bg: 'bg-red-50',      text: 'text-red-700',     dot: 'bg-red-500',      label: 'Gagal'      },
         cancelled: { bg: 'bg-gray-100',    text: 'text-gray-600',    dot: 'bg-gray-400',     label: 'Dibatalkan' },
     };
-    
+
     function showDetail(id) {
         const modal   = document.getElementById('modal-detail');
         const loading = document.getElementById('modal-loading');
         const content = document.getElementById('modal-content');
-    
+
         loading.classList.remove('hidden');
         content.classList.add('hidden');
         content.innerHTML = '';
         modal.classList.remove('hidden');
-    
+
         setTimeout(() => {
             const d = transaksiData[id];
             if (!d) {
                 loading.innerHTML = '<p class="text-red-500 text-sm py-8 text-center px-6">Data tidak ditemukan.</p>';
                 return;
             }
-    
+
             const cfg = statusCfg[d.status] || statusCfg.pending;
-    
-            // Header gradient berdasarkan status
+
             const headerBg = d.status === 'success'   ? 'from-emerald-500 to-teal-600'
                         : d.status === 'pending'   ? 'from-amber-400 to-yellow-500'
+                        : d.status === 'expired'   ? 'from-gray-400 to-gray-500'
                         : d.status === 'failed'    ? 'from-red-500 to-rose-600'
                         : 'from-gray-400 to-gray-500';
-    
-            // Icon berdasarkan status
+
             const headerIcon = d.status === 'success'
                 ? '<i class="fas fa-check-circle text-white text-3xl"></i>'
                 : d.status === 'pending'
                 ? '<i class="fas fa-clock text-white text-3xl"></i>'
+                : d.status === 'expired'
+                ? '<i class="fas fa-hourglass-end text-white text-3xl"></i>'
                 : '<i class="fas fa-times-circle text-white text-3xl"></i>';
-    
-            // Footer berdasarkan status
+
             const footerHtml = d.status === 'success'
             ? `<div class="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-center">
                 <p class="text-xs text-emerald-700 font-medium">
@@ -494,7 +504,7 @@ const transaksiData = {
                     Langganan ${d.is_aktif ? 'sedang aktif' : 'sudah berakhir'}
                 </p>
             </div>`
-            : d.status === 'pending'
+            : (d.status === 'pending' && d.is_payable)
             ? `<div class="space-y-2">
                 <div class="bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 text-center">
                     <p class="text-xs text-yellow-700 font-medium">
@@ -507,13 +517,20 @@ const transaksiData = {
                     Lanjutkan Pembayaran
                 </button>
             </div>`
+            : d.status === 'expired'
+            ? `<div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center">
+                <p class="text-xs text-gray-500">
+                    <i class="fas fa-hourglass-end mr-1"></i>
+                    Waktu pembayaran sudah habis. Silakan buat pesanan baru.
+                </p>
+            </div>`
             : `<div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center">
                 <p class="text-xs text-gray-500">
                     <i class="fas fa-info-circle mr-1"></i>
                     Transaksi ini tidak aktif
                 </p>
             </div>`;
-    
+
             content.innerHTML = `
                 <div>
                     <div class="bg-gradient-to-br ${headerBg} px-6 pt-6 pb-8 relative">
@@ -528,13 +545,13 @@ const transaksiData = {
                             <p class="text-white font-bold text-2xl mt-3">${d.harga_format}</p>
                         </div>
                     </div>
-    
+
                     <div class="-mt-4 relative z-10">
                         <svg viewBox="0 0 400 24" class="w-full" preserveAspectRatio="none" style="height:24px">
                             <path d="M0,0 Q200,24 400,0 L400,24 L0,24 Z" fill="white"/>
                         </svg>
                     </div>
-    
+
                     <div class="px-5 -mt-2 pb-2 space-y-0 divide-y divide-gray-100">
                         ${row('Layanan',       d.nama_layanan)}
                         ${row('Durasi',        d.durasi_label)}
@@ -545,11 +562,11 @@ const transaksiData = {
                         ${row('Tgl Transaksi', d.created_at)}
                         ${row('Tgl Update',    d.updated_at)}
                     </div>
-    
+
                     <div class="px-5 py-4 mt-1">
                         ${footerHtml}
                     </div>
-    
+
                     <div class="px-5 pb-5">
                         <button onclick="closeModal()"
                                 class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-medium rounded-xl transition">
@@ -557,12 +574,12 @@ const transaksiData = {
                         </button>
                     </div>
                 </div>`;
-    
+
             loading.classList.add('hidden');
             content.classList.remove('hidden');
         }, 200);
     }
-    
+
     function row(label, val, type = '') {
         const valClass = type === 'mono'  ? 'font-mono text-xs text-gray-600 break-all'
                     : type === 'green' ? 'font-semibold text-emerald-600'
@@ -573,14 +590,14 @@ const transaksiData = {
                 <span class="text-xs ${valClass} text-right">${val || '—'}</span>
             </div>`;
     }
-    
+
     function closeModal() {
         document.getElementById('modal-detail').classList.add('hidden');
     }
     function closeDetail(e) {
         if (e.target === document.getElementById('modal-detail')) closeModal();
     }
-    
+
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 </script>
 @endpush

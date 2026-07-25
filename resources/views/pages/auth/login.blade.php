@@ -182,31 +182,75 @@
 
         });
 
+        // ── Anti-spam-klik + reCAPTCHA (alur token TIDAK diubah dari versi asli) ──
         const form = document.querySelector('form[action="/login"]');
         const tokenInput = document.getElementById('g-recaptcha-response');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const submitBtnOriginalText = submitBtn.innerHTML;
+        const recaptchaSiteKey = '{{ $recaptchaSiteKey }}';
 
-        if (form && tokenInput && '{{ $recaptchaSiteKey }}') {
+        function lockSubmitButton() {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            submitBtn.innerHTML = 'Memproses...';
+        }
+
+        function unlockSubmitButton() {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            submitBtn.innerHTML = submitBtnOriginalText;
+        }
+
+        // Blokir klik ganda di level tombol juga (bukan cuma di form).
+        submitBtn.addEventListener('click', function (event) {
+            if (submitBtn.disabled) {
+                event.preventDefault();
+            }
+        });
+
+        if (form && tokenInput && recaptchaSiteKey) {
+            // ── Alur SAMA PERSIS dengan versi asli, cuma disisipi lock/unlock ──
             form.addEventListener('submit', function (event) {
                 if (tokenInput.value) {
-                    return;
+                    lockSubmitButton();
+                    return; // submit native jalan seperti biasa (token sudah ada)
                 }
 
                 event.preventDefault();
 
                 if (!window.grecaptcha) {
+                    lockSubmitButton();
                     form.submit();
                     return;
                 }
 
+                lockSubmitButton();
+
                 window.grecaptcha.ready(function () {
-                    window.grecaptcha.execute('{{ $recaptchaSiteKey }}', { action: 'login' })
+                    window.grecaptcha.execute(recaptchaSiteKey, { action: 'login' })
                         .then(function (token) {
                             tokenInput.value = token;
                             form.submit();
+                        })
+                        .catch(function (err) {
+                            console.error('reCAPTCHA execute gagal:', err);
+                            unlockSubmitButton();
                         });
                 });
             });
+        } else {
+            // Tanpa reCAPTCHA: cuma kunci tombol, submit native jalan seperti biasa.
+            form.addEventListener('submit', function () {
+                lockSubmitButton();
+            });
         }
+
+        // Halaman di-restore dari bfcache (misal user pencet Back) -> buka lagi tombolnya.
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                unlockSubmitButton();
+            }
+        });
 
     });
     </script>

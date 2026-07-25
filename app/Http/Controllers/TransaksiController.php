@@ -12,10 +12,6 @@ use Illuminate\Support\Facades\Log;
 
 class TransaksiController extends Controller
 {
-    // ── Landing: Halaman Langganan (daftar layanan) ────────────
-    // Sudah ada di LandingController->langganan(), tidak perlu duplikasi.
-    // Controller ini fokus pada proses checkout & riwayat user.
-
     // ── Checkout: Buat transaksi & ambil Snap Token ────────────
     public function checkout(Request $request)
     {
@@ -46,10 +42,10 @@ class TransaksiController extends Controller
                 ->with('error', 'Kamu sudah memiliki langganan aktif untuk layanan ini.');
         }
 
-        // ── Batalkan transaksi pending lama untuk layanan yang sama ──
-        // Supaya tidak numpuk saat user berkali-kali klik checkout tanpa bayar
+        // ── Batalkan SEMUA transaksi pending lama milik user ini ──
+        // Diubah dari "per layanan_id yang sama" menjadi seluruh pending user,
+        // supaya tidak ada transaksi pending nyangkut untuk layanan lain.
         Transaksi::where('user_id', $user->user_id)
-            ->where('layanan_id', $layanan->layanan_id)
             ->where('status', 'pending')
             ->update(['status' => 'cancelled']);
 
@@ -91,11 +87,23 @@ class TransaksiController extends Controller
             ], 422);
         }
 
+        // Guard: tolak retry kalau created_at sudah lewat window EXPIRY_HOURS,
+        // walaupun status di DB masih 'pending' (command jam-an belum sempat menyapunya).
+        // Ini yang mencegah transaksi lama tetap bisa dibayar dari riwayat.
+        if ($transaksi->isExpired()) {
+            $transaksi->update(['status' => 'expired']);
+
+            return response()->json([
+                'message' => 'Transaksi ini sudah kedaluwarsa (lebih dari 24 jam). Silakan buat pesanan baru.',
+            ], 422);
+        }
+
         $layanan = Layanan::findOrFail($transaksi->layanan_id);
         $user    = Auth::user();
 
-        // Snap token lama kemungkinan sudah kedaluwarsa, minta token baru
-        // dengan order_id yang sama (Midtrans membolehkan re-request selama status masih pending)
+        // Snap token lama kemungkinan sudah kedaluwarsa di sisi Midtrans, minta token baru
+        // dengan order_id yang sama — tapi window pembayarannya TETAP dihitung dari
+        // created_at transaksi asli (lihat getSnapToken), bukan dari waktu retry ini.
         $snapToken = $this->getSnapToken($transaksi, $user, $layanan);
 
         if (! $snapToken) {
@@ -110,8 +118,6 @@ class TransaksiController extends Controller
     }
 
     // ── Notification: Webhook dari Midtrans ───────────────────
-    // URL ini harus bisa diakses publik (daftarkan di dashboard Midtrans)
-    // Tidak perlu CSRF karena request dari server Midtrans
     public function notification(Request $request)
     {
         $payload = $request->all();
@@ -122,14 +128,12 @@ class TransaksiController extends Controller
             'payment_type' => $payload['payment_type'] ?? '',
         ]);
 
-        // Verifikasi signature key untuk keamanan
-        $orderId           = trim((string) ($payload['order_id'] ?? ''));
-        $statusCode        = trim((string) ($payload['status_code'] ?? ''));
-        $grossAmount       = trim((string) ($payload['gross_amount'] ?? ''));
-        $serverKey         = trim((string) config('midtrans.server_key'));
-        $signatureKey      = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+        $orderId      = trim((string) ($payload['order_id'] ?? ''));
+        $statusCode   = trim((string) ($payload['status_code'] ?? ''));
+        $grossAmount  = trim((string) ($payload['gross_amount'] ?? ''));
+        $serverKey    = trim((string) config('midtrans.server_key'));
+        $signatureKey = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
 
-        // Bandingkan signature
         $payloadSignature = trim((string) ($payload['signature_key'] ?? ''));
         if ($signatureKey !== $payloadSignature) {
             Log::warning('Midtrans: Invalid Signature', [
@@ -149,37 +153,38 @@ class TransaksiController extends Controller
             return response()->json(['message' => 'Order not found'], 404);
         }
 
-        // Update payload mentah
         $transaksi->update(['midtrans_payload' => $payload]);
 
         $transactionStatus = $payload['transaction_status'] ?? '';
         $fraudStatus       = $payload['fraud_status'] ?? '';
         $paymentType       = $payload['payment_type'] ?? null;
 
-        // Logika status Midtrans → status kita
         if ($transactionStatus === 'capture') {
-            // Credit card: capture + fraud check
             $newStatus = ($fraudStatus === 'accept') ? 'success' : 'failed';
         } elseif ($transactionStatus === 'settlement') {
             $newStatus = 'success';
-        } elseif (in_array($transactionStatus, ['deny', 'expire', 'failure'])) {
+        } elseif ($transactionStatus === 'deny') {
+            $newStatus = 'failed';
+        } elseif ($transactionStatus === 'expire') {
+            // Selaraskan dengan status 'expired' kita sendiri (sama seperti yang
+            // ditulis ExpirePendingTransaksi) — beda dari 'cancelled'.
+            $newStatus = 'expired';
+        } elseif ($transactionStatus === 'failure') {
             $newStatus = 'failed';
         } elseif ($transactionStatus === 'cancel') {
             $newStatus = 'cancelled';
         } elseif ($transactionStatus === 'pending') {
             $newStatus = 'pending';
         } else {
-            $newStatus = $transaksi->status; // tidak berubah
+            $newStatus = $transaksi->status;
         }
 
-        // Update transaksi
         $updateData = [
             'status'                   => $newStatus,
             'payment_type'             => $paymentType,
             'midtrans_transaction_id'  => $payload['transaction_id'] ?? null,
         ];
 
-        // Jika berhasil, hitung masa aktif
         if ($newStatus === 'success' && ! $transaksi->isSuccess()) {
             $mulai = Carbon::now();
             $updateData['aktif_mulai']  = $mulai;
@@ -205,9 +210,15 @@ class TransaksiController extends Controller
     // ── Status: Cek status transaksi (AJAX polling) ────────────
     public function status(Transaksi $transaksi)
     {
-        // Pastikan hanya pemilik yang bisa cek
         if ($transaksi->user_id !== Auth::id()) {
             abort(403);
+        }
+
+        // Jaring pengaman on-the-fly, jaga-jaga command jam-an belum sempat jalan.
+        // Cukup panggil isExpired() (bukan cek status==='pending' manual) karena
+        // isExpired() sudah otomatis false begitu status sudah literal 'expired'.
+        if ($transaksi->status === 'pending' && $transaksi->isExpired()) {
+            $transaksi->update(['status' => 'expired']);
         }
 
         return response()->json([
@@ -216,6 +227,7 @@ class TransaksiController extends Controller
                 'success'   => 'Pembayaran Berhasil',
                 'pending'   => 'Menunggu Pembayaran',
                 'failed'    => 'Pembayaran Gagal',
+                'expired'   => 'Kedaluwarsa',
                 'cancelled' => 'Dibatalkan',
                 default     => $transaksi->status,
             },
@@ -227,9 +239,15 @@ class TransaksiController extends Controller
     {
         $user = Auth::user();
 
+        // Sapu bersih transaksi pending milik user ini yang sudah lewat window
+        // sebelum ditampilkan — jaring pengaman kalau command jam-an sempat telat.
+        Transaksi::where('user_id', $user->user_id)
+            ->expiredPending()
+            ->update(['status' => 'expired']);
+
         $query = Transaksi::where('user_id', $user->user_id)
                           ->with('layanan')
-                          ->whereIn('status', ['pending', 'success', 'failed'])
+                          ->whereIn('status', ['pending', 'success', 'failed', 'expired', 'cancelled'])
                           ->orderByDesc('created_at');
 
         if ($request->filled('status')) {
@@ -238,7 +256,6 @@ class TransaksiController extends Controller
 
         $transaksis = $query->paginate(10)->withQueryString();
 
-        // Statistik ringkas untuk user
         $stats = [
             'total'    => Transaksi::where('user_id', $user->user_id)->count(),
             'aktif'    => Transaksi::where('user_id', $user->user_id)->success()
@@ -296,6 +313,15 @@ class TransaksiController extends Controller
             'callbacks' => [
                 'finish' => route('transaksi.riwayat'),
             ],
+            // Kunci window pembayaran ke created_at transaksi, BUKAN ke waktu request ini.
+            // Ini yang membuat countdown di Snap popup tidak "restart" walau user
+            // klik "Bayar" berkali-kali dari halaman riwayat — durasinya sama persis
+            // dengan yang dipakai Transaksi::EXPIRY_HOURS di seluruh aplikasi.
+            'expiry' => [
+                'start_time' => $transaksi->created_at->format('Y-m-d H:i:s O'),
+                'unit'       => 'hours',
+                'duration'   => Transaksi::EXPIRY_HOURS,
+            ],
         ];
 
         try {
@@ -320,8 +346,6 @@ class TransaksiController extends Controller
     }
 
     // ── Debug: Test Webhook Endpoint ──────────────────────────
-    // URL: /transaksi/webhook-test
-    // Gunakan untuk test dengan curl
     public function webhookTest(Request $request)
     {
         $payload = $request->all();
@@ -356,14 +380,12 @@ class TransaksiController extends Controller
     }
 
     // ── Debug: Generate Test Signature ────────────────────────
-    // URL: /transaksi/signature-test?order_id=TEST001&status_code=200&gross_amount=10000
-    // Gunakan untuk generate signature untuk test
     public function signatureTest(Request $request)
     {
         $orderId = $request->get('order_id', 'TEST001');
         $statusCode = $request->get('status_code', '200');
         $grossAmount = (int) $request->get('gross_amount', 10000);
-        
+
         $serverKey = config('midtrans.server_key');
         $signatureKey = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
 

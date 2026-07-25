@@ -1,6 +1,5 @@
 <?php
 
-// app/Console/Commands/ExpirePendingTransaksi.php
 namespace App\Console\Commands;
 
 use App\Models\Transaksi;
@@ -13,10 +12,10 @@ class ExpirePendingTransaksi extends Command
 
     public function handle()
     {
-        $count = Transaksi::where('status', 'pending')
-            ->where('created_at', '<=', now()->subHours(24))
-            ->update(['status' => 'cancelled']);
+        // 'expired' (timeout otomatis) — beda dari 'cancelled' (dibatalkan user lewat checkout ulang,
+        // lihat TransaksiController::checkout()).
+        $count = Transaksi::expiredPending()->update(['status' => 'expired']);
 
-        $this->info("{$count} transaksi pending ditandai cancelled.");
+        $this->info("{$count} transaksi pending ditandai expired.");
     }
 }

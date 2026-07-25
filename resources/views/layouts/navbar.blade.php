@@ -76,11 +76,18 @@
                         Ubah Password
                     </a>
                     <div class="border-t border-slate-200"></div>
-                    <form action="{{ url('/logout') }}" method="POST">
+                    <form action="{{ url('/logout') }}" method="POST"
+                          x-data="{ submitting: false }"
+                          @submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
                         @csrf
                         <button type="submit"
+                                :disabled="submitting"
+                                :class="submitting ? 'opacity-60 cursor-not-allowed' : ''"
                                 class="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-rose-50">
-                            Logout
+                            <span x-show="!submitting">Logout</span>
+                            <span x-show="submitting" style="display: none;">
+                                <i class="fas fa-spinner fa-spin mr-1"></i> Logout...
+                            </span>
                         </button>
                     </form>
                 </div>

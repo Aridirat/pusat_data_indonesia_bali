@@ -7,9 +7,6 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon"/>
     <meta name="csrf-token" content="{{ csrf_token() }}"/>
     @vite(['resources/css/app.css', 'resources/js/app.ts'])
-    {{-- Midtrans Snap JS (sandbox) --}}
-    <script src="https://app.sandbox.midtrans.com/snap/snap.js"
-            data-client-key="{{ config('midtrans.client_key') }}"></script>
 </head>
 <body class="bg-slate-50 text-gray-900 antialiased">
 
