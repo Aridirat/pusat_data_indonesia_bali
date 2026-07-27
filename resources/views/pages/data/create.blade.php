@@ -1838,9 +1838,11 @@
             document.getElementById('metaBadge').textContent = metaData.length + ' metadata';
             const notFound  = metaData.filter(m => m.reason === 'not_found').length;
             const notActive = metaData.filter(m => m.reason === 'not_active').length;
+            const mismatch  = metaData.filter(m => m.reason === 'name_mismatch').length;
             const parts = [];
             if (notFound  > 0) parts.push(`${notFound} tidak ditemukan`);
             if (notActive > 0) parts.push(`${notActive} belum aktif`);
+            if (mismatch  > 0) parts.push(`${mismatch} nama tidak cocok`);
             document.getElementById('invalidMetaSubtitle').textContent =
                 parts.join(' · ') + ' — data dilewati';
             metaSection.classList.remove('hidden');
@@ -2220,21 +2222,6 @@
                 </tr>`).join('');
             renderPagination('dup', 'dupPager');
 
-        } else if (type === 'meta') {
-            document.getElementById('metaTableBody').innerHTML = rows.map((m, i) => {
-                const reasonBadge = m.reason === 'not_found'
-                    ? `<span style="background:#fce7f3; color:#9d174d;" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"><i class="fas fa-times-circle text-xs"></i> Belum terdaftar</span>`
-                    : `<span style="background:#fef3c7; color:#92400e;" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"><i class="fas fa-clock text-xs"></i> Status ${esc(m.status_label ?? 'tidak aktif')}</span>`;
-                return `
-                <tr style="background:${i % 2 !== 0 ? '#fdf4ff' : '#fff'};">
-                    <td class="px-3 py-2.5 font-mono font-semibold" style="color:#7c3aed;">#${esc(String(m.metadata_id))}</td>
-                    <td class="px-3 py-2.5 text-gray-700 font-medium">${esc(m.nama_metadata ?? '-')}</td>
-                    <td class="px-3 py-2.5">${reasonBadge}</td>
-                    <td class="px-3 py-2.5 font-mono text-gray-400">Baris ${esc(String(m.row))}</td>
-                </tr>`;
-            }).join('');
-            renderPagination('meta', 'metaPager');
-
         } else if (type === 'out') {
             document.getElementById('outTableBody').innerHTML = rows.map((rec, i) => {
                 const info = rec.outlier_info;
@@ -2363,6 +2350,33 @@
             restoreUnitConflictState();
             renderPagination('unit', 'unitPager');
             updateUnitConflictSummary();
+        } else if (type === 'meta') {
+            document.getElementById('metaTableBody').innerHTML = rows.map((m, i) => {
+                let reasonBadge, extraNote = '';
+                if (m.reason === 'not_found') {
+                    reasonBadge = `<span style="background:#fce7f3; color:#9d174d;" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"><i class="fas fa-times-circle text-xs"></i> Belum terdaftar</span>`;
+                } else if (m.reason === 'name_mismatch') {
+                    reasonBadge = `<span style="background:#fee2e2; color:#b91c1c;" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"><i class="fas fa-triangle-exclamation text-xs"></i> ID sudah dipakai metadata lain</span>`;
+                    extraNote = `<p class="text-[11px] text-red-500 mt-1">metadata_id ${esc(String(m.metadata_id))} telah terdaftar dengan nama <strong>"${esc(m.nama_metadata_db ?? '-')}"</strong>. Pastikan metadata_id dan nama <strong>"${esc(m.nama_metadata)}"</strong> yang Anda input sudah benar &amp; berstatus aktif.</p>`;
+                } else {
+                    reasonBadge = `<span style="background:#fef3c7; color:#92400e;" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"><i class="fas fa-clock text-xs"></i> Status ${esc(m.status_label ?? 'tidak aktif')}</span>`;
+                }
+
+                const namaCell = m.reason === 'name_mismatch'
+                    ? `<p class="text-red-600 font-medium">Excel: ${esc(m.nama_metadata ?? '-')}</p>
+                    <p class="text-gray-400 text-[11px]">Sistem: ${esc(m.nama_metadata_db ?? '-')}</p>
+                    ${extraNote}`
+                    : esc(m.nama_metadata ?? '-');
+
+                return `
+                <tr style="background:${i % 2 !== 0 ? '#fdf4ff' : '#fff'};">
+                    <td class="px-3 py-2.5 font-mono font-semibold" style="color:#7c3aed;">#${esc(String(m.metadata_id))}</td>
+                    <td class="px-3 py-2.5 text-gray-700 font-medium">${namaCell}</td>
+                    <td class="px-3 py-2.5">${reasonBadge}</td>
+                    <td class="px-3 py-2.5 font-mono text-gray-400">Baris ${esc(String(m.row))}</td>
+                </tr>`;
+            }).join('');
+            renderPagination('meta', 'metaPager');
         }
     }
 

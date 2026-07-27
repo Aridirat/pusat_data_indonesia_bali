@@ -1062,14 +1062,43 @@ class DataImport
             $metadataId = null;
         } else {
             $metaValidation = $this->metadataCache[$metadataId] ?? null;
-            if (!$metaValidation['valid']) {
+
+            if ($metaValidation['reason'] === 'not_found') {
+                // ID-nya sendiri tidak ada di DB -> memang tidak ada nama pembanding
                 $invalid_metadata[] = [
                     'metadata_id'   => $metadataId,
                     'nama_metadata' => $metaNama,
-                    'reason'        => $metaValidation['reason'],
+                    'reason'        => 'not_found',
                     'row'           => $rowNum,
                 ];
                 $metadataId = null;
+            } else {
+                // metadata_id DITEMUKAN di DB (baik aktif maupun tidak aktif)
+                // -> selalu bandingkan nama, supaya user tahu ID itu sudah dipakai metadata LAIN
+                $nameMismatch = !$this->isMetadataNameMatching($metaNama, $metaValidation['nama']);
+
+                if ($nameMismatch) {
+                    $invalid_metadata[] = [
+                        'metadata_id'      => $metadataId,
+                        'nama_metadata'    => $metaNama,                 // nama versi Excel
+                        'nama_metadata_db' => $metaValidation['nama'],   // nama yang SUDAH terdaftar utk ID ini
+                        'reason'           => 'name_mismatch',
+                        // ikutkan info status juga, siapa tahu berguna
+                        'status_active'    => $metaValidation['valid'],
+                        'row'              => $rowNum,
+                    ];
+                    $metadataId = null;
+                } elseif (!$metaValidation['valid']) {
+                    // nama cocok, tapi statusnya memang tidak aktif
+                    $invalid_metadata[] = [
+                        'metadata_id'   => $metadataId,
+                        'nama_metadata' => $metaNama,
+                        'reason'        => $metaValidation['reason'], // not_active
+                        'row'           => $rowNum,
+                    ];
+                    $metadataId = null;
+                }
+                // kalau valid & nama cocok -> lanjut normal, $metadataId tetap terisi
             }
         }
 
@@ -1254,6 +1283,29 @@ class DataImport
         if ($trimmed === '') return null;
 
         return $this->satuanCache[strtolower($trimmed)] ?? null;
+    }
+
+    /**
+     * Bandingkan nama_metadata dari Excel vs nama metadata_id yang sama di DB.
+     * Toleransi kecil untuk typo/spasi/kapitalisasi, TAPI beda konsep (mis. "Kepadatan
+     * Penduduk" vs "Persentase Penduduk") harus tetap dianggap tidak cocok.
+     */
+    private function isMetadataNameMatching(?string $namaExcel, ?string $namaDb): bool
+    {
+        if ($namaExcel === null || trim($namaExcel) === '') {
+            // Kolom nama_metadata kosong di Excel -> tidak bisa divalidasi, anggap lolos.
+            // (Bisa diubah jadi wajib diisi kalau mau lebih ketat.)
+            return true;
+        }
+
+        $normalize = fn($s) => strtolower(trim(preg_replace('/\s+/', ' ', (string) $s)));
+        $a = $normalize($namaExcel);
+        $b = $normalize($namaDb);
+
+        if ($a === $b) return true;
+
+        similar_text($a, $b, $percent);
+        return $percent >= 90; // di bawah ini dianggap metadata berbeda
     }
 
     /**
