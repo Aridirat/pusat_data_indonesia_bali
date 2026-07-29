@@ -299,7 +299,7 @@
         
                             {{-- Nilai Saat Ini --}}
                             <td class="px-3 py-3 text-center">
-                                @if($anomaly->_ctx_curr_value !== null)
+                                @if($ctxType !== 'unit_conflict' && $anomaly->_ctx_curr_value !== null)
                                     <span class="font-mono font-semibold text-gray-800 text-sm">
                                         {{ number_format((float)$anomaly->_ctx_curr_value, 2) }}
                                     </span>

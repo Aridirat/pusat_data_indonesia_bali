@@ -412,19 +412,7 @@ class AnomalyDetectionService
         $distinctUnitIds = $rows->pluck('satuan_asal_id')->filter()->unique();
         $unitsConsistent = $distinctUnitIds->count() <= 1;
 
-        // ── Tentukan satuan "mayoritas" agar bisa tandai baris yang berbeda ──
-        // (bukan sekadar unitsConsistent global, tapi per-baris: baris mana
-        // yang sebenarnya menyimpang dari mayoritas sumber lain)
-        $unitCounts = $rows->pluck('satuan_asal_id')->filter()->countBy();
-        $majorityUnitId = $unitCounts->isNotEmpty()
-            ? $unitCounts->sortDesc()->keys()->first()
-            : null;
-        $majorityCount = $unitCounts->isNotEmpty() ? $unitCounts->sortDesc()->first() : 0;
-        // Kalau semua unit unik (tidak ada mayoritas nyata, mis. 2 sumber beda unit
-        // tanpa ada yang menang), anggap tidak ada baseline mayoritas yang valid
-        $hasClearMajority = $majorityCount > 1 || $distinctUnitIds->count() <= 1;
-
-        return $rows->map(function (Data $d) use ($avg, $unitsConsistent, $majorityUnitId, $hasClearMajority) {
+        return $rows->map(function (Data $d) use ($avg, $unitsConsistent) {
             $value   = (float) $d->number_value;
             $selisih = $value - $avg;
             $pctDiff = $avg > 0 ? abs($selisih / $avg) * 100 : 0;
@@ -433,13 +421,23 @@ class AnomalyDetectionService
                 ?? $d->satuan?->nama_satuan
                 ?? ($d->metadata?->satuan_data ?? '—');
 
-            // ── Status satuan: konflik jika unit rujukan baris ini berbeda
-            //    dari mayoritas sumber lain untuk metadata+lokasi+waktu yang sama.
-            $unitConflict = false;
-            if (!$unitsConsistent) {
-                $unitConflict = $hasClearMajority
-                    ? ($d->satuan_asal_id !== $majorityUnitId)
-                    : true; // tidak ada mayoritas jelas → semua ditandai konflik
+            $unitConflict = $d->satuan_asal_id !== null && $d->satuan_asal_id !== $d->satuan_id;
+
+            // Kalau ada bentrok satuan: anggap $value MASIH dalam satuan lama
+            // (satuan_asal_id) — belum dikonversi. "Disesuaikan" = dikonversi
+            // MAJU ke satuan metadata (satuan_id).
+            $oldUnitValue  = null;
+            $oldUnitName   = null;
+            $adjustedValue = $value; // default: sudah konsisten, tidak perlu diubah
+
+            if ($unitConflict) {
+                $oldUnitValue = $value;
+                $oldUnitName  = $d->satuanAsal?->nama_satuan;
+
+                $converted = \App\Models\Satuan::convertValue($value, (int) $d->satuan_asal_id, (int) $d->satuan_id);
+                if ($converted !== null) {
+                    $adjustedValue = $converted;
+                }
             }
 
             return [
@@ -448,8 +446,12 @@ class AnomalyDetectionService
                 'produsen'         => $d->produsen?->nama_produsen ?? "Produsen #{$d->produsen_id}",
                 'rujukan'          => $d->rujukan?->nama_rujukan ?? '—',
                 'satuan'           => $satuanDisplay,
-                'units_consistent' => $unitsConsistent,
+                'satuan_metadata'  => $d->satuan?->nama_satuan ?? ($d->metadata?->satuan_data ?? '—'),
+                'old_unit_value'   => $oldUnitValue,
+                'old_unit_name'    => $oldUnitName,
+                'adjusted_value'   => $adjustedValue,
                 'unit_conflict'    => $unitConflict,
+                'units_consistent' => $unitsConsistent,
                 'value'            => $value,
                 'avg_baseline'     => round($avg, 4),
                 'selisih'          => round($selisih, 4),

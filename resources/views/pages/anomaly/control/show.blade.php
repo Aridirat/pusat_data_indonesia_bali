@@ -94,6 +94,33 @@
             </div>
             @endif
 
+            {{-- Detail Metadata — sumber kebenaran sebelum dua versi yang bentrok --}}
+            @if(($anomaly->anomaly_type === \App\Models\Anomaly::TYPE_SOURCE_CONFLICT && $conflictData)
+                || $anomaly->anomaly_type === \App\Models\Anomaly::TYPE_UNIT_CONFLICT)
+            <div class="bg-white rounded-xl border border-sky-200 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Detail Metadata</p>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
+                        Metadata Inti
+                    </span>
+                </div>
+                <dl class="grid grid-cols-2 md:grid-cols-3 gap-x-10 gap-y-3 text-sm">
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Nama Metadata</dt>
+                        <dd class="text-gray-800 mt-0.5">{{ $data->metadata?->nama ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Satuan Metadata</dt>
+                        <dd class="text-gray-800 mt-0.5">{{ $data->metadata?->satuan_data ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Produsen Metadata</dt>
+                        <dd class="text-gray-800 mt-0.5">{{ $data->metadata?->produsen?->nama_produsen ?? '-' }}</dd>
+                    </div>
+                </dl>
+            </div>
+            @endif
+
             {{-- Detail data --}}
             @if($anomaly->anomaly_type === \App\Models\Anomaly::TYPE_SOURCE_CONFLICT && $conflictData)
                 <div class="grid md:grid-cols-2 gap-5">
@@ -101,9 +128,6 @@
                     <div class="bg-white rounded-xl border border-purple-200 p-5">
                         <div class="flex items-center justify-between mb-3">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Detail Data</p>
-                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
-                                Data Ini
-                            </span>
                         </div>
                         <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                             @php
@@ -136,9 +160,6 @@
                     <div class="bg-white rounded-xl border border-amber-200 p-5">
                         <div class="flex items-center justify-between mb-3">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Detail Data</p>
-                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
-                                Sumber Konflik
-                            </span>
                         </div>
                         <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                             @php
@@ -189,7 +210,7 @@
                                         . ($data->time->quarter ? '/Q'.$data->time->quarter    : '')
                                         . ($data->time->semester? '/S'.$data->time->semester   : ''))
                                     : '-'],
-                                ['label'=>'Sumber/Produsen', 'value'=> $data->produsen?->nama_produsen ?? '-'],
+                                ['label'=>'Sumber/Produsen', 'value'=> $data->metadata?->produsen?->nama_produsen ?? '-'],
                                 ['label'=>'Rujukan', 'value'=> $data->rujukan?->nama_rujukan ?? '-'],
                                 ['label'=>'Diinput oleh', 'value'=> $data->user?->name ?? '-'],
                                 ['label'=>'Tanggal Input', 'value'=> $data->date_inputed?->format('d/m/Y H:i') ?? '-'],
@@ -224,7 +245,7 @@
                                         . ($data->time->quarter ? '/Q'.$data->time->quarter    : '')
                                         . ($data->time->semester? '/S'.$data->time->semester   : ''))
                                     : '-'],
-                                ['label'=>'Sumber/Produsen', 'value'=> $data->produsen?->nama_produsen ?? '-'],
+                                ['label'=>'Sumber/Produsen', 'value'=> $data->rujukan?->produsen?->nama_produsen ?? '-'],
                                 ['label'=>'Rujukan', 'value'=> $data->rujukan?->nama_rujukan ?? '-'],
                                 ['label'=>'Diinput oleh', 'value'=> $data->user?->name ?? '-'],
                                 ['label'=>'Tanggal Input', 'value'=> $data->date_inputed?->format('d/m/Y H:i') ?? '-'],
@@ -271,7 +292,10 @@
                 </div>
             @endif
 
-            {{-- Perbandingan sumber data --}}
+            {{-- Perbandingan sumber data — sembunyikan untuk unit_conflict, karena
+                tabelnya membandingkan sumber lain (rujukan berbeda), bukan dua
+                versi satuan dari data yang sama seperti yang ditampilkan di atas --}}
+            @if($anomaly->anomaly_type !== \App\Models\Anomaly::TYPE_UNIT_CONFLICT)
             <div class="bg-white rounded-xl border border-gray-200 p-5">
                 <div class="flex items-center justify-between mb-3">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -293,6 +317,7 @@
                     @endif
                 </div>
             </div>
+            @endif
 
             {{-- Audit trail --}}
             <div class="bg-white rounded-xl border border-gray-200 p-5">
@@ -592,8 +617,10 @@ async function loadSourceComparison() {
                 <thead class="bg-gray-50">
                 <tr>
                     <th class="px-2 py-2 text-left text-gray-500 font-medium">Rujukan</th>
-                    <th class="px-2 py-2 text-right text-gray-500 font-medium">Nilai</th>
-                    <th class="px-2 py-2 text-left text-gray-500 font-medium">Satuan</th>
+                    <th class="px-2 py-2 text-right text-gray-500 font-medium">Angka di Satuan Lama (Rujukan)</th>
+                    <th class="px-2 py-2 text-left text-gray-500 font-medium">Satuan Lama (Rujukan)</th>
+                    <th class="px-2 py-2 text-right text-gray-500 font-medium">Angka Setelah Disesuaikan</th>
+                    <th class="px-2 py-2 text-left text-gray-500 font-medium">Satuan Sesuai Metadata</th>
                     <th class="px-2 py-2 text-right text-gray-500 font-medium">Selisih</th>
                     <th class="px-2 py-2 text-right text-gray-500 font-medium">% Diff</th>
                     <th class="px-2 py-2 text-center text-gray-500 font-medium">Status Nilai</th>
@@ -608,8 +635,10 @@ async function loadSourceComparison() {
             html += `
             <tr class="${conflict ? 'bg-amber-50/40' : ''}">
             <td class="px-2 py-2 font-medium text-gray-700">${esc(row.rujukan)}</td>
-            <td class="px-2 py-2 text-right font-mono text-gray-800">${fmt(row.value)}</td>
-            <td class="px-2 py-2 text-gray-500">${esc(row.satuan)}</td>
+            <td class="px-2 py-2 text-right font-mono text-gray-800">${row.old_unit_value !== null && row.old_unit_value !== undefined ? fmt(row.old_unit_value) : '—'}</td>
+            <td class="px-2 py-2 text-gray-500">${esc(row.old_unit_name ?? '—')}</td>
+            <td class="px-2 py-2 text-right font-mono text-gray-800">${fmt(row.adjusted_value)}</td>
+            <td class="px-2 py-2 text-gray-500">${esc(row.satuan_metadata ?? '—')}</td>
             <td class="px-2 py-2 text-right font-mono ${row.selisih >= 0 ? 'text-red-600' : 'text-blue-600'}">
                 ${row.selisih >= 0 ? '+' : ''}${fmt(row.selisih)}
             </td>
@@ -630,7 +659,7 @@ async function loadSourceComparison() {
             </td>
             </tr>`;
         });
-        html += `</tbody></table></div>`;
+        html += `</tbody></table>`;
         wrap.innerHTML = html;
     } catch(e) {
         wrap.innerHTML = '<p class="text-xs text-red-400 text-center py-4">Gagal memuat data.</p>';
@@ -644,6 +673,10 @@ function esc(str) {
 function fmt(val) {
     const n = parseFloat(val);
     return isNaN(n) ? '-' : n.toLocaleString('id-ID', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmt4(val) {
+    const n = parseFloat(val);
+    return isNaN(n) ? '-' : n.toLocaleString('id-ID', {minimumFractionDigits:2, maximumFractionDigits:4});
 }
 
 // Decision radio handler

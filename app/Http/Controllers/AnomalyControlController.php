@@ -416,12 +416,12 @@ class AnomalyControlController extends Controller
     public function show(Anomaly $anomaly)
     {
         $anomaly->load([
-            'data.metadata',
+            'data.metadata.produsen',
             'data.location',
             'data.time',
             'data.user',
             'data.produsen',
-            'data.rujukan',
+            'data.rujukan.produsen',
             'reviews.reviewer',
             'data.satuan',
             'data.satuanAsal',
@@ -725,12 +725,12 @@ class AnomalyControlController extends Controller
     {
         $anomaly = Anomaly::findOrFail($anomalyId);
         $anomaly->load([
-            'data.metadata',
+            'data.metadata.produsen',
             'data.location',
             'data.time',
             'data.user',
             'data.produsen',
-            'data.rujukan',
+            'data.rujukan.produsen',
             'data.satuan',
             'data.satuanAsal',
         ]);
