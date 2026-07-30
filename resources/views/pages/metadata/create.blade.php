@@ -658,6 +658,16 @@ function formatFileSize(bytes) {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
+/* Safe DOM helpers to avoid exceptions when an element is missing */
+function safeSetText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function safeGet(id) {
+    return document.getElementById(id);
+}
+
 /* ============================================================
    TAB SWITCHER
    ============================================================ */
@@ -921,8 +931,8 @@ function setFile(file) {
     }
 
     currentFile = file;
-    document.getElementById('fileName').textContent  = file.name;
-    document.getElementById('fileSize').textContent  = formatFileSize(file.size);
+    safeSetText('fileName', file.name);
+    safeSetText('fileSize', formatFileSize(file.size));
     document.getElementById('fileInfo').classList.remove('hidden');
     document.getElementById('dropZone').classList.add('hidden');
     document.getElementById('btnPreview').disabled = false;
@@ -953,11 +963,17 @@ function resetPreview() {
 async function doPreview() {
     if (!currentFile) return;
 
-    document.getElementById('previewLoading').classList.remove('hidden');
-    document.getElementById('previewResult').classList.add('hidden');
-    document.getElementById('importResult').classList.add('hidden');
-    document.getElementById('btnImport').classList.add('hidden');
-    document.getElementById('btnPreview').disabled = true;
+    const previewLoadingEl = safeGet('previewLoading');
+    const previewResultEl  = safeGet('previewResult');
+    const importResultEl   = safeGet('importResult');
+    const btnImportEl      = safeGet('btnImport');
+    const btnPreviewEl     = safeGet('btnPreview');
+
+    if (previewLoadingEl) previewLoadingEl.classList.remove('hidden');
+    if (previewResultEl) previewResultEl.classList.add('hidden');
+    if (importResultEl) importResultEl.classList.add('hidden');
+    if (btnImportEl) btnImportEl.classList.add('hidden');
+    if (btnPreviewEl) btnPreviewEl.disabled = true;
 
     const formData = new FormData();
     formData.append('file',   currentFile);
@@ -967,8 +983,8 @@ async function doPreview() {
         const resp = await fetch(PREVIEW_URL, { method: 'POST', body: formData });
         const json = await resp.json();
 
-        document.getElementById('previewLoading').classList.add('hidden');
-        document.getElementById('btnPreview').disabled = false;
+        if (previewLoadingEl) previewLoadingEl.classList.add('hidden');
+        if (btnPreviewEl) btnPreviewEl.disabled = false;
 
         if (!json.success) {
             showImportAlert('error', json.message || 'Gagal memproses file.');
@@ -982,16 +998,16 @@ async function doPreview() {
         renderPreviewTable(previewData);
         renderSkipped(skippedData);
 
-        document.getElementById('previewResult').classList.remove('hidden');
+        if (previewResultEl) previewResultEl.classList.remove('hidden');
 
         if (json.new > 0) {
-            document.getElementById('importCount').textContent = json.new;
-            document.getElementById('btnImport').classList.remove('hidden');
+            safeSetText('importCount', json.new);
+            if (btnImportEl) btnImportEl.classList.remove('hidden');
         }
 
     } catch (err) {
-        document.getElementById('previewLoading').classList.add('hidden');
-        document.getElementById('btnPreview').disabled = false;
+        if (previewLoadingEl) previewLoadingEl.classList.add('hidden');
+        if (btnPreviewEl) btnPreviewEl.disabled = false;
         showImportAlert('error', 'Terjadi kesalahan jaringan: ' + err.message);
     }
 }
@@ -1007,9 +1023,11 @@ async function doImport() {
 
     if (!confirm(`Import ${countValue} metadata ke database?`)) return;
 
-    const btnImport = document.getElementById('btnImport');
-    btnImport.disabled = true;
-    btnImport.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Mengimport...';
+    const btnImport = safeGet('btnImport');
+    if (btnImport) {
+        btnImport.disabled = true;
+        btnImport.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Mengimport...';
+    }
 
     const formData = new FormData();
     formData.append('file',   currentFile);
@@ -1025,13 +1043,14 @@ async function doImport() {
         const resp = await fetch(IMPORT_URL, { method: 'POST', body: formData });
         const json = await resp.json();
 
-        btnImport.disabled = false;
-        btnImport.innerHTML =
+        if (btnImport) { btnImport.disabled = false; }
+        if (btnImport) btnImport.innerHTML =
             `<i class="fas fa-database mr-2"></i> Import ke Database
              <span id="importCount" class="bg-white text-emerald-600 text-xs font-bold px-1.5 py-0.5 rounded-full">${countValue}</span>`;
 
         if (json.success) {
-            document.getElementById('importResult').innerHTML =
+            const importResultEl = safeGet('importResult');
+            if (importResultEl) importResultEl.innerHTML =
                 `<div class="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
                     <i class="fas fa-check-circle text-green-500 text-lg shrink-0 mt-0.5"></i>
                     <div>
@@ -1042,8 +1061,8 @@ async function doImport() {
                         </a>
                     </div>
                 </div>`;
-            document.getElementById('importResult').classList.remove('hidden');
-            document.getElementById('btnImport').classList.add('hidden');
+            if (importResultEl) importResultEl.classList.remove('hidden');
+            if (btnImport) btnImport.classList.add('hidden');
         } else {
             showImportAlert('error', json.message || 'Import gagal.');
         }
@@ -1147,6 +1166,14 @@ function toggleSkipped() {
 function showImportAlert(type, msg) {
     const isErr = type === 'error';
     const el    = document.getElementById('importResult');
+    if (!el) {
+        if (isErr) {
+            alert(msg);
+        } else {
+            console.log(msg);
+        }
+        return;
+    }
     el.innerHTML =
         `<div class="flex items-center gap-3 p-4 rounded-lg text-sm
                      ${isErr ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'}">
