@@ -657,7 +657,7 @@ const DataChart = {
                 y: {
                     grid:        { color: '#f3f4f6', lineWidth: 1 },
                     border:      { dash: [3, 3], color: 'transparent' },
-                    beginAtZero: false,
+                    beginAtZero: true,   // ← diubah dari false ke true
                     ticks: {
                         color: '#9ca3af',
                         font:  { size: 11 },
