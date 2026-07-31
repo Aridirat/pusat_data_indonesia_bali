@@ -12,6 +12,20 @@ use Illuminate\Support\Collection;
 
 class SubscriptionLimitsService
 {
+    /**
+     * Group yang tidak terkena limit template/kuota sama sekali.
+     * 1 = Administrator, 2 = Pengelola (lihat GroupSeeder).
+     */
+    private const UNLIMITED_TEMPLATE_GROUPS = [1, 2];
+
+    /**
+     * Admin & Pengelola tidak dibatasi jumlah template.
+     */
+    public function isUnlimitedTemplateUser(User $user): bool
+    {
+        return in_array((int) $user->group_id, self::UNLIMITED_TEMPLATE_GROUPS, true);
+    }
+
     public function hasActiveSubscription(User $user): bool
     {
         return $this->getActiveSubscription($user) !== null;
@@ -46,6 +60,11 @@ class SubscriptionLimitsService
 
     public function getMaxTemplates(User $user): int
     {
+        // Admin & Pengelola: tidak dibatasi.
+        if ($this->isUnlimitedTemplateUser($user)) {
+            return PHP_INT_MAX;
+        }
+
         $subscription = $this->getActiveSubscription($user);
 
         if ($subscription) {
@@ -62,6 +81,11 @@ class SubscriptionLimitsService
 
     public function canCreateTemplate(User $user): bool
     {
+        // Admin & Pengelola: selalu boleh membuat template baru.
+        if ($this->isUnlimitedTemplateUser($user)) {
+            return true;
+        }
+
         return $this->getTemplateCountForUser($user) < $this->getMaxTemplates($user);
     }
 
@@ -149,6 +173,11 @@ class SubscriptionLimitsService
 
     public function getLockedTemplateIds($user): Collection
     {
+        // Admin & Pengelola: tidak pernah ada template yang terkunci.
+        if ($this->isUnlimitedTemplateUser($user)) {
+            return collect();
+        }
+
         $limit = $this->getMaxTemplates($user);
 
         $orderedIds = Tampilan::where('user_id', $user->user_id)

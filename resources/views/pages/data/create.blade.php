@@ -705,23 +705,29 @@
                             <div class="px-4 py-2.5 flex items-center gap-2 flex-wrap text-xs"
                                 style="background:#fffbeb; border-bottom:1px solid #fed7aa;">
                                 <span class="font-semibold" style="color:#92400e;">Level outlier:</span>
-    
+
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                                     style="background:#fefce8; color:#854d0e; border:1px solid #fde047;">
                                     <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:#ca8a04;"></span>
-                                    Medium &nbsp;<span class="font-mono">z 3–6</span>
+                                    Low &nbsp;<span class="font-mono">z &lt;10</span>
                                 </span>
-    
+
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                                     style="background:#fff7ed; color:#9a3412; border:1px solid #fb923c;">
                                     <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:#ea580c;"></span>
-                                    High &nbsp;<span class="font-mono">z 6–10</span>
+                                    Medium &nbsp;<span class="font-mono">z 10–30</span>
                                 </span>
-    
+
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                                    style="background:#fef2f2; color:#b91c1c; border:1px solid #f87171;">
+                                    <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:#dc2626;"></span>
+                                    High &nbsp;<span class="font-mono">z 31–40</span>
+                                </span>
+
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                                     style="background:#fdf4ff; color:#86198f; border:1px solid #e879f9;">
                                     <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:#a21caf;"></span>
-                                    Critical &nbsp;<span class="font-mono">z &gt;10</span>
+                                    Critical &nbsp;<span class="font-mono">z &gt;40</span>
                                 </span>
     
                                 <span class="ml-auto italic" style="color:#c2410c;">
@@ -1918,10 +1924,10 @@
 
     // Severity berdasarkan standard z-score (konsisten dengan DB/createAnomaliesForPendingKeys)
             function getSeverityFromZ(z) {
-                if (z >= 10) return 'critical';
-                if (z >= 6)  return 'high';
-                if (z >= 3)  return 'medium';
-                return 'low'; // tidak akan muncul di tabel (sudah difilter z > 3)
+                if (z > 40)  return 'critical';
+                if (z >= 31) return 'high';
+                if (z >= 10) return 'medium';
+                return 'low';
             }
 
             // Alias agar tidak perlu ubah pemanggil lain (backward compat)
@@ -1929,21 +1935,25 @@
  
             function getLevelBadge(z) {
                 const absZ = Math.abs(parseFloat(z));
-                if (absZ >= 10) return {
+                if (absZ > 40) return {
                     label: 'Critical',
                     style: 'background:#fdf4ff; color:#86198f; border:1px solid #e879f9;',
                     dot:   'background:#a21caf;'
                 };
-                if (absZ >= 6) return {
+                if (absZ >= 31) return {
                     label: 'High',
                     style: 'background:#fef2f2; color:#b91c1c; border:1px solid #f87171;',
                     dot:   'background:#dc2626;'
                 };
-                // z 3–6 → Medium (satu-satunya level yang mungkin selain di atas)
-                return {
+                if (absZ >= 10) return {
                     label: 'Medium',
                     style: 'background:#fff7ed; color:#9a3412; border:1px solid #fb923c;',
                     dot:   'background:#ea580c;'
+                };
+                return {
+                    label: 'Low',
+                    style: 'background:#fefce8; color:#854d0e; border:1px solid #fde047;',
+                    dot:   'background:#ca8a04;'
                 };
             }
 

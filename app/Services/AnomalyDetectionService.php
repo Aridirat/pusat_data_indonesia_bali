@@ -305,10 +305,10 @@ class AnomalyDetectionService
         if ($outlierInfo === null) return null;
 
         $severity = match (true) {
-            $outlierInfo['z_score'] >= 6 => Anomaly::SEVERITY_CRITICAL,
-            $outlierInfo['z_score'] >= 5 => Anomaly::SEVERITY_HIGH,
-            $outlierInfo['z_score'] >= 4 => Anomaly::SEVERITY_MEDIUM,
-            default                       => Anomaly::SEVERITY_LOW,
+            $outlierInfo['z_score'] > 40  => Anomaly::SEVERITY_CRITICAL,
+            $outlierInfo['z_score'] >= 31 => Anomaly::SEVERITY_HIGH,
+            $outlierInfo['z_score'] >= 10 => Anomaly::SEVERITY_MEDIUM,
+            default                        => Anomaly::SEVERITY_LOW,
         };
 
         $mean      = $outlierInfo['mean'];

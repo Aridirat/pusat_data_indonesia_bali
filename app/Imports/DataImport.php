@@ -66,6 +66,8 @@ class DataImport
     private array $existingSet  = [];
     private array $metadataCache = [];
     private array $rujukanCache  = [];
+
+    private array $locationCache = []; // location_id => nama_wilayah
     private array $satuanCache   = [];   // lower(nama_satuan|simbol) => satuan_id
     private array $satuanNameCache         = []; // satuan_id => nama tampilan (buat pesan bentrok satuan)
     private array $invalid_satuan          = []; // dipakai di import(), mirip $invalid_metadata
@@ -89,6 +91,7 @@ class DataImport
         [$periodCols, $dataRows, $columns] = $this->readExcel($filePath);
     
         $this->preloadMetadataCache($dataRows, $columns['metadata_id']);
+        $this->preloadLocationCache($dataRows, $columns['location_id']);
         $this->buildExistingSet($periodCols);
         $this->preloadRujukanCache($dataRows, $columns['rujukan_id']);
         $this->preloadSatuanCache();
@@ -234,9 +237,10 @@ class DataImport
                     'direction'     => $m['value'] > $median ? 'high' : 'low',
                     'pct_from_mean' => $pctFromMean,
                     'severity'      => match(true) {
-                        $mz >= 10 => 'critical',
-                        $mz >= 6  => 'high',
-                        default   => 'medium',
+                        $mz > 40  => 'critical',
+                        $mz >= 31 => 'high',
+                        $mz >= 10 => 'medium',
+                        default   => 'low',
                     },
                     'no_stddev'     => false,
                     'source'        => 'intra_series',
@@ -265,6 +269,7 @@ class DataImport
         [$periodCols, $dataRows, $columns] = $this->readExcel($filePath);
 
         $this->preloadMetadataCache($dataRows, $columns['metadata_id']);
+        $this->preloadLocationCache($dataRows, $columns['location_id']);
         $this->preloadTimeCache($periodCols);
         $this->buildExistingSet($periodCols);
         $this->preloadRujukanCache($dataRows, $columns['rujukan_id']);
@@ -516,9 +521,9 @@ class DataImport
     
             // Hitung severity berdasarkan z-score
             $severity = match(true) {
-                $zScore >= 10 => 'critical',
-                $zScore >= 6  => 'high',
-                $zScore >= 3  => 'medium',
+                $zScore > 40  => 'critical',
+                $zScore >= 31 => 'high',
+                $zScore >= 10 => 'medium',
                 default       => 'low',
             };
     
@@ -660,9 +665,9 @@ class DataImport
                             );
 
                             $severity = match(true) {
-                                $zScore >= 10 => Anomaly::SEVERITY_CRITICAL,
-                                $zScore >= 6  => Anomaly::SEVERITY_HIGH,
-                                $zScore >= 3  => Anomaly::SEVERITY_MEDIUM,
+                                $zScore > 40  => Anomaly::SEVERITY_CRITICAL,
+                                $zScore >= 31 => Anomaly::SEVERITY_HIGH,
+                                $zScore >= 10 => Anomaly::SEVERITY_MEDIUM,
                                 default       => Anomaly::SEVERITY_LOW,
                             };
                         } else {
@@ -1053,6 +1058,17 @@ class DataImport
             : null;
         $metaNama   = $row[$columns['nama_metadata']] ?? '-';
         $locNama    = $row[$columns['nama_wilayah']]  ?? '-';
+        if ($locationId !== null) {
+        if (!isset($this->locationCache[$locationId])) {
+            $errors[] = [
+                'message' => "Baris $rowNum: location_id '$locationId' tidak ditemukan.",
+                'row'     => $rowNum,
+            ];
+            $locationId = null;
+        } else {
+            $locNama = $this->locationCache[$locationId]; // ⬅️ selalu pakai nama asli dari DB
+        }
+    }
         $rujukanId  = ($columns['rujukan_id'] !== null && isset($row[$columns['rujukan_id']]))
             ? (int) $row[$columns['rujukan_id']]
             : null;
@@ -1249,6 +1265,21 @@ class DataImport
                 'produsen_id' => $r->produsen_id,
             ];
         }
+    }
+
+    private function preloadLocationCache(array $dataRows, int $locColIndex): void
+    {
+        $ids = array_unique(array_filter(array_map(
+            fn($row) => isset($row[$locColIndex]) && $row[$locColIndex] !== '' ? (int) $row[$locColIndex] : null,
+            $dataRows
+        )));
+
+        if (empty($ids)) return;
+
+        $this->locationCache = DB::table('location')
+            ->whereIn('location_id', $ids)
+            ->pluck('nama_wilayah', 'location_id')
+            ->toArray();
     }
 
     /**

@@ -341,12 +341,12 @@ class AnomalyStatisticsService
         if ($zScore === null || $zScore <= $threshold) {
             return null;  // bukan outlier
         }
-
+        
         // Tentukan severity berdasarkan z-score
         $severity = match (true) {
-            $zScore >= 10 => 'critical',
-            $zScore >= 6  => 'high',
-            $zScore >= 3  => 'medium',
+            $zScore > 40  => 'critical',
+            $zScore >= 31 => 'high',
+            $zScore >= 10 => 'medium',
             default       => 'low',
         };
 
