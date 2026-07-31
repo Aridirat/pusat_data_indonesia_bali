@@ -6,6 +6,7 @@ use App\Models\Layanan;
 use App\Models\LayananFitur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Models\FiturKatalog;
 
 class LayananController extends Controller
 {
@@ -34,7 +35,9 @@ class LayananController extends Controller
     // ── Create ─────────────────────────────────────────────────
     public function create()
     {
-        return view('pages.layanan.create');
+        $fiturKatalog = FiturKatalog::orderBy('nama_fitur')->pluck('nama_fitur');
+
+        return view('pages.layanan.create', compact('fiturKatalog'));
     }
 
     // ── Store ──────────────────────────────────────────────────
@@ -84,8 +87,9 @@ class LayananController extends Controller
     public function edit(Layanan $layanan)
     {
         $layanan->load('fiturs');
+        $fiturKatalog = FiturKatalog::orderBy('nama_fitur')->pluck('nama_fitur');
 
-        return view('pages.layanan.edit', compact('layanan'));
+        return view('pages.layanan.edit', compact('layanan', 'fiturKatalog'));
     }
 
     // ── Update ─────────────────────────────────────────────────
@@ -196,6 +200,8 @@ class LayananController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
+
+            FiturKatalog::firstOrCreate(['nama_fitur' => $nama]);
         }
 
         if (! empty($rows)) {

@@ -94,7 +94,7 @@
             <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div>
                     <h2 class="text-sm font-semibold text-gray-700">Fitur Layanan</h2>
-                    <p class="text-xs text-gray-400 mt-0.5">Tambahkan fitur-fitur yang disertakan dalam paket ini.</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Tambahkan fitur-fitur yang disertakan dalam paket ini. Bisa pilih dari saran, atau ketik bebas.</p>
                 </div>
                 <button type="button" onclick="addFitur()"
                         class="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition">
@@ -113,9 +113,12 @@
                             <i class="fas fa-grip-vertical text-gray-300 text-xs"></i>
                         </div>
                         <input type="text" name="fiturs[]"
-                               value="{{ $fiturNama }}"
-                               placeholder="Contoh: Akses 5 metadata"
-                               class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            value="{{ $fiturNama }}"
+                            placeholder="Contoh: Akses 5 metadata"
+                            autocomplete="off"
+                            oninput="onFiturInput(this)"
+                            onfocus="onFiturFocus(this)"
+                            class="fitur-input flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <button type="button" onclick="removeFitur(this)"
                                 class="flex-shrink-0 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
                             <i class="fas fa-times text-xs"></i>
@@ -333,7 +336,108 @@
 
 @push('scripts')
 <script>
-// ── Fitur ────────────────────────────────────────────────────
+// ── Katalog fitur dari server ──────────────────────────────────
+const FITUR_KATALOG = @json($fiturKatalog ?? []);
+
+// ── Dropdown global — satu elemen di body, dipakai bergantian oleh semua input fitur ──
+let fiturDropdownEl   = null;
+let activeFiturInput  = null;
+
+function ensureFiturDropdown() {
+    if (fiturDropdownEl) return fiturDropdownEl;
+    fiturDropdownEl = document.createElement('div');
+    fiturDropdownEl.id = 'fiturDropdownGlobal';
+    fiturDropdownEl.className = 'hidden fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto';
+    document.body.appendChild(fiturDropdownEl);
+    return fiturDropdownEl;
+}
+
+function positionFiturDropdown(input) {
+    const dropdown = ensureFiturDropdown();
+    const rect = input.getBoundingClientRect();
+    dropdown.style.left  = rect.left + 'px';
+    dropdown.style.top   = (rect.bottom + 4) + 'px';
+    dropdown.style.width = rect.width + 'px';
+}
+
+function onFiturFocus(input) {
+    activeFiturInput = input;
+    const q = input.value.trim().toLowerCase();
+    const items = q
+        ? FITUR_KATALOG.filter(f => f.toLowerCase().includes(q))
+        : FITUR_KATALOG;
+    renderFiturDropdown(input, items);
+}
+
+function onFiturInput(input) {
+    activeFiturInput = input;
+    const q = input.value.trim().toLowerCase();
+    const items = q
+        ? FITUR_KATALOG.filter(f => f.toLowerCase().includes(q))
+        : FITUR_KATALOG;
+    renderFiturDropdown(input, items);
+}
+
+function renderFiturDropdown(input, items) {
+    const dropdown = ensureFiturDropdown();
+    dropdown.innerHTML = '';
+
+    if (!items.length) {
+        const p = document.createElement('p');
+        p.className = 'px-4 py-3 text-xs text-gray-400 text-center';
+        p.textContent = 'Tidak ada saran yang cocok — bisa langsung dipakai sebagai fitur baru';
+        dropdown.appendChild(p);
+    } else {
+        items.forEach(nama => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0';
+            btn.textContent = nama;
+            btn.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                if (activeFiturInput) activeFiturInput.value = nama;
+                dropdown.classList.add('hidden');
+            });
+            dropdown.appendChild(btn);
+        });
+    }
+
+    positionFiturDropdown(input);
+    dropdown.classList.remove('hidden');
+}
+
+function hideFiturDropdown() {
+    if (fiturDropdownEl) fiturDropdownEl.classList.add('hidden');
+    activeFiturInput = null;
+}
+
+// Reposisi saat scroll/resize supaya dropdown tetap nempel di input aktif
+window.addEventListener('scroll', function () {
+    if (activeFiturInput && fiturDropdownEl && !fiturDropdownEl.classList.contains('hidden')) {
+        positionFiturDropdown(activeFiturInput);
+    }
+}, true);
+
+window.addEventListener('resize', function () {
+    if (activeFiturInput && fiturDropdownEl && !fiturDropdownEl.classList.contains('hidden')) {
+        positionFiturDropdown(activeFiturInput);
+    }
+});
+
+// Tutup dropdown saat klik di luar input fitur & dropdown itu sendiri
+document.addEventListener('click', function (e) {
+    const clickedInput    = e.target.classList.contains('fitur-input');
+    const clickedDropdown = fiturDropdownEl && fiturDropdownEl.contains(e.target);
+    if (!clickedInput && !clickedDropdown) {
+        hideFiturDropdown();
+    }
+});
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') hideFiturDropdown();
+});
+
+// ── Fitur: tambah/hapus baris ───────────────────────────────────
 function addFitur() {
     const list = document.getElementById('fitur-list');
     const div  = document.createElement('div');
@@ -343,7 +447,10 @@ function addFitur() {
             <i class="fas fa-grip-vertical text-gray-300 text-xs"></i>
         </div>
         <input type="text" name="fiturs[]" placeholder="Contoh: Akses 5 metadata"
-               class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+               autocomplete="off"
+               oninput="onFiturInput(this)"
+               onfocus="onFiturFocus(this)"
+               class="fitur-input flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
         <button type="button" onclick="removeFitur(this)"
                 class="flex-shrink-0 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
             <i class="fas fa-times text-xs"></i>
@@ -389,20 +496,10 @@ function handleDurasiType(val) {
     if (val === 'selamanya') {
         inputDurasi.value = 1;
         inputDurasi.readOnly = true;
-
-        inputDurasi.classList.add(
-            'opacity-50',
-            'cursor-not-allowed',
-            'bg-gray-100'
-        );
+        inputDurasi.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
     } else {
         inputDurasi.readOnly = false;
-
-        inputDurasi.classList.remove(
-            'opacity-50',
-            'cursor-not-allowed',
-            'bg-gray-100'
-        );
+        inputDurasi.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
     }
 }
 

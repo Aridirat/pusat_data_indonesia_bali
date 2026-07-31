@@ -12,6 +12,7 @@ use Database\Seeders\KlasifikasiSeeder;
 use Database\Seeders\AnomalyRuleSeeder;
 use Database\Seeders\SubscriptionPackageSeeder;
 use Database\Seeders\SatuanSeeder;
+use Database\Seeders\FiturKatalogSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -30,6 +31,7 @@ class DatabaseSeeder extends Seeder
             AnomalyRuleSeeder::class,
             SubscriptionPackageSeeder::class,
             SatuanSeeder::class,
+            FiturKatalogSeeder::class,
         ]);
     }
 }
