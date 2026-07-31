@@ -1057,8 +1057,11 @@ class DataImport
             ? (int) $row[$columns['location_id']]
             : null;
         $metaNama   = $row[$columns['nama_metadata']] ?? '-';
-        $locNama    = $row[$columns['nama_wilayah']]  ?? '-';
-        if ($locationId !== null) {
+        $locNama    = '-';
+        $rujukanId  = ($columns['rujukan_id'] !== null && isset($row[$columns['rujukan_id']]))
+            ? (int) $row[$columns['rujukan_id']]
+            : null;
+        if ($locationId !== null && $locationId !== 0 && !DB::table('location')->where('location_id', $locationId)->exists()) {
         if (!isset($this->locationCache[$locationId])) {
             $errors[] = [
                 'message' => "Baris $rowNum: location_id '$locationId' tidak ditemukan.",
@@ -1120,14 +1123,14 @@ class DataImport
 
         if ($locationId === null) {
             $errors[] = ['message' => "Baris $rowNum: location_id kosong atau tidak valid.", 'row' => $rowNum];
+        } elseif (!array_key_exists($locationId, $this->locationCache)) {
+            $errors[] = [
+                'message' => "Baris $rowNum: location_id '$locationId' tidak ditemukan.",
+                'row'     => $rowNum,
+            ];
+            $locationId = null;
         } else {
-            if (!DB::table('location')->where('location_id', $locationId)->exists()) {
-                $errors[] = [
-                    'message' => "Baris $rowNum: location_id '$locationId' tidak ditemukan.",
-                    'row'     => $rowNum,
-                ];
-                $locationId = null;
-            }
+            $locNama = $this->locationCache[$locationId];
         }
 
         if (!$metadataId || $locationId === null) {
@@ -1272,7 +1275,7 @@ class DataImport
         $ids = array_unique(array_filter(array_map(
             fn($row) => isset($row[$locColIndex]) && $row[$locColIndex] !== '' ? (int) $row[$locColIndex] : null,
             $dataRows
-        )));
+        ), fn($v) => $v !== null));   // ⬅️ callback eksplisit, biar 0 nggak ikut kebuang
 
         if (empty($ids)) return;
 
