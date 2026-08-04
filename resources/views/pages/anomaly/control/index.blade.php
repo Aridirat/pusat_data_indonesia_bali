@@ -49,8 +49,6 @@
         $statCards = [
             ['label'=>'Warning',        'value'=>$stats['total_warning'],      'icon'=>'fas fa-exclamation-triangle', 'style'=>'background:#fef9c3; color:#a16207;', 'border'=>'border-amber-200'],
             ['label'=>'Resolved',       'value'=>$stats['total_resolved'],     'icon'=>'fas fa-check-circle',         'style'=>'background:#dcfce7; color:#15803d;', 'border'=>'border-green-200'],
-            ['label'=>'Critical Aktif', 'value'=>$stats['critical_pending'],   'icon'=>'fas fa-fire',                 'style'=>'background:#fee2e2; color:#b91c1c;', 'border'=>'border-red-200'],
-            ['label'=>'High Aktif',     'value'=>$stats['high_pending'],       'icon'=>'fas fa-arrow-up',             'style'=>'background:#ffedd5; color:#c2410c;', 'border'=>'border-orange-200'],
         ];
         @endphp
 

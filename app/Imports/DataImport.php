@@ -551,6 +551,19 @@ class DataImport
         return $previewRows;
     }
 
+    /**
+     * Konversi nilai dari satuan asli ($fromSatuanId) ke satuan kanonik metadata ($toSatuanId).
+     * Kalau salah satu null, dianggap sudah dalam satuan yang benar (nggak perlu konversi).
+     * Satuan::convertValue sendiri sudah handle kasus from === to.
+     */
+    private function toCanonicalUnitValue(float $value, ?int $fromSatuanId, ?int $toSatuanId): ?float
+    {
+        if ($fromSatuanId === null || $toSatuanId === null) {
+            return $value;
+        }
+        return Satuan::convertValue($value, $fromSatuanId, $toSatuanId);
+    }
+
     private function createAnomaliesForPendingKeys(string $insertedAt, array $previewOutlierInfo = []): void
     {
         if (empty($this->pendingAnomalyKeys)) {
@@ -584,136 +597,54 @@ class DataImport
             }
         });
 
-        $rows = $query->get(['id', 'number_value', 'metadata_id', 'location_id', 'time_id', 'rujukan_id']);
+        $rows = $query->get(['id', 'number_value', 'metadata_id', 'location_id', 'time_id', 'rujukan_id', 'satuan_id', 'satuan_asal_id']);
 
         foreach ($rows as $row) {
-            $currentValue = (float) $row->number_value;
-            $rowKey = sprintf(
-                '%d_%d_%d_%s',
-                $row->metadata_id,
-                $row->location_id,
-                $row->time_id,
-                $row->rujukan_id === null ? '' : $row->rujukan_id
-            );
-            $previewInfo = $previewOutlierInfo[$rowKey] ?? null;
+            $rowKey = sprintf('%d_%d_%d_%s', $row->metadata_id, $row->location_id, $row->time_id,
+                $row->rujukan_id === null ? '' : $row->rujukan_id);
+            $info = $infoMap[$rowKey] ?? null;
 
-            $previousValue    = null;
-            $percentageChange = null;
-            $severity         = Anomaly::SEVERITY_MEDIUM;
-            $message          = 'Data ditandai sebagai outlier oleh pengguna saat import.';
-            $historyCount     = 0;
+            $avg     = $info['avg']      ?? null;
+            $pctDiff = $info['pct_diff'] ?? null;
+            $n       = $info['n']        ?? 0;
 
-            if (!empty($previewInfo)) {
-                $historyCount = isset($previewInfo['n']) ? (int) $previewInfo['n'] : 0;
-                $previousValue = isset($previewInfo['mean']) ? (float) $previewInfo['mean'] : null;
-                $percentageChange = array_key_exists('z_score', $previewInfo)
-                    ? ($previewInfo['z_score'] !== null ? round($previewInfo['z_score'], 4) : null)
-                    : null;
+            // FIX: pakai nilai KANONIK (sudah dikonversi ke satuan metadata),
+            // bukan raw number_value. Prioritaskan $info['value'] (dari deteksi
+            // sebelum insert), fallback ke konversi ulang kalau info nggak ada.
+            $currentValue = $info['value']
+                ?? $this->toCanonicalUnitValue((float) $row->number_value, $row->satuan_asal_id, $row->satuan_id);
 
-                $severity = match (($previewInfo['severity'] ?? null)) {
-                    'critical' => Anomaly::SEVERITY_CRITICAL,
-                    'high'     => Anomaly::SEVERITY_HIGH,
-                    'medium'   => Anomaly::SEVERITY_MEDIUM,
-                    'low'      => Anomaly::SEVERITY_LOW,
-                    default    => Anomaly::SEVERITY_MEDIUM,
-                };
+            $frekuensi = strtolower($this->metadataCache[$row->metadata_id]['frekuensi_penerbitan'] ?? '');
+            $severity  = $pctDiff !== null
+                ? Anomaly::calculateSeverity($pctDiff, (int) $row->metadata_id, $frekuensi)
+                : Anomaly::SEVERITY_MEDIUM;
 
-                $message = sprintf(
-                    'Outlier ditandai pengguna saat import. Preview deteksi: mean=%s, z_score=%s, source=%s, n=%s.',
-                    $previousValue !== null ? number_format($previousValue, 4, '.', '') : '-',
-                    $percentageChange !== null ? number_format($percentageChange, 4, '.', '') : '-',
-                    $previewInfo['source'] ?? 'unknown',
-                    $previewInfo['n'] ?? '-'
-                );
-            } else {
-                // ── Histori: gunakan ONLY STATUS_AVAILABLE untuk konsistensi ──────────────
-                // (sama dengan detectOutliersViaDb dan AnomalyControlController)
-                $history = DB::table('data')
-                    ->where('metadata_id', $row->metadata_id)
-                    ->where('location_id', $row->location_id)
-                    ->where('id', '!=', $row->id)
-                    ->where('status', Data::STATUS_AVAILABLE)
-                    ->whereNotNull('number_value')
-                    ->orderBy('time_id', 'desc')
-                    ->limit(20)
-                    ->pluck('number_value')
-                    ->map(fn($v) => (float) $v)
-                    ->toArray();
-
-                // Gunakan AnomalyStatisticsService untuk perhitungan konsisten
-                if (count($history) >= 1) {
-                    $stats = AnomalyStatisticsService::descriptiveStats($history);
-                    $mean   = $stats['mean'];
-                    $stdDev = $stats['stddev'];
-                    $n      = $stats['n'];
-
-                    $previousValue = $mean;
-
-                    if ($stdDev > 0) {
-                        $zScore = AnomalyStatisticsService::zScore($currentValue, $mean, $stdDev);
-                        if ($zScore !== null) {
-                            $percentageChange = round($zScore, 4);
-                            $upperBound       = round($mean + 3 * $stdDev, 2);
-                            $lowerBound       = round($mean - 3 * $stdDev, 2);
-
-                            $message = sprintf(
-                                'Outlier ditandai pengguna saat import. Z-score=%.2f '
-                                . '(mean=%.2f, σ=%.2f, batas=[%s – %s], n=%d)',
-                                $zScore, $mean, $stdDev,
-                                $lowerBound, $upperBound,
-                                $n
-                            );
-
-                            $severity = match(true) {
-                                $zScore > 40  => Anomaly::SEVERITY_CRITICAL,
-                                $zScore >= 31 => Anomaly::SEVERITY_HIGH,
-                                $zScore >= 10 => Anomaly::SEVERITY_MEDIUM,
-                                default       => Anomaly::SEVERITY_LOW,
-                            };
-                        } else {
-                            $message = sprintf(
-                                'Outlier ditandai pengguna saat import. Mean histori=%.2f (n=%d, σ≈0).',
-                                $mean, $n
-                            );
-                        }
-
-                        if ($n < AnomalyStatisticsService::MIN_HISTORY_FOR_MEANINGFUL_STATS) {
-                            $message = sprintf(
-                                'Outlier ditandai pengguna saat import. Mean histori=%.2f (n=%d, histori kurang untuk z-score).',
-                                $mean, $n
-                            );
-                        }
-                    } else {
-                        $message = sprintf(
-                            'Outlier ditandai pengguna saat import. Mean histori=%.2f (n=%d, σ≈0).',
-                            $mean, $n
-                        );
-                    }
-                }
-            }
+            $message = $avg !== null
+                ? sprintf(
+                    'Konflik sumber data ditandai pengguna saat import. Nilai (setelah konversi satuan) = %s, '
+                    . 'rata-rata antar sumber = %s, selisih = %s%% dari %d sumber yang dibandingkan.',
+                    number_format($currentValue ?? 0, 4, '.', ''),
+                    number_format($avg, 4, '.', ''),
+                    number_format($pctDiff, 2, '.', ''),
+                    $n
+                )
+                : 'Konflik sumber data ditandai pengguna saat import.';
 
             $anomaly = Anomaly::firstOrCreate(
-                [
-                    'id'           => $row->id,
-                    'table_name'   => 'data',
-                    'anomaly_type' => Anomaly::TYPE_UNREASONABLE,
-                ],
+                ['id' => $row->id, 'table_name' => 'data', 'anomaly_type' => Anomaly::TYPE_SOURCE_CONFLICT],
                 [
                     'severity'          => $severity,
-                    'previous_value'    => $previousValue,
-                    'current_value'     => $currentValue,
-                    'percentage_change' => $percentageChange,
+                    'previous_value'    => $avg,
+                    'current_value'     => $currentValue, // ← sebelumnya (float) $row->number_value
+                    'percentage_change' => $pctDiff,
                     'message'           => $message,
                     'status'            => Anomaly::STATUS_WARNING,
                     'detected_at'       => now(),
                 ]
             );
 
-            if ($anomaly->wasRecentlyCreated ?? false) {
-                $this->anomaliesCreated++;
-            }
+            if ($anomaly->wasRecentlyCreated ?? false) $this->anomaliesCreated++;
 
-            // ── Audit trail — agar konsisten dengan AnomalyDetectionService ──
             DB::table('audit_trails')->insert([
                 'user_id'    => $this->userId ?: null,
                 'table_name' => 'data',
@@ -723,10 +654,10 @@ class DataImport
                 'new_value'  => json_encode([
                     'anomalies_found' => 1,
                     'workflow_status' => 'warning',
-                    'checks_run'      => ['manual_outlier_flag_import'],
-                    'z_score'         => $percentageChange,
-                    'mean'            => $previousValue,
-                    'history_n'       => $historyCount,
+                    'checks_run'      => ['manual_source_conflict_import'],
+                    'avg'             => $avg,
+                    'pct_diff'        => $pctDiff,
+                    'n'               => $n,
                 ]),
                 'reason'     => 'Screening otomatis sistem',
                 'ip_address' => null,

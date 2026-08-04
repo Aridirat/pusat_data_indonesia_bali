@@ -19,8 +19,9 @@ class SatuanSeeder extends Seeder
 
             // ── Berat ─────────────────────────────
             ['nama_satuan' => 'Gram', 'simbol' => 'g', 'nilai_konversi' => 1],
+            ['nama_satuan' => 'Ons', 'simbol' => 'ons', 'nilai_konversi' => 100],
             ['nama_satuan' => 'Kilogram', 'simbol' => 'kg', 'nilai_konversi' => 1000],
-            ['nama_satuan' => 'Kuintal', 'simbol' => 'kw', 'nilai_konversi' => 100000],
+            ['nama_satuan' => 'Kuintal', 'simbol' => 'kuintal', 'nilai_konversi' => 100000],
             ['nama_satuan' => 'Ton', 'simbol' => 'ton', 'nilai_konversi' => 1000000],
 
             // ── Luas ─────────────────────────────
@@ -32,6 +33,7 @@ class SatuanSeeder extends Seeder
             // ── Volume ─────────────────────────────
             ['nama_satuan' => 'Liter', 'simbol' => 'l', 'nilai_konversi' => 1],
             ['nama_satuan' => 'Meter Kubik', 'simbol' => 'm3', 'nilai_konversi' => 1000],
+            ['nama_satuan' => 'Barel', 'simbol' => null, 'nilai_konversi' => 158.99], // 1 barel = 158,99 liter (BPS)
 
             // ── Uang ─────────────────────────────
             ['nama_satuan' => 'Rupiah', 'simbol' => 'Rp', 'nilai_konversi' => 1],
@@ -47,6 +49,11 @@ class SatuanSeeder extends Seeder
             ['nama_satuan' => 'Kilowatt Jam', 'simbol' => 'Kwh', 'nilai_konversi' => 1000],
             ['nama_satuan' => 'Megawatt Jam', 'simbol' => 'MWh', 'nilai_konversi' => 1000000],
 
+            // Listrik
+            ['nama_satuan' => 'Volt', 'simbol' => 'V', 'nilai_konversi' => 1],
+            ['nama_satuan' => 'Kilovolt', 'simbol' => 'kV', 'nilai_konversi' => 1000],
+            ['nama_satuan' => 'Megavolt', 'simbol' => 'MV', 'nilai_konversi' => 1000000],
+
             // ── Case-variant yang disatukan (sama persis nilainya,
             //    cuma beda penulisan) ──
             ['nama_satuan' => 'Orang', 'simbol' => 'orang', 'nilai_konversi' => 1],
@@ -54,11 +61,16 @@ class SatuanSeeder extends Seeder
 
             // ── Standalone: satuan hitung/kategorikal & rate majemuk ──
             // simbol = null (tidak perlu duplikasi nama_satuan)
+            // Sengaja TIDAK ikut grup konversi manapun: Knot adalah satuan
+            // kecepatan (jarak/waktu, dimensi beda dari Panjang), dan
+            // Liter Beras adalah konversi densitas khusus beras (bukan
+            // konversi Liter↔Kg yang berlaku umum) — kalau digabung ke
+            // grup Panjang/Volume, sistem bisa salah "mengonversi" data
+            // lain yang tidak relevan (lihat diskusi KW vs MVA).
             ['nama_satuan' => 'Agen', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Badan', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Balai', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Banjar', 'simbol' => null, 'nilai_konversi' => 1],
-            ['nama_satuan' => 'Barel', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Batang', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Biro', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Btg/Pohon', 'simbol' => null, 'nilai_konversi' => 1],
@@ -97,12 +109,14 @@ class SatuanSeeder extends Seeder
             ['nama_satuan' => 'Kelurahan', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Kit', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'KK', 'simbol' => null, 'nilai_konversi' => 1],
+            ['nama_satuan' => 'Knot', 'simbol' => null, 'nilai_konversi' => 1], // satuan kecepatan (1 knot = 1,8523 km/jam), bukan panjang
             ['nama_satuan' => 'KT', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Ku/Ha', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Kw/Ha', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Lembaga', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Lingkungan', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Lintasan', 'simbol' => null, 'nilai_konversi' => 1],
+            ['nama_satuan' => 'Liter Beras', 'simbol' => null, 'nilai_konversi' => 1], // konversi densitas khusus beras (0,80 kg/liter), bukan Liter umum
             ['nama_satuan' => 'Liter/Detik', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'Lokasi', 'simbol' => null, 'nilai_konversi' => 1],
             ['nama_satuan' => 'LSM', 'simbol' => null, 'nilai_konversi' => 1],

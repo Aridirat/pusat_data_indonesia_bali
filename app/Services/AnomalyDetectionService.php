@@ -284,7 +284,7 @@ class AnomalyDetectionService
         $history = Data::where('metadata_id', $data->metadata_id)
             ->where('location_id', $data->location_id)
             ->where('id', '!=', $data->id)
-            ->where('status', Data::STATUS_AVAILABLE)
+            ->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
             ->whereNotNull('number_value')
             ->orderBy('time_id', 'desc')
             ->limit(20)
@@ -357,7 +357,7 @@ class AnomalyDetectionService
         $anomaliesFound = 0;
         $skipped        = 0;
 
-        Data::where('status', Data::STATUS_AVAILABLE)
+        Data::whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
             ->whereNotNull('number_value')
             ->when(!$scanAll, fn($query) => $query->where('workflow_status', Data::WORKFLOW_DRAFT))
             ->when($metadataId, fn($q) => $q->where('metadata_id', $metadataId))
@@ -407,15 +407,32 @@ class AnomalyDetectionService
 
         if ($rows->isEmpty()) return collect();
 
-        $avg = $rows->avg('number_value');
-
         $distinctUnitIds = $rows->pluck('satuan_asal_id')->filter()->unique();
         $unitsConsistent = $distinctUnitIds->count() <= 1;
 
-        return $rows->map(function (Data $d) use ($avg, $unitsConsistent) {
-            $value   = (float) $d->number_value;
-            $selisih = $value - $avg;
-            $pctDiff = $avg > 0 ? abs($selisih / $avg) * 100 : 0;
+        $adjusted = $rows->mapWithKeys(function (Data $d) {
+            $raw = (float) $d->number_value;
+            $val = $raw;
+            $unitConflict = $d->satuan_asal_id !== null && $d->satuan_asal_id !== $d->satuan_id;
+            if ($unitConflict) {
+                $converted = \App\Models\Satuan::convertValue($raw, (int) $d->satuan_asal_id, (int) $d->satuan_id);
+                if ($converted !== null) $val = $converted;
+            }
+            return [$d->id => $val];
+        });
+
+        $avg = $adjusted->avg(); // tetap dipakai untuk kolom "Selisih" & "% Diff" informatif
+
+        // ── NEW: cek apakah SEMUA nilai kanonik (adjusted) sama satu sama lain ──
+        $reference  = $adjusted->first();
+        $valuesMatch = $adjusted->every(
+            fn ($v) => $this->valuesAreEqual($v, $reference)
+        );
+
+        return $rows->map(function (Data $d) use ($avg, $unitsConsistent, $adjusted, $valuesMatch) {
+            $adjustedValue = $adjusted[$d->id];
+            $selisih       = $adjustedValue - $avg;
+            $pctDiff       = $avg > 0 ? abs($selisih / $avg) * 100 : 0;
 
             $satuanDisplay = $d->satuanAsal?->nama_satuan
                 ?? $d->satuan?->nama_satuan
@@ -423,22 +440,8 @@ class AnomalyDetectionService
 
             $unitConflict = $d->satuan_asal_id !== null && $d->satuan_asal_id !== $d->satuan_id;
 
-            // Kalau ada bentrok satuan: anggap $value MASIH dalam satuan lama
-            // (satuan_asal_id) — belum dikonversi. "Disesuaikan" = dikonversi
-            // MAJU ke satuan metadata (satuan_id).
-            $oldUnitValue  = null;
-            $oldUnitName   = null;
-            $adjustedValue = $value; // default: sudah konsisten, tidak perlu diubah
-
-            if ($unitConflict) {
-                $oldUnitValue = $value;
-                $oldUnitName  = $d->satuanAsal?->nama_satuan;
-
-                $converted = \App\Models\Satuan::convertValue($value, (int) $d->satuan_asal_id, (int) $d->satuan_id);
-                if ($converted !== null) {
-                    $adjustedValue = $converted;
-                }
-            }
+            $oldUnitValue = $unitConflict ? (float) $d->number_value : null;
+            $oldUnitName  = $unitConflict ? $d->satuanAsal?->nama_satuan : null;
 
             return [
                 'data_id'          => $d->id,
@@ -449,17 +452,31 @@ class AnomalyDetectionService
                 'satuan_metadata'  => $d->satuan?->nama_satuan ?? ($d->metadata?->satuan_data ?? '—'),
                 'old_unit_value'   => $oldUnitValue,
                 'old_unit_name'    => $oldUnitName,
-                'adjusted_value'   => $adjustedValue,
+                'adjusted_value'   => round($adjustedValue, 4),
                 'unit_conflict'    => $unitConflict,
                 'units_consistent' => $unitsConsistent,
-                'value'            => $value,
+                'value'            => (float) $d->number_value,
                 'avg_baseline'     => round($avg, 4),
                 'selisih'          => round($selisih, 4),
                 'pct_diff'         => round($pctDiff, 2),
-                'conflict'         => $pctDiff >= 5,
+                'conflict'         => !$valuesMatch,   // ← DIUBAH: bukan lagi pctDiff >= 5
                 'workflow'         => $d->workflow_status,
             ];
         });
+    }
+
+    /**
+     * Bandingkan dua nilai kanonik dengan toleransi, untuk menghindari
+     * false-positive akibat floating-point rounding hasil konversi satuan
+     * (mis. 4000 gr / 1000 = 3.999999999999... bukan 4 persis).
+     */
+    private function valuesAreEqual(float $a, float $b, float $absTolerance = 0.01, float $relTolerance = 0.0001): bool
+    {
+        $diff = abs($a - $b);
+        if ($diff <= $absTolerance) return true;
+
+        $largest = max(abs($a), abs($b));
+        return $largest > 0 && ($diff / $largest) <= $relTolerance;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -476,7 +493,7 @@ class AnomalyDetectionService
             ->where('location_id', $data->location_id)
             ->where('produsen_id', $data->produsen_id)
             ->where('time_id', '<', $data->time_id)
-            ->where('status', Data::STATUS_AVAILABLE)
+            ->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
             ->whereNotNull('number_value')
             ->orderBy('time_id', 'desc')
             ->first();
@@ -550,5 +567,76 @@ class AnomalyDetectionService
             Anomaly::SEVERITY_CRITICAL => (float) $rule->threshold_critical,
             default                    => 0,
         };
+    }
+
+    /**
+     * Ambil histori data untuk metadata + lokasi + produsen yang SAMA
+     * (satu series/rujukan yang konsisten), diurutkan dari periode
+     * paling lama ke paling baru, dijendela (windowed) di sekitar
+     * periode data yang sedang diperiksa.
+     *
+     * @return Collection<array{data_id:int, periode:string, value:float, satuan:string, is_current:bool, workflow:string}>
+     */
+    public function getSeriesContext(Data $data, int $maxPoints = 10): Collection
+    {
+        $series = Data::where('metadata_id', $data->metadata_id)
+            ->where('location_id', $data->location_id)
+            ->where('produsen_id', $data->produsen_id)
+            ->where(function ($q) use ($data) {
+                // Selalu ikutkan data yang sedang direview, apa pun statusnya —
+                // supaya baris anomalinya sendiri tidak pernah "hilang" dari window.
+                $q->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
+                ->orWhere('id', $data->id);
+            })
+            ->whereNotNull('number_value')
+            ->with('time')
+            ->get()
+            ->filter(fn ($d) => $d->time !== null)
+            ->sortBy(fn ($d) => $d->time_id)
+            ->values();
+
+        if ($series->isEmpty()) return collect();
+
+        if ($series->count() <= $maxPoints) {
+            return $series->map(fn ($d) => $this->formatSeriesPoint($d, $data->id));
+        }
+
+        $targetIndex = $series->search(fn ($d) => $d->id === $data->id);
+        if ($targetIndex === false) {
+            // Data yang direview tidak ketemu di series (kasus langka) → fallback: ambil paling baru
+            return $series->slice(-$maxPoints)->values()->map(fn ($d) => $this->formatSeriesPoint($d, $data->id));
+        }
+
+        // Window centered di targetIndex, di-clamp ke batas awal/akhir series
+        $half  = intdiv($maxPoints, 2);
+        $start = $targetIndex - $half;
+        $end   = $start + $maxPoints - 1;
+
+        $lastIndex = $series->count() - 1;
+
+        if ($start < 0) {
+            $end  += -$start;
+            $start = 0;
+        }
+        if ($end > $lastIndex) {
+            $start -= ($end - $lastIndex);
+            $end    = $lastIndex;
+            $start  = max(0, $start);
+        }
+
+        return $series->slice($start, $end - $start + 1)->values()
+            ->map(fn ($d) => $this->formatSeriesPoint($d, $data->id));
+    }
+
+    private function formatSeriesPoint(Data $d, int $currentDataId): array
+    {
+        return [
+            'data_id'    => $d->id,
+            'periode'    => $this->formatPeriodeLabel($d),
+            'value'      => (float) $d->number_value,
+            'satuan'     => $d->satuan?->nama_satuan ?? ($d->metadata?->satuan_data ?? '—'),
+            'is_current' => $d->id === $currentDataId,
+            'workflow'   => $d->workflow_status,
+        ];
     }
 }

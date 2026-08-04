@@ -166,28 +166,46 @@ class AnomalyControlController extends Controller
             $rows = Data::where('metadata_id', $key['metadata_id'])
                 ->where('location_id', $key['location_id'])
                 ->where('time_id', $key['time_id'])
-                ->where('status', Data::STATUS_AVAILABLE)
+                // Bug 2: ikutkan PENDING juga, bukan cuma AVAILABLE
+                ->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
                 ->whereNotNull('number_value')
                 ->with(['produsen', 'rujukan', 'satuan', 'satuanAsal'])
                 ->get();
 
-            $avg    = $rows->avg('number_value');
             $mapKey = "{$key['metadata_id']}-{$key['location_id']}-{$key['time_id']}";
 
             $distinctUnitIds = $rows->pluck('satuan_asal_id')->filter()->unique();
             $unitsConsistent = $distinctUnitIds->count() <= 1;
 
-            $conflictMap[$mapKey] = $rows->map(fn($d) => [
-                'data_id'          => $d->id,
-                'produsen'         => $d->produsen?->nama_produsen ?? "Produsen #{$d->produsen_id}",
-                'rujukan'          => $d->rujukan?->nama_rujukan ?? '—',
-                'satuan'           => $d->satuanAsal?->nama_satuan ?? ($d->satuan?->nama_satuan ?? '—'),
-                'units_consistent' => $unitsConsistent,
-                'value'            => (float) $d->number_value,
-                'selisih'          => round((float) $d->number_value - $avg, 4),
-                'pct_diff'         => $avg > 0 ? round(abs(((float) $d->number_value - $avg) / $avg * 100), 2) : 0,
-                'is_current'       => false,
-            ])->toArray();
+            $canonicalValues = $rows->mapWithKeys(function ($d) {
+                $raw = (float) $d->number_value;
+                $val = $raw;
+                if ($d->satuan_asal_id && $d->satuan_id && (int) $d->satuan_asal_id !== (int) $d->satuan_id) {
+                    $converted = \App\Models\Satuan::convertValue($raw, (int) $d->satuan_asal_id, (int) $d->satuan_id);
+                    if ($converted !== null) $val = $converted;
+                }
+                return [$d->id => $val];
+            });
+
+            $avg = $canonicalValues->avg();
+
+            $conflictMap[$mapKey] = $rows->map(function ($d) use ($canonicalValues, $avg, $unitsConsistent) {
+                $val     = $canonicalValues[$d->id];
+                $selisih = $val - $avg;
+                return [
+                    'data_id'          => $d->id,
+                    'produsen'         => $d->produsen?->nama_produsen ?? "Produsen #{$d->produsen_id}",
+                    'rujukan'          => $d->rujukan?->nama_rujukan ?? '—',
+                    'satuan'           => $d->satuan?->nama_satuan ?? ($d->satuanAsal?->nama_satuan ?? '—'),
+                    'units_consistent' => $unitsConsistent,
+                    'value'            => round($val, 4),
+                    'raw_value'        => (float) $d->number_value,
+                    'raw_satuan'       => $d->satuanAsal?->nama_satuan ?? ($d->satuan?->nama_satuan ?? '—'),
+                    'selisih'          => round($selisih, 4),
+                    'pct_diff'         => $avg > 0 ? round(abs($selisih / $avg) * 100, 2) : 0,
+                    'is_current'       => false,
+                ];
+            })->toArray();
         }
     
         // Kumpulkan data historis untuk unreasonable (batch per metadata+location)
@@ -462,11 +480,24 @@ class AnomalyControlController extends Controller
         $decisionHistory = $this->workflow->getDecisionHistory($data->id);
 
         // ── Perbandingan antar sumber ─────────────────────────
-        $sourceComparison = $this->detector->compareSourceValues(
-            $data->metadata_id,
-            $data->location_id,
-            $data->time_id,
-        );
+        $sourceComparison = in_array($anomaly->anomaly_type, [
+            Anomaly::TYPE_SOURCE_CONFLICT,
+            Anomaly::TYPE_UNIT_CONFLICT,
+        ], true)
+            ? $this->detector->compareSourceValues(
+                $data->metadata_id,
+                $data->location_id,
+                $data->time_id,
+            )
+            : collect();
+
+        $seriesContext = in_array($anomaly->anomaly_type, [
+            Anomaly::TYPE_EXTREME_INCREASE,
+            Anomaly::TYPE_EXTREME_DECREASE,
+            Anomaly::TYPE_UNREASONABLE,
+        ], true)
+            ? $this->detector->getSeriesContext($data, 10)
+            : collect();
 
         // ── Audit trail record ini ────────────────────────────
         $auditHistory = $this->auditTrail->getHistory('data', $data->id);
@@ -480,6 +511,7 @@ class AnomalyControlController extends Controller
             'conflictData',
             'decisionHistory',
             'sourceComparison',
+            'seriesContext',
             'auditHistory',
             'decisionOptions',
         ));
@@ -750,11 +782,24 @@ class AnomalyControlController extends Controller
                 ->first();
         }
 
-        $sourceComparison = $this->detector->compareSourceValues(
-            $data->metadata_id,
-            $data->location_id,
-            $data->time_id,
-        );
+        $sourceComparison = in_array($anomaly->anomaly_type, [
+            Anomaly::TYPE_SOURCE_CONFLICT,
+            Anomaly::TYPE_UNIT_CONFLICT,
+        ], true)
+            ? $this->detector->compareSourceValues(
+                $data->metadata_id,
+                $data->location_id,
+                $data->time_id,
+            )
+            : collect();
+
+        $seriesContext = in_array($anomaly->anomaly_type, [
+            Anomaly::TYPE_EXTREME_INCREASE,
+            Anomaly::TYPE_EXTREME_DECREASE,
+            Anomaly::TYPE_UNREASONABLE,
+        ], true)
+            ? $this->detector->getSeriesContext($data, 10)
+            : collect();
 
         if (!app()->bound('dompdf.wrapper')) {
             if (class_exists(\Barryvdh\DomPDF\ServiceProvider::class)) {
@@ -765,7 +810,7 @@ class AnomalyControlController extends Controller
         }
 
         $pdf = app('dompdf.wrapper')
-            ->loadView('pages.anomaly.control.report_pdf', compact('anomaly', 'data', 'conflictData', 'sourceComparison'))
+            ->loadView('pages.anomaly.control.report_pdf', compact('anomaly', 'data', 'seriesContext', 'conflictData', 'sourceComparison'))
             ->setPaper('a4', 'portrait');
 
         return $pdf->download("Laporan-Anomali-{$anomaly->anomalies_id}.pdf");

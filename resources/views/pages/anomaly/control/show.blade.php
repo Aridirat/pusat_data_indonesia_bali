@@ -292,10 +292,69 @@
                 </div>
             @endif
 
+            {{-- Konteks series — histori periode sekitar, untuk anomali outlier/perubahan ekstrem --}}
+            @if(in_array($anomaly->anomaly_type, [
+                    \App\Models\Anomaly::TYPE_EXTREME_INCREASE,
+                    \App\Models\Anomaly::TYPE_EXTREME_DECREASE,
+                    \App\Models\Anomaly::TYPE_UNREASONABLE,
+                ], true))
+            <div class="bg-white rounded-xl border border-gray-200 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Riwayat Data Sekitar Periode Ini
+                    </p>
+                    <span class="text-[10px] text-gray-400">
+                        {{ $seriesContext->count() }} periode ditampilkan
+                    </span>
+                </div>
+
+                @if($seriesContext->isEmpty())
+                    <p class="text-xs text-gray-400 text-center py-4">Tidak ada data historis untuk series ini.</p>
+                @else
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-2 py-2 text-left text-gray-500 font-medium">Periode</th>
+                                <th class="px-2 py-2 text-right text-gray-500 font-medium">Nilai</th>
+                                <th class="px-2 py-2 text-left text-gray-500 font-medium">Satuan</th>
+                                <th class="px-2 py-2 text-center text-gray-500 font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($seriesContext as $point)
+                            <tr class="{{ $point['is_current'] ? 'bg-red-50' : '' }}">
+                                <td class="px-2 py-2 font-medium {{ $point['is_current'] ? 'text-red-700 font-semibold' : 'text-gray-700' }}">
+                                    {{ $point['periode'] }}
+                                </td>
+                                <td class="px-2 py-2 text-right font-mono {{ $point['is_current'] ? 'text-red-700 font-semibold' : 'text-gray-800' }}">
+                                    {{ number_format($point['value'], 2) }}
+                                </td>
+                                <td class="px-2 py-2 {{ $point['is_current'] ? 'text-red-600' : 'text-gray-500' }}">
+                                    {{ $point['satuan'] }}
+                                </td>
+                                <td class="px-2 py-2 text-center">
+                                    @if($point['is_current'])
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                            style="background:#fee2e2; color:#b91c1c;">Anomali</span>
+                                    @else
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                            style="background:#dcfce7; color:#15803d;">Normal</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+            </div>
+            @endif
+
             {{-- Perbandingan sumber data — sembunyikan untuk unit_conflict, karena
                 tabelnya membandingkan sumber lain (rujukan berbeda), bukan dua
                 versi satuan dari data yang sama seperti yang ditampilkan di atas --}}
-            @if($anomaly->anomaly_type !== \App\Models\Anomaly::TYPE_UNIT_CONFLICT)
+            @if($anomaly->anomaly_type === \App\Models\Anomaly::TYPE_SOURCE_CONFLICT)
             <div class="bg-white rounded-xl border border-gray-200 p-5">
                 <div class="flex items-center justify-between mb-3">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
