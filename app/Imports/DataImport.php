@@ -602,41 +602,39 @@ class DataImport
         foreach ($rows as $row) {
             $rowKey = sprintf('%d_%d_%d_%s', $row->metadata_id, $row->location_id, $row->time_id,
                 $row->rujukan_id === null ? '' : $row->rujukan_id);
-            $info = $infoMap[$rowKey] ?? null;
 
-            $avg     = $info['avg']      ?? null;
-            $pctDiff = $info['pct_diff'] ?? null;
-            $n       = $info['n']        ?? 0;
+            // FIX: pakai parameter yang benar, bukan $infoMap yang tidak pernah di-set
+            $info = $previewOutlierInfo[$rowKey] ?? null;
 
-            // FIX: pakai nilai KANONIK (sudah dikonversi ke satuan metadata),
-            // bukan raw number_value. Prioritaskan $info['value'] (dari deteksi
-            // sebelum insert), fallback ke konversi ulang kalau info nggak ada.
+            $mean     = $info['mean']     ?? null;
+            $stddev   = $info['stddev']   ?? null;
+            $zScore   = $info['z_score']  ?? null;
+            $n        = $info['n']        ?? 0;
+            $severity = $info['severity'] ?? Anomaly::SEVERITY_MEDIUM;
+
             $currentValue = $info['value']
                 ?? $this->toCanonicalUnitValue((float) $row->number_value, $row->satuan_asal_id, $row->satuan_id);
 
-            $frekuensi = strtolower($this->metadataCache[$row->metadata_id]['frekuensi_penerbitan'] ?? '');
-            $severity  = $pctDiff !== null
-                ? Anomaly::calculateSeverity($pctDiff, (int) $row->metadata_id, $frekuensi)
-                : Anomaly::SEVERITY_MEDIUM;
-
-            $message = $avg !== null
+            $message = $mean !== null
                 ? sprintf(
-                    'Konflik sumber data ditandai pengguna saat import. Nilai (setelah konversi satuan) = %s, '
-                    . 'rata-rata antar sumber = %s, selisih = %s%% dari %d sumber yang dibandingkan.',
+                    'Nilai tidak wajar ditandai pengguna saat import. Nilai (setelah konversi satuan) = %s, '
+                    . 'rata-rata histori = %s, StdDev = %s, z-score = %s dari %d data historis.',
                     number_format($currentValue ?? 0, 4, '.', ''),
-                    number_format($avg, 4, '.', ''),
-                    number_format($pctDiff, 2, '.', ''),
+                    number_format($mean, 4, '.', ''),
+                    $stddev !== null ? number_format($stddev, 4, '.', '') : '-',
+                    $zScore !== null ? number_format($zScore, 2, '.', '') : '-',
                     $n
                 )
-                : 'Konflik sumber data ditandai pengguna saat import.';
+                : 'Nilai tidak wajar ditandai pengguna saat import (tidak ada histori pembanding).';
 
             $anomaly = Anomaly::firstOrCreate(
-                ['id' => $row->id, 'table_name' => 'data', 'anomaly_type' => Anomaly::TYPE_SOURCE_CONFLICT],
+                // FIX: tipe yang benar
+                ['id' => $row->id, 'table_name' => 'data', 'anomaly_type' => Anomaly::TYPE_UNREASONABLE],
                 [
                     'severity'          => $severity,
-                    'previous_value'    => $avg,
-                    'current_value'     => $currentValue, // ← sebelumnya (float) $row->number_value
-                    'percentage_change' => $pctDiff,
+                    'previous_value'    => $mean,
+                    'current_value'     => $currentValue,
+                    'percentage_change' => $zScore,
                     'message'           => $message,
                     'status'            => Anomaly::STATUS_WARNING,
                     'detected_at'       => now(),
@@ -654,9 +652,9 @@ class DataImport
                 'new_value'  => json_encode([
                     'anomalies_found' => 1,
                     'workflow_status' => 'warning',
-                    'checks_run'      => ['manual_source_conflict_import'],
-                    'avg'             => $avg,
-                    'pct_diff'        => $pctDiff,
+                    'checks_run'      => ['manual_unreasonable_value_import'],
+                    'mean'            => $mean,
+                    'z_score'         => $zScore,
                     'n'               => $n,
                 ]),
                 'reason'     => 'Screening otomatis sistem',

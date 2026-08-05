@@ -75,10 +75,6 @@ class AnomalyDetectionService
     // CHECK 1 — KENAIKAN / PENURUNAN EKSTREM
     // ══════════════════════════════════════════════════════════
 
-    /**
-     * Bandingkan nilai data saat ini dengan nilai historis sebelumnya
-     * pada metadata + lokasi yang sama, periode sebelumnya.
-     */
     private function checkPercentageChange(Data $data): ?Anomaly
     {
         if ($data->number_value === null) return null;
@@ -89,9 +85,7 @@ class AnomalyDetectionService
         $prev    = (float) $previousData->number_value;
         $current = (float) $data->number_value;
 
-        // Hindari pembagian nol
         if ($prev == 0) {
-            // Nilai dari 0 ke angka — langsung critical
             if ($current != 0) {
                 return $this->createAnomaly($data, [
                     'anomaly_type'      => Anomaly::TYPE_EXTREME_INCREASE,
@@ -108,7 +102,6 @@ class AnomalyDetectionService
 
         $percentageChange = (($current - $prev) / abs($prev)) * 100;
 
-        // Ambil threshold sesuai metadata & frekuensi
         $frekuensi = strtolower($data->metadata?->frekuensi_penerbitan ?? '');
         $rule      = AnomalyRule::resolveForData((int) $data->metadata_id, $frekuensi);
 
@@ -119,10 +112,14 @@ class AnomalyDetectionService
 
         $absChange = abs($percentageChange);
 
-        // Tidak anomali jika perubahan di bawah threshold low
         if ($absChange < $tLow) return null;
 
-        // Hitung severity
+        if ($this->isPreviousPeriodTheOutlier($data, $previousData, $current, $prev)) {
+            $this->checkUnreasonableValue($previousData);
+            return null;
+        }
+        // ────────────────────────────────────────────────────────────
+
         $severity = match (true) {
             $absChange >= $tCritical => Anomaly::SEVERITY_CRITICAL,
             $absChange >= $tHigh     => Anomaly::SEVERITY_HIGH,
@@ -142,9 +139,39 @@ class AnomalyDetectionService
             'current_value'     => $current,
             'percentage_change' => $percentageChange,
             'message'           => "Nilai {$arah} {$absChange}% dari {$prev} ({$prevPeriode}) "
-                                 . "menjadi {$current} ({$periode}). "
-                                 . "Threshold {$severity}: ≥{$this->getThresholdForSeverity($severity, $rule)}%.",
+                                . "menjadi {$current} ({$periode}). "
+                                . "Threshold {$severity}: ≥{$this->getThresholdForSeverity($severity, $rule)}%.",
         ]);
+    }
+    private function isPreviousPeriodTheOutlier(Data $data, Data $previousData, float $current, float $prev): bool
+    {
+        $series = Data::where('metadata_id', $data->metadata_id)
+            ->where('location_id', $data->location_id)
+            ->where('produsen_id', $data->produsen_id)
+            ->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
+            ->whereNotIn('id', [$data->id, $previousData->id])
+            ->whereNotNull('number_value')
+            ->orderBy('time_id', 'desc')
+            ->limit(8)
+            ->pluck('number_value')
+            ->map(fn($v) => (float) $v)
+            ->toArray();
+
+        if (count($series) < AnomalyStatisticsService::MIN_HISTORY_FOR_MEANINGFUL_STATS) {
+            return false;
+        }
+
+        $combined = array_merge($series, [$current, $prev]);
+        $median   = AnomalyStatisticsService::median($combined);
+        $mad      = AnomalyStatisticsService::medianAbsoluteDeviation($combined, $median);
+
+        if ($mad < 1e-10) return false;
+
+        $mzCurrent = abs(0.6745 * ($current - $median) / $mad);
+        $mzPrev    = abs(0.6745 * ($prev - $median) / $mad);
+
+        return $mzPrev > AnomalyStatisticsService::OUTLIER_MZSCORE_THRESHOLD
+            && $mzCurrent <= AnomalyStatisticsService::OUTLIER_MZSCORE_THRESHOLD;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -283,13 +310,21 @@ class AnomalyDetectionService
         // Gunakan ONLY STATUS_AVAILABLE untuk konsistensi dengan DataImport & AnomalyControlController
         $history = Data::where('metadata_id', $data->metadata_id)
             ->where('location_id', $data->location_id)
+            ->where('produsen_id', $data->produsen_id)     // FIX: samakan dengan getSeriesContext
             ->where('id', '!=', $data->id)
             ->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
             ->whereNotNull('number_value')
             ->orderBy('time_id', 'desc')
             ->limit(20)
-            ->pluck('number_value')
-            ->map(fn($v) => (float) $v)
+            ->get(['number_value', 'satuan_id', 'satuan_asal_id'])
+            ->map(function ($d) use ($data) {                // FIX: normalisasi satuan
+                $raw = (float) $d->number_value;
+                if ($d->satuan_id && $data->satuan_id && (int) $d->satuan_id !== (int) $data->satuan_id) {
+                    $converted = \App\Models\Satuan::convertValue($raw, (int) $d->satuan_id, (int) $data->satuan_id);
+                    if ($converted !== null) return $converted;
+                }
+                return $raw;
+            })
             ->toArray();
 
         // Gunakan AnomalyStatisticsService untuk deteksi konsisten di semua lapisan

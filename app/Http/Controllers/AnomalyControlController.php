@@ -208,13 +208,15 @@ class AnomalyControlController extends Controller
             })->toArray();
         }
     
-        // Kumpulkan data historis untuk unreasonable (batch per metadata+location)
+        // Kumpulkan data historis untuk unreasonable (batch per metadata+location+produsen)
         $unreasonableKeys = $anomalies
             ->where('anomaly_type', Anomaly::TYPE_UNREASONABLE)
             ->map(fn($a) => [
                 'metadata_id' => $a->data?->metadata_id,
                 'location_id' => $a->data?->location_id,
                 'data_id'     => $a->data?->id,
+                'produsen_id' => $a->data?->produsen_id,
+                'satuan_id'   => $a->data?->satuan_id,
             ])
             ->filter(fn($k) => $k['metadata_id'] !== null && $k['location_id'] !== null && $k['data_id'] !== null);
 
@@ -223,16 +225,25 @@ class AnomalyControlController extends Controller
             $mapKey = "{$key['metadata_id']}-{$key['location_id']}-{$key['data_id']}";
             if (isset($statsMap[$mapKey])) continue;
 
-            // Gunakan ONLY STATUS_AVAILABLE agar konsisten dengan DataImport::detectOutliersViaDb
+            // Filter per produsen yang sama, samakan status dengan getSeriesContext(),
+            // dan normalisasi satuan sebelum dihitung supaya tidak ketimpa nilai konversi yang salah
             $history = Data::where('metadata_id', $key['metadata_id'])
                 ->where('location_id', $key['location_id'])
+                ->where('produsen_id', $key['produsen_id'])
                 ->where('id', '!=', $key['data_id'])
-                ->where('status', Data::STATUS_AVAILABLE)
+                ->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
                 ->whereNotNull('number_value')
                 ->orderBy('time_id', 'desc')
                 ->limit(20)
-                ->pluck('number_value')
-                ->map(fn($v) => (float) $v)
+                ->get(['number_value', 'satuan_id'])
+                ->map(function ($d) use ($key) {
+                    $raw = (float) $d->number_value;
+                    if ($d->satuan_id && $key['satuan_id'] && (int) $d->satuan_id !== (int) $key['satuan_id']) {
+                        $converted = \App\Models\Satuan::convertValue($raw, (int) $d->satuan_id, (int) $key['satuan_id']);
+                        if ($converted !== null) return $converted;
+                    }
+                    return $raw;
+                })
                 ->toArray();
 
             // Gunakan AnomalyStatisticsService untuk perhitungan konsisten
@@ -463,17 +474,19 @@ class AnomalyControlController extends Controller
         $data = $anomaly->data;
 
         $conflictData = null;
+        $conflictDataList = collect();
         if ($anomaly->anomaly_type === Anomaly::TYPE_SOURCE_CONFLICT) {
-            $conflictData = Data::where('metadata_id', $data->metadata_id)
+            $conflictDataList = Data::where('metadata_id', $data->metadata_id)
                 ->where('location_id', $data->location_id)
                 ->where('time_id', $data->time_id)
                 ->where('id', '!=', $data->id)
-                ->where('status', Data::STATUS_AVAILABLE)
+                ->whereIn('status', [Data::STATUS_AVAILABLE, Data::STATUS_PENDING])
                 ->whereNotNull('number_value')
                 ->with(['metadata', 'location', 'time', 'user', 'produsen', 'rujukan', 'satuan', 'satuanAsal'])
-                // Ambil yang selisihnya paling besar, sesuai logika checkSourceConflict()
                 ->orderByRaw('ABS(number_value - ?) DESC', [(float) $data->number_value])
-                ->first();
+                ->get();
+
+            $conflictData = $conflictDataList->first(); // tetap dipakai gate "Detail Metadata"
         }
 
         // ── Histori keputusan stakeholder ─────────────────────
@@ -506,14 +519,9 @@ class AnomalyControlController extends Controller
         $decisionOptions = AnomalyReview::decisionOptions();
 
         return view('pages.anomaly.control.show', compact(
-            'anomaly',
-            'data',
-            'conflictData',
-            'decisionHistory',
-            'sourceComparison',
-            'seriesContext',
-            'auditHistory',
-            'decisionOptions',
+            'anomaly', 'data', 'conflictData', 'conflictDataList',
+            'decisionHistory', 'sourceComparison', 'seriesContext',
+            'auditHistory', 'decisionOptions',
         ));
     }
 

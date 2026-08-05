@@ -122,29 +122,32 @@
             @endif
 
             {{-- Detail data --}}
-            @if($anomaly->anomaly_type === \App\Models\Anomaly::TYPE_SOURCE_CONFLICT && $conflictData)
-                <div class="grid md:grid-cols-2 gap-5">
-                    {{-- Card 1: data anomali ini --}}
+           @if($anomaly->anomaly_type === \App\Models\Anomaly::TYPE_SOURCE_CONFLICT && $conflictDataList->isNotEmpty())
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {{-- Card: data anomali ini --}}
                     <div class="bg-white rounded-xl border border-purple-200 p-5">
                         <div class="flex items-center justify-between mb-3">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Detail Data</p>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
+                                Data Ini
+                            </span>
                         </div>
                         <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                             @php
                             $detailsA = [
                                 ['label'=>'Metadata', 'value'=> $data->metadata ? $data->metadata->getSubNamaForSatuan((int)($data->satuan_asal_id ?? $data->satuan_id ?? 0)) : '-'],
                                 ['label'=>'Satuan', 'value'=> $data->satuanAsal?->nama_satuan ?? ($data->satuan?->nama_satuan ?? ($data->metadata?->satuan_data ?? '-'))],
-                                ['label'=>'Lokasi',         'value'=> $data->location?->nama_wilayah ?? '-'],
-                                ['label'=>'Periode',        'value'=> $data->time
+                                ['label'=>'Lokasi', 'value'=> $data->location?->nama_wilayah ?? '-'],
+                                ['label'=>'Periode', 'value'=> $data->time
                                     ? ($data->time->year
                                         . ($data->time->month   ? '/Bln-'.$data->time->month   : '')
                                         . ($data->time->quarter ? '/Q'.$data->time->quarter    : '')
                                         . ($data->time->semester? '/S'.$data->time->semester   : ''))
                                     : '-'],
                                 ['label'=>'Sumber/Produsen','value'=> $data->produsen?->nama_produsen ?? '-'],
-                                ['label'=>'Rujukan',        'value'=> $data->rujukan?->nama_rujukan ?? '-'],
-                                ['label'=>'Diinput oleh',   'value'=> $data->user?->name ?? '-'],
-                                ['label'=>'Tanggal Input',  'value'=> $data->date_inputed?->format('d/m/Y H:i') ?? '-'],
+                                ['label'=>'Rujukan', 'value'=> $data->rujukan?->nama_rujukan ?? '-'],
+                                ['label'=>'Diinput oleh', 'value'=> $data->user?->name ?? '-'],
+                                ['label'=>'Tanggal Input', 'value'=> $data->date_inputed?->format('d/m/Y H:i') ?? '-'],
                             ];
                             @endphp
                             @foreach($detailsA as $d)
@@ -156,27 +159,31 @@
                         </dl>
                     </div>
 
-                    {{-- Card 2: data lawan konflik --}}
+                    {{-- Card: satu per sumber pembanding --}}
+                    @foreach($conflictDataList as $cd)
                     <div class="bg-white rounded-xl border border-amber-200 p-5">
                         <div class="flex items-center justify-between mb-3">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Detail Data</p>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+                                Sumber Pembanding {{ $loop->iteration }}
+                            </span>
                         </div>
                         <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                             @php
                             $detailsB = [
-                                ['label'=>'Metadata', 'value'=> $conflictData->metadata ? $conflictData->metadata->getSubNamaForSatuan((int)($conflictData->satuan_asal_id ?? $conflictData->satuan_id ?? 0)) : '-'],
-                                ['label'=>'Satuan', 'value'=> $conflictData->satuanAsal?->nama_satuan ?? ($conflictData->satuan?->nama_satuan ?? ($conflictData->metadata?->satuan_data ?? '-'))],
-                                ['label'=>'Lokasi',         'value'=> $conflictData->location?->nama_wilayah ?? '-'],
-                                ['label'=>'Periode',        'value'=> $conflictData->time
-                                    ? ($conflictData->time->year
-                                        . ($conflictData->time->month   ? '/Bln-'.$conflictData->time->month   : '')
-                                        . ($conflictData->time->quarter ? '/Q'.$conflictData->time->quarter    : '')
-                                        . ($conflictData->time->semester? '/S'.$conflictData->time->semester   : ''))
+                                ['label'=>'Metadata', 'value'=> $cd->metadata ? $cd->metadata->getSubNamaForSatuan((int)($cd->satuan_asal_id ?? $cd->satuan_id ?? 0)) : '-'],
+                                ['label'=>'Satuan', 'value'=> $cd->satuanAsal?->nama_satuan ?? ($cd->satuan?->nama_satuan ?? ($cd->metadata?->satuan_data ?? '-'))],
+                                ['label'=>'Lokasi', 'value'=> $cd->location?->nama_wilayah ?? '-'],
+                                ['label'=>'Periode', 'value'=> $cd->time
+                                    ? ($cd->time->year
+                                        . ($cd->time->month   ? '/Bln-'.$cd->time->month   : '')
+                                        . ($cd->time->quarter ? '/Q'.$cd->time->quarter    : '')
+                                        . ($cd->time->semester? '/S'.$cd->time->semester   : ''))
                                     : '-'],
-                                ['label'=>'Sumber/Produsen','value'=> $conflictData->produsen?->nama_produsen ?? '-'],
-                                ['label'=>'Rujukan',        'value'=> $conflictData->rujukan?->nama_rujukan ?? '-'],
-                                ['label'=>'Diinput oleh',   'value'=> $conflictData->user?->name ?? '-'],
-                                ['label'=>'Tanggal Input',  'value'=> $conflictData->date_inputed?->format('d/m/Y H:i') ?? '-'],
+                                ['label'=>'Sumber/Produsen','value'=> $cd->produsen?->nama_produsen ?? '-'],
+                                ['label'=>'Rujukan', 'value'=> $cd->rujukan?->nama_rujukan ?? '-'],
+                                ['label'=>'Diinput oleh', 'value'=> $cd->user?->name ?? '-'],
+                                ['label'=>'Tanggal Input', 'value'=> $cd->date_inputed?->format('d/m/Y H:i') ?? '-'],
                             ];
                             @endphp
                             @foreach($detailsB as $d)
@@ -187,6 +194,7 @@
                             @endforeach
                         </dl>
                     </div>
+                    @endforeach
                 </div>
             @elseif($anomaly->anomaly_type === \App\Models\Anomaly::TYPE_UNIT_CONFLICT)
                 <div class="grid md:grid-cols-2 gap-5">
